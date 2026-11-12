@@ -8,6 +8,7 @@ import { ACCENTS, CURRENCIES } from './data.js';
 import { backBar, groceryPending } from './lists.js';
 import { balance } from './money.js';
 import { quizWaiting } from './quiz.js';
+import { testerCard } from './testing.js';
 
 /* ---------- Más ---------- */
 function renderMore() {
@@ -71,7 +72,8 @@ function renderSettings() {
 
     <div class="glass stack"><span class="label">Sesión</span><p class="small muted" style="margin:0">Entraste como ${esc(S.me.email)}</p>
       <button class="btn ghost" onclick="startTour()">Ver la guía otra vez</button>
-      <button class="btn danger" onclick="logout()">Cerrar sesión</button></div>`);
+      <button class="btn danger" onclick="logout()">Cerrar sesión</button></div>
+    ${testerCard()}`);
   loadPhotos($('s-settings'));
 }
 function saveSettings() {
