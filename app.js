@@ -22,7 +22,17 @@ import { applyAccent, applyTheme, uploadData } from './settings.js';
 import './search.js';
 import { maybeStartTour, resetTourCheck } from './tour.js';
 
-const setState = s => { document.body.classList.remove('loading', 'out', 'in', 'noconfig'); document.body.classList.add(s); };
+// La pantalla de carga se muestra al menos ~2 s para que se vea la animación (salvo con "reducir movimiento").
+const splashEnd = performance.now() + (matchMedia('(prefers-reduced-motion: reduce)').matches ? 0 : 2200);
+let nextState = null, stateTimer = null;
+const applyState = s => { document.body.classList.remove('loading', 'out', 'in', 'noconfig'); document.body.classList.add(s); };
+const setState = s => {
+  const wait = splashEnd - performance.now();
+  if (document.body.classList.contains('loading') && wait > 0) {
+    nextState = s;
+    stateTimer ??= setTimeout(() => { stateTimer = null; applyState(nextState); }, wait);
+  } else applyState(s);
+};
 const updateOnline = () => document.body.classList.toggle('is-offline', !navigator.onLine);
 addEventListener('online', updateOnline); addEventListener('offline', updateOnline); updateOnline();
 if ('serviceWorker' in navigator) navigator.serviceWorker.register('sw.js').catch(() => {});

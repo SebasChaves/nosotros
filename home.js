@@ -183,7 +183,7 @@ function renderHome() {
   }
   const up = upcoming().slice(0, 5);
   paint('s-home', `
-    <div class="topbar"><div class="title"><span class="hi">Hola${myName() ? ', ' + esc(myName()) : ''}</span><h1>Futari</h1></div>
+    <div class="topbar"><div class="title"><span class="hi">Hola${myName() ? ', ' + esc(myName()) : ''}</span><h1 class="brand grad-text" style="font-size:30px">Futari</h1></div>
       <div class="row" style="gap:10px"><div class="avatars">${names.map(([id]) => avatar(id, 36)).join('')}</div>
       <button class="icon-btn" onclick="openSearch()" aria-label="Buscar">${icon('search')}</button>
       <button class="icon-btn" onclick="go('s-settings')" aria-label="Ajustes">${icon('gear')}</button></div></div>
