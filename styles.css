@@ -414,3 +414,23 @@ body[data-theme="light"] .tour { background: rgba(40, 20, 50, .35); }
 .celebrate i.h { width: auto; height: auto; font-style: normal; font-size: 26px; top: auto; bottom: -40px; animation-name: rise; }
 @keyframes fall { to { transform: translate(var(--dx), 105vh) rotate(var(--rot)); opacity: .9; } }
 @keyframes rise { 0% { transform: translate(0, 0) scale(.6); opacity: 0; } 15% { opacity: 1; } to { transform: translate(var(--dx), -105vh) scale(1.2); opacity: 0; } }
+
+/* Panel de administración */
+.adm-chart { display: flex; align-items: flex-end; gap: 3px; height: 150px; padding-top: 16px; }
+.adm-col { flex: 1; min-width: 0; height: 100%; display: flex; flex-direction: column; justify-content: flex-end; align-items: stretch; gap: 3px; background: none; border: 0; padding: 0; cursor: pointer; color: var(--muted); }
+.adm-stack { display: flex; flex-direction: column-reverse; border-radius: 5px; overflow: hidden; min-height: 2px; background: var(--soft); }
+.adm-stack i { display: block; min-height: 3px; }
+.adm-n { font-size: 9.5px; text-align: center; font-variant-numeric: tabular-nums; min-height: 12px; }
+.adm-d { font-size: 9.5px; text-align: center; font-variant-numeric: tabular-nums; }
+.adm-col.on .adm-d { color: var(--text); font-weight: 700; }
+.adm-col.on .adm-stack { outline: 2px solid var(--text); outline-offset: 1px; }
+.adm-dot { display: inline-block; width: 8px; height: 8px; border-radius: 50%; margin-right: 6px; }
+.adm-table { width: 100%; border-collapse: collapse; font-size: 12.5px; font-variant-numeric: tabular-nums; }
+.adm-table th { text-align: left; color: var(--muted); font-weight: 600; padding: 6px 8px; white-space: nowrap; }
+.adm-table td { padding: 8px; border-top: 1px solid var(--line); vertical-align: top; }
+.adm-table td:first-child { white-space: nowrap; }
+.adm-table tr { cursor: pointer; }
+.adm-table tr.on td { background: var(--soft); }
+.adm-heat { flex: 1; display: grid; grid-template-columns: repeat(24, 1fr); gap: 2px; }
+.adm-heat i { height: 16px; border-radius: 3px; }
+.adm-heat.lbl span { font-size: 9px; color: var(--muted); }

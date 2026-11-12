@@ -20,6 +20,8 @@ import './shows.js';
 import './games.js';
 import { applyAccent, applyTheme, uploadData } from './settings.js';
 import './search.js';
+import './admin.js';
+import { logVisit } from './tracking.js';
 import { maybeStartTour, resetTourCheck } from './tour.js';
 
 // La pantalla de carga se muestra al menos ~2 s para que se vea la animación (salvo con "reducir movimiento").
@@ -91,6 +93,7 @@ function listen() {
     }, fail));
   }
   rerenderAll(); updateBadges();
+  logVisit();
 }
 
 function updateBadges() {

@@ -8,7 +8,7 @@ import { ACCENTS, CURRENCIES } from './data.js';
 import { backBar, groceryPending } from './lists.js';
 import { balance } from './money.js';
 import { quizWaiting } from './quiz.js';
-import { testerCard } from './testing.js';
+import { isTester } from './testing.js';
 
 /* ---------- Más ---------- */
 function renderMore() {
@@ -32,6 +32,7 @@ function renderMore() {
       ${tile('s-quiz', 'brain', '¿Cuánto me conoces?', quizWaiting() ? `${esc(pn)} ya jugó` : 'Quiz de pareja', quizWaiting() ? 1 : 0)}
       ${tile('s-bucket', 'list', 'Bucket list', `${bucketDone} de ${S.data.bucket.length} cumplidas`)}
       ${tile('s-summary', 'spark', 'Resumen del año', `Su ${today().getFullYear()} en números`)}
+      ${isTester() ? tile('s-admin', 'gear', 'Administración', 'Solo tú la ves') : ''}
     </div>`);
 }
 
@@ -71,9 +72,10 @@ function renderSettings() {
         <button class="del" aria-label="Borrar" onclick="delIdea('${i.id}')">${icon('trash')}</button></li>`).join('') : '<li class="empty">Aún no agregan ideas propias</li>'}</ul></div>
 
     <div class="glass stack"><span class="label">Sesión</span><p class="small muted" style="margin:0">Entraste como ${esc(S.me.email)}</p>
+      <p class="tiny muted" style="margin:0">Futari guarda la hora y el tipo de teléfono cada vez que alguno de los dos abre la app, para estadísticas de uso.</p>
       <button class="btn ghost" onclick="startTour()">Ver la guía otra vez</button>
       <button class="btn danger" onclick="logout()">Cerrar sesión</button></div>
-    ${testerCard()}`);
+    ${isTester() ? `<button class="btn ghost" onclick="go('s-admin')">${icon('gear')} Abrir administración</button>` : ''}`);
   loadPhotos($('s-settings'));
 }
 function saveSettings() {

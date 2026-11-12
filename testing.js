@@ -1,6 +1,6 @@
 // Zona de pruebas: herramientas para limpiar datos. Solo se muestra a las cuentas de TESTERS
 // (o a todos en el emulador local). Es solo visual: las reglas de Firebase no cambian.
-import { getDocs, writeBatch, deleteField, terminate } from 'https://www.gstatic.com/firebasejs/11.0.2/firebase-firestore.js';
+import { getDocs, writeBatch, deleteField, terminate, query, where } from 'https://www.gstatic.com/firebasejs/11.0.2/firebase-firestore.js';
 import { signOut } from 'https://www.gstatic.com/firebasejs/11.0.2/firebase-auth.js';
 import { $, S, db, auth, EMU, esc, icon, expose, toast, openSheet, closeSheet, ask, col, ref, privCol, coupleRef,
          COLLECTIONS, PRIVATE, profile, uid } from './core.js';
@@ -62,6 +62,7 @@ async function wipeRun(kind) {
       for (const c of COLLECTIONS) for (const d of S.data[c]) ops.push(b => b.delete(ref(c, d.id)));
       for (const id of photos) ops.push(b => b.delete(ref('photos', id)));
       ops.push(b => b.delete(coupleRef));
+      for (const c of ['visits', 'errors']) for (const d of (await getDocs(col(c))).docs) ops.push(b => b.delete(d.ref));
     } else {
       for (const c of COLLECTIONS) {
         if (c === 'profiles') continue;
@@ -75,6 +76,7 @@ async function wipeRun(kind) {
       for (const a of S.data.answers) if (a.answers?.[me]) ops.push(b => b.update(ref('answers', a.id), { [`answers.${me}`]: deleteField() }));
       for (const l of S.data.lists) if (!mineDoc(l) && l.votes?.[me]) ops.push(b => b.update(ref('lists', l.id), { [`votes.${me}`]: deleteField() }));
       if (profile(me).id) ops.push(b => b.delete(ref('profiles', me)));
+      for (const c of ['visits', 'errors']) for (const d of (await getDocs(query(col(c), where('uid', '==', me)))).docs) ops.push(b => b.delete(d.ref));
       if (S.settings.members?.[me]) ops.push(b => b.update(coupleRef, { [`members.${me}`]: deleteField() }));
     }
     for (const c of PRIVATE) for (const d of (await getDocs(privCol(c))).docs) ops.push(b => b.delete(d.ref));
