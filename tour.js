@@ -7,7 +7,7 @@ const isIOS = () => /iphone|ipad|ipod/i.test(navigator.userAgent);
 
 const STEPS = () => [
   { emoji: '💞', title: `¡Bienvenido${myName() ? ', ' + myName() : ''}!`,
-    text: 'Esta es su app de pareja. Todo lo que hagan aquí lo ven los dos al instante. Te muestro lo principal en un minuto.' },
+    text: 'Esta es Futari (二人, «los dos» en japonés), su app de pareja. Todo lo que hagan aquí lo ven los dos al instante. Te muestro lo principal en un minuto.' },
   { tab: 'home', screen: 's-home', emoji: '🏠', title: 'Inicio',
     text: 'Su día a día juntos:', list: ['El contador de días juntos', '¿Cómo te sientes hoy? y la pregunta del día', 'El reto de la semana', 'Próximos momentos y fechas especiales'] },
   { tab: 'decide', screen: 's-decide', emoji: '🎲', title: 'Decidir',

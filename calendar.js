@@ -110,7 +110,7 @@ function downloadIcs(id) {
   const ev = S.data.events.find(e => e.id === id); if (!ev) return;
   const [a, b] = range(ev), allDay = !ev.time;
   const clean = s => String(s || '').replace(/[\\;,]/g, m => '\\' + m).replace(/\n/g, '\\n');
-  const ics = ['BEGIN:VCALENDAR', 'VERSION:2.0', 'PRODID:-//Nosotros//ES', 'BEGIN:VEVENT', `UID:${ev.id}@nosotros`,
+  const ics = ['BEGIN:VCALENDAR', 'VERSION:2.0', 'PRODID:-//Futari//ES', 'BEGIN:VEVENT', `UID:${ev.id}@futari`,
     `DTSTAMP:${new Date().toISOString().replace(/[-:]/g, '').slice(0, 15)}Z`,
     allDay ? `DTSTART;VALUE=DATE:${a}` : `DTSTART:${a}`, allDay ? `DTEND;VALUE=DATE:${b}` : `DTEND:${b}`,
     `SUMMARY:${clean(ev.title)}`, ev.note ? `DESCRIPTION:${clean(ev.note)}` : '', 'BEGIN:VALARM', 'TRIGGER:-PT1H', 'ACTION:DISPLAY',

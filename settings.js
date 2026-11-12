@@ -150,7 +150,7 @@ function exportData() {
   const blob = new Blob([JSON.stringify(out, null, 2)], { type: 'application/json' });
   const a = document.createElement('a');
   a.href = URL.createObjectURL(blob);
-  a.download = `nosotros-respaldo-${dayKey(new Date())}.json`;
+  a.download = `futari-respaldo-${dayKey(new Date())}.json`;
   a.click();
   setTimeout(() => URL.revokeObjectURL(a.href), 1000);
 }
