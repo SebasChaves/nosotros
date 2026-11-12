@@ -72,13 +72,52 @@ export const expose = fns => Object.assign(window, fns);
 /* ================= Navegación ================= */
 const showHooks = {};
 export const onShow = (id, fn) => { showHooks[id] = fn; };
+// Orden de las pestañas, para saber hacia qué lado deslizar.
+const TAB_ORDER = ['home', 'decide', 'moments', 'love', 'more'];
+const MAIN_SCREENS = new Set(['s-home', 's-decide', 's-moments', 's-love', 's-more']);
+const SLIDE_EASE = 'cubic-bezier(.22,.8,.24,1)';
+let leaving = null;
+// Dirección: 1 = la nueva entra desde la derecha; -1 = desde la izquierda.
+function slideDir(from, to) {
+  const a = TAB_ORDER.indexOf(from.dataset.tab), b = TAB_ORDER.indexOf(to.dataset.tab);
+  if (from.dataset.tab !== to.dataset.tab && a >= 0 && b >= 0) return b > a ? 1 : -1;
+  // Dentro de la misma pestaña (o la búsqueda): entrar a una sub-pantalla avanza, volver a la principal retrocede.
+  if (to.id === 's-search') return 1;
+  if (from.id === 's-search') return -1;
+  return MAIN_SCREENS.has(to.id) || (from.id === 's-trip' && to.id === 's-trips') || (from.id === 's-gallery' && to.id === 's-moments') ? -1 : 1;
+}
+export function placeTabPill() {
+  const pill = document.querySelector('.tabbar .pill'), on = document.querySelector('.tabbar button.on');
+  if (!pill) return;
+  pill.style.opacity = on ? 1 : 0;
+  if (on) pill.style.transform = `translateX(${on.offsetLeft}px)`;
+}
 export function go(id) {
   const s = $(id); if (!s) return;
-  document.querySelectorAll('.screen').forEach(x => x.classList.toggle('active', x === s));
+  const old = document.querySelector('.screen.active');
+  if (old === s) { window.scrollTo(0, 0); showHooks[id]?.(); return; }
+  const reduce = matchMedia('(prefers-reduced-motion: reduce)').matches;
+  leaving?.(); // si se toca rápido, termina la animación anterior
+  if (old && !reduce && document.body.classList.contains('in')) {
+    // La pantalla que sale queda "flotando" en su lugar mientras se desliza hacia afuera.
+    const y = window.scrollY, rect = { top: old.offsetTop - y, left: old.offsetLeft, width: old.offsetWidth };
+    old.classList.add('leaving');
+    Object.assign(old.style, { top: rect.top + 'px', left: rect.left + 'px', width: rect.width + 'px' });
+    const dir = slideDir(old, s);
+    const outA = old.animate([{ transform: 'translateX(0)', opacity: 1 }, { transform: `translateX(${-dir * 30}%)`, opacity: 0 }], { duration: 300, easing: SLIDE_EASE });
+    const cleanup = () => { leaving = null; outA.cancel(); old.classList.remove('leaving'); old.style.top = old.style.left = old.style.width = ''; };
+    leaving = cleanup; outA.finished.then(() => leaving === cleanup && cleanup()).catch(() => {});
+    document.querySelectorAll('.screen').forEach(x => x.classList.toggle('active', x === s));
+    s.animate([{ transform: `translateX(${dir * 100}%)` }, { transform: 'translateX(0)' }], { duration: 340, easing: SLIDE_EASE });
+  } else {
+    document.querySelectorAll('.screen').forEach(x => x.classList.toggle('active', x === s));
+  }
   document.querySelectorAll('.tabbar button').forEach(b => b.classList.toggle('on', b.dataset.tab === s.dataset.tab));
+  placeTabPill();
   window.scrollTo(0, 0);
   showHooks[id]?.();
 }
+addEventListener('resize', () => placeTabPill());
 
 /* ================= Fechas ================= */
 export const DAY = 86400000;

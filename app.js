@@ -2,7 +2,7 @@
 import { onAuthStateChanged, signInWithEmailAndPassword, sendPasswordResetEmail }
   from 'https://www.gstatic.com/firebasejs/11.0.2/firebase-auth.js';
 import { onSnapshot } from 'https://www.gstatic.com/firebasejs/11.0.2/firebase-firestore.js';
-import { $, S, auth, configured, coupleRef, col, privCol, COLLECTIONS, PRIVATE, toast, expose, rerender, rerenderAll,
+import { $, S, auth, configured, placeTabPill, coupleRef, col, privCol, COLLECTIONS, PRIVATE, toast, expose, rerender, rerenderAll,
          partnerUid, profile, uid, ask } from './core.js';
 import { todayAnswers } from './home.js';
 import { listNeedsMyVote } from './decide.js';
@@ -25,7 +25,7 @@ import { maybeStartTour, resetTourCheck } from './tour.js';
 // La pantalla de carga se muestra al menos ~2 s para que se vea la animación (salvo con "reducir movimiento").
 const splashEnd = performance.now() + (matchMedia('(prefers-reduced-motion: reduce)').matches ? 0 : 2200);
 let nextState = null, stateTimer = null;
-const applyState = s => { document.body.classList.remove('loading', 'out', 'in', 'noconfig'); document.body.classList.add(s); };
+const applyState = s => { document.body.classList.remove('loading', 'out', 'in', 'noconfig'); document.body.classList.add(s); if (s === 'in') requestAnimationFrame(placeTabPill); };
 const setState = s => {
   const wait = splashEnd - performance.now();
   if (document.body.classList.contains('loading') && wait > 0) {
