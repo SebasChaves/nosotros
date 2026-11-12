@@ -1,7 +1,7 @@
 // Guarda la app en caché para que funcione sin internet.
 // Sube el número de versión cada vez que cambies archivos.
-const CACHE = 'nosotros-v1';
-const FILES = ['./', './index.html', './manifest.json', './icon-180.png', './icon-192.png', './icon-512.png'];
+const CACHE = 'nosotros-v2';
+const FILES = ['./', './index.html', './manifest.json', './firebase-config.js', './icon-180.png', './icon-192.png', './icon-512.png'];
 
 self.addEventListener('install', e => {
   e.waitUntil(caches.open(CACHE).then(c => c.addAll(FILES)));
@@ -15,14 +15,16 @@ self.addEventListener('activate', e => {
   self.clients.claim();
 });
 
-// Primero intenta la red (para recibir actualizaciones); si no hay, usa la caché.
+// Solo se cachean los archivos de la app y la librería de Firebase.
+// Las conexiones con la base de datos pasan directo (Firebase maneja su propio modo sin internet).
 self.addEventListener('fetch', e => {
-  if (e.request.method !== 'GET') return;
+  const url = new URL(e.request.url);
+  const mine = url.origin === self.location.origin || url.hostname === 'www.gstatic.com';
+  if (e.request.method !== 'GET' || !mine) return;
   e.respondWith(
     fetch(e.request)
       .then(res => {
-        const copy = res.clone();
-        caches.open(CACHE).then(c => c.put(e.request, copy));
+        if (res.ok) { const copy = res.clone(); caches.open(CACHE).then(c => c.put(e.request, copy)); }
         return res;
       })
       .catch(() => caches.match(e.request))
