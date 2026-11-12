@@ -26,6 +26,7 @@ function renderMore() {
       ${tile('s-places', 'fork', 'Restaurantes', plural(S.data.places.length, 'lugar', 'lugares'))}
       ${tile('s-shows', 'film', 'Pelis y series', plural(S.data.shows.filter(s => (s.status || 'want') === 'want').length, 'por ver', 'por ver'))}
       ${tile('s-cal', 'cal', 'Calendario', nextPlan ? esc(nextPlan.title) : 'Planes de los dos')}
+      ${tile('s-game', 'flame', 'Juego de retos', 'Verdad o reto y más')}
       ${tile('s-us', 'heart', 'Gustos y regalos', 'Tallas, antojos, ideas')}
       ${tile('s-quiz', 'brain', '¿Cuánto me conoces?', quizWaiting() ? `${esc(pn)} ya jugó` : 'Quiz de pareja', quizWaiting() ? 1 : 0)}
       ${tile('s-bucket', 'list', 'Bucket list', `${bucketDone} de ${S.data.bucket.length} cumplidas`)}
@@ -128,6 +129,7 @@ function logout() { if (confirm('¿Cerrar sesión en este teléfono?')) { go('s-
 function exportData() {
   const out = { version: 4, start: S.settings.start, currency: S.settings.currency, members: S.settings.members };
   for (const c of COLLECTIONS) out[c] = S.data[c];
+  out.cards = S.data.cards.filter(c => c.level !== 'ours'); // las de "Solo nosotros" no salen del teléfono
   for (const c of PRIVATE) out[c] = S.priv[c];
   const blob = new Blob([JSON.stringify(out, null, 2)], { type: 'application/json' });
   const a = document.createElement('a');
