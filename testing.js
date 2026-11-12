@@ -70,7 +70,7 @@ async function wipeRun(kind) {
       }
       // Fotos de mis momentos, mi foto de perfil y mi fondo
       const myMoments = new Set(S.data.moments.filter(mineDoc).map(m => m.id));
-      for (const id of photos) if (myMoments.has(id.replace(/^t-/, '')) || id.startsWith(`avatar-${me}`) || id === `bg-${me}`) ops.push(b => b.delete(ref('photos', id)));
+      for (const id of photos) if (myMoments.has(id.replace(/^t-/, '')) || (id.startsWith('d-') || id.startsWith('t-d-')) && id.endsWith('-' + me) || id.startsWith(`avatar-${me}`) || id === `bg-${me}`) ops.push(b => b.delete(ref('photos', id)));
       // Mi parte dentro de documentos compartidos
       for (const m of S.data.moods) if (m[me]) ops.push(b => b.update(ref('moods', m.id), { [me]: deleteField() }));
       for (const a of S.data.answers) if (a.answers?.[me]) ops.push(b => b.update(ref('answers', a.id), { [`answers.${me}`]: deleteField() }));

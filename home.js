@@ -9,10 +9,11 @@ import { itemsFor, nextEventDate } from './calendar.js';
 import { unreadNotes } from './love.js';
 import { listNeedsMyVote } from './decide.js';
 import { quizWaiting } from './quiz.js';
+import { myDailyDone, partnerDailyDone } from './daily.js';
 
 /* ---------- Racha y "Pensando en ti" ---------- */
 // Un día cuenta para la racha si los dos hicieron algo: marcar ánimo, responder la pregunta o mandar un "pensando en ti".
-const didSomething = (key, who) => !!(S.data.moods.find(x => x.id === key)?.[who] || S.data.answers.find(x => x.id === key)?.answers?.[who] || S.data.thinks.find(x => x.id === key)?.[who]);
+const didSomething = (key, who) => !!(S.data.moods.find(x => x.id === key)?.[who] || S.data.answers.find(x => x.id === key)?.answers?.[who] || S.data.thinks.find(x => x.id === key)?.[who] || S.data.daily.find(x => x.id === key)?.[who]);
 const bothDid = key => { const p = partnerUid(); return !!p && didSomething(key, uid()) && didSomething(key, p); };
 const prevDay = d => new Date(d.getFullYear(), d.getMonth(), d.getDate() - 1);
 export function streak() {
@@ -21,7 +22,7 @@ export function streak() {
   while (n < 3660 && bothDid(dayKey(d))) { n++; d = prevDay(d); }
   return n;
 }
-function bestStreak() {
+export function bestStreak() {
   const keys = [...new Set([...S.data.moods, ...S.data.answers, ...S.data.thinks].map(x => x.id))].filter(bothDid).sort();
   let best = 0, run = 0, prev = null;
   for (const k of keys) { run = prev && dayKey(new Date(parseDate(prev).getFullYear(), parseDate(prev).getMonth(), parseDate(prev).getDate() + 1)) === k ? run + 1 : 1; best = Math.max(best, run); prev = k; }
@@ -51,6 +52,9 @@ function todayCard() {
   for (const it of itemsFor(tomorrow).filter(i => i.kind !== 'trip')) row('⏰', `<b>Mañana:</b> ${esc(it.label)}`, `go('s-cal');calPick('${tomorrow}')`);
   const ans = todayAnswers();
   if (!ans?.answers?.[uid()]) row('💬', p && ans?.answers?.[p] ? `Responde la pregunta del día (${pn} ya respondió)` : 'Responde la pregunta del día', `document.getElementById('answerText')?.scrollIntoView({block:'center'});document.getElementById('answerText')?.focus()`);
+  if (!myDailyDone()) row('📷', partnerDailyDone() ? `${pn} ya subió su foto del día: sube la tuya para verla` : 'Sube tu foto del día', `go('s-moments');momTab('daily')`);
+  const lb = S.settings.lastBackup, dataCount = S.data.notes.length + S.data.moments.length + S.data.bucket.length;
+  if (dataCount > 10 && (!lb || Date.now() - lb > 30 * 864e5)) row('💾', lb ? `Hace ${Math.round((Date.now() - lb) / 864e5)} días que no descargan un respaldo` : 'Descarguen su primer respaldo', 'exportData()');
   const notes = unreadNotes(); if (notes) row('💌', `Tienes ${plural(notes, 'nota nueva', 'notas nuevas')} en el frasco`, `go('s-love');loveTab('notes')`);
   const toDo = S.data.coupons.filter(c => c.fromUid === uid() && c.redeemedAt && !c.doneAt).length; if (toDo) row('🎟️', `${pn} canjeó ${plural(toDo, 'cupón', 'cupones')}: te toca cumplir`, `go('s-love');loveTab('coupons')`);
   const fresh = S.data.coupons.filter(c => c.fromUid !== uid() && !c.seenAt).length; if (fresh) row('🎁', `${pn} te regaló ${plural(fresh, 'cupón', 'cupones')}`, `go('s-love');loveTab('coupons')`);
@@ -267,6 +271,6 @@ function renderHome() {
   loadPhotos($('s-home'));
 }
 
-on('dates moments moods answers challenges trips profiles events thinks notes coupons lists quiz', renderHome);
+on('dates moments moods answers challenges trips profiles events thinks notes coupons lists quiz daily', renderHome);
 on('thinks', checkIncomingThink);
 expose({ sendThink, openFechas, addFecha, delFecha, answerQuestion, openAnswers, setMood, skipChallenge, doneChallenge });

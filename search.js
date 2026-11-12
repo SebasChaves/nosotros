@@ -30,6 +30,9 @@ function sources() {
   add('Gastos', '💸', D.expenses.filter(e => e.type !== 'settle').map(e => ({ text: e.desc, sub: `${fmtMoney(e.amount)} · ${fmtShort(parseDate(e.date))}`, open: () => go('s-money') })));
   add('Listas de Decidir', '🎲', D.lists.map(l => ({ text: `${l.name} ${(l.options || []).join(' ')}`, label: l.name, sub: `${(l.options || []).length} opciones`, open: () => { go('s-decide'); window.decideTab('lists'); window.selectList(l.id); } })));
   add('Preguntas del día', '💬', D.answers.filter(a => a.answers?.[me]).map(a => ({ text: `${a.q} ${Object.values(a.answers).map(x => x.text).join(' ')}`, label: a.q, sub: fmtShort(parseDate(a.id)), open: () => { go('s-home'); window.openAnswers(); } })));
+  add('Recetas', '👩‍🍳', window.__allRecipes?.().map(r => ({ text: ` `, label: r.name, sub: r.min ? ` min` : '', open: () => { go('s-recipes'); window.openRecipe(r.id); } })) || []);
+  add('Playlist', '🎵', D.songs.map(s => ({ text: `  `, label: s.title, sub: s.artist || '', open: () => go('s-music') })));
+  add('Mapa', '📍', D.pins.map(p => ({ text: `   `, label: p.title, sub: [p.place, p.country].filter(Boolean).join(', '), open: () => { go('s-map'); setTimeout(() => window.flyPin(p.id), 400); } })));
   add('Ideas de regalo', '🎁', S.priv.gifts.map(g => ({ text: g.text, sub: 'Solo tú la ves', open: () => { go('s-us'); window.usTab('gifts'); } })));
   return out;
 }

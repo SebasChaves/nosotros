@@ -7,6 +7,8 @@ import { $, S, db, auth, esc, icon, paint, on, onShow, expose, toast, write, ref
 import { ACCENTS, CURRENCIES } from './data.js';
 import { backBar, groceryPending } from './lists.js';
 import { balance } from './money.js';
+import { badgeCount } from './badges.js';
+import { pinEnabled } from './lock.js';
 import { quizWaiting } from './quiz.js';
 import { isTester } from './testing.js';
 
@@ -27,6 +29,10 @@ function renderMore() {
       ${tile('s-places', 'fork', 'Restaurantes', plural(S.data.places.length, 'lugar', 'lugares'))}
       ${tile('s-shows', 'film', 'Pelis y series', plural(S.data.shows.filter(s => (s.status || 'want') === 'want').length, 'por ver', 'por ver'))}
       ${tile('s-cal', 'cal', 'Calendario', nextPlan ? esc(nextPlan.title) : 'Planes de los dos')}
+      ${tile('s-recipes', 'pot', 'Recetas', S.data.menu.length ? 'Recetas y menú semanal' : `Más de 40 recetas`)}
+      ${tile('s-map', 'map', 'Nuestro mapa', plural(S.data.pins.length, 'lugar', 'lugares'))}
+      ${tile('s-music', 'music', 'Su playlist', plural(S.data.songs.length, 'canción', 'canciones'))}
+      ${tile('s-badges', 'medal', 'Logros', ` de `)}
       ${tile('s-game', 'flame', 'Juego de retos', 'Verdad o reto y más')}
       ${tile('s-us', 'heart', 'Gustos y regalos', 'Tallas, antojos, ideas')}
       ${tile('s-quiz', 'brain', '¿Cuánto me conoces?', quizWaiting() ? `${esc(pn)} ya jugó` : 'Quiz de pareja', quizWaiting() ? 1 : 0)}
@@ -62,8 +68,12 @@ function renderSettings() {
       <div class="grid2"><label class="btn ghost small" style="width:100%">${icon('photo')} ${prefs.bg ? 'Cambiar' : 'Elegir foto'}<input type="file" accept="image/*" hidden onchange="pickBg(this)"></label>
         ${prefs.bg ? `<button class="btn ghost small" style="width:100%" onclick="removeBg()">Quitar</button>` : ''}</div></div>
 
+    <div class="glass stack"><span class="label">${icon('lock')} Bloqueo con PIN</span>
+      <p class="small muted" style="margin:0">Opcional. Pide un código de 4 números al abrir la app en este teléfono (y si estuvo cerrada más de un minuto).</p>
+      ${pinEnabled() ? `<div class="grid2"><button class="btn ghost small" style="width:100%" onclick="setupPin()">Cambiar PIN</button><button class="btn ghost small" style="width:100%" onclick="disablePin()">Desactivar</button></div>` : `<button class="btn ghost" onclick="setupPin()">Activar bloqueo con PIN</button>`}</div>
+
     <div class="glass stack"><span class="label">Respaldo</span>
-      <p class="small muted" style="margin:0">Todo está guardado en la nube. Igual pueden descargar una copia (sin las fotos).</p>
+      <p class="small muted" style="margin:0">Todo está guardado en la nube. Igual pueden descargar una copia (sin las fotos). ${S.settings.lastBackup ? `Último respaldo: ${new Date(S.settings.lastBackup).toLocaleDateString('es', { day: 'numeric', month: 'long', year: 'numeric' })}.` : 'Aún no han descargado ninguno.'}</p>
       <div class="grid2"><button class="btn ghost small" style="width:100%" onclick="exportData()">Descargar</button>
         <label class="btn ghost small" style="width:100%">Subir respaldo<input type="file" accept="application/json,.json" hidden onchange="importData(this)"></label></div></div>
 
@@ -145,6 +155,7 @@ async function logout() { if (await ask('¿Cerrar sesión en este teléfono?')) 
 
 /* ---------- Respaldo ---------- */
 function exportData() {
+  write(setDoc(coupleRef, { lastBackup: Date.now() }, { merge: true }));
   const out = { version: 4, start: S.settings.start, currency: S.settings.currency, members: S.settings.members };
   for (const c of COLLECTIONS) out[c] = S.data[c];
   out.cards = S.data.cards.filter(c => c.level !== 'ours'); // las de "Solo nosotros" no salen del teléfono
@@ -202,8 +213,9 @@ function importData(input) {
   input.value = '';
 }
 
-on('groceries expenses trips places bucket quiz shows events', renderMore);
+on('groceries expenses trips places bucket quiz shows events pins songs menu notes moments thinks answers daily', renderMore);
 on('ideas profiles', () => { if ($('s-settings').classList.contains('active')) renderSettings(); });
 onShow('s-settings', renderSettings);
+window.rerenderSettings = () => { if ($('s-settings').classList.contains('active')) renderSettings(); };
 onShow('s-more', renderMore);
 expose({ saveSettings, setTheme, setAccent, pickAvatar, removeAvatar, pickBg, removeBg, delIdea, logout, exportData, importData });

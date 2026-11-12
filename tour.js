@@ -13,15 +13,15 @@ const STEPS = () => [
   { tab: 'decide', screen: 's-decide', emoji: '🎲', title: 'Decidir',
     text: '¿No se ponen de acuerdo? Arman una lista y eligen:', list: ['Al azar', 'Eliminando por turnos', 'Match: cada uno vota en su teléfono y solo quedan las coincidencias', 'Además, más de 100 ideas de citas'] },
   { tab: 'moments', screen: 's-moments', emoji: '📸', title: 'Momentos',
-    text: 'Su historia con fotos, ordenada por año. Arriba está la galería con todas las fotos.' },
+    text: 'Su historia con fotos:', list: ['Línea de tiempo con los momentos importantes', 'Foto del día: cada uno sube una foto diaria; la de tu pareja se revela cuando subes la tuya', 'Galería con todas las fotos'] },
   { tab: 'love', screen: 's-love', emoji: '💌', title: 'Detalles',
     text: 'Para consentirse:', list: ['Frasco de notas: escribes para tu pareja y ella saca una cuando quiera', 'Cupones canjeables: "vale por un masaje"…'] },
   { tab: 'more', screen: 's-more', emoji: '✨', title: 'Más',
-    text: 'Todo lo demás: súper, gastos compartidos, viajes con búsqueda de hospedaje, pelis y series, calendario, juego de retos, gustos y regalos, quiz y el resumen del año.' },
+    text: 'Todo lo demás:', list: ['Súper, gastos y viajes con búsqueda de hospedaje', 'Recetas con menú semanal que manda los ingredientes al súper', 'Nuestro mapa, su playlist y pelis por ver', 'Calendario, juego de retos, quiz y gustos y regalos', 'Logros y el resumen del año'] },
   { emoji: '🔴', title: 'Los puntitos',
     text: `Cuando hay algo pendiente para ti (una nota nueva, un voto, un cupón canjeado) aparece un puntito en la barra de abajo. Y con la lupa ${icon('search')} de arriba encuentras cualquier cosa.` },
   standalone()
-    ? { emoji: '⚙️', title: '¡Listo!', text: 'Empieza poniendo tu nombre, la fecha en que empezaron y tu foto en Ajustes.', final: true }
+    ? { emoji: '⚙️', title: '¡Listo!', text: 'Empieza poniendo tu nombre, la fecha en que empezaron y tu foto en Ajustes. Ahí también puedes activar un PIN para proteger la app.', final: true }
     : { emoji: '📲', title: 'Instálala en tu teléfono', final: true,
         text: isIOS() ? 'En Safari toca el botón Compartir y luego "Agregar a pantalla de inicio". Así se abre como una app y funciona sin internet.'
                       : 'En Chrome toca el menú ⋮ y luego "Instalar app" o "Agregar a pantalla principal". Así se abre como una app y funciona sin internet.' },

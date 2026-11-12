@@ -434,3 +434,46 @@ body[data-theme="light"] .tour { background: rgba(40, 20, 50, .35); }
 .adm-heat { flex: 1; display: grid; grid-template-columns: repeat(24, 1fr); gap: 2px; }
 .adm-heat i { height: 16px; border-radius: 3px; }
 .adm-heat.lbl span { font-size: 9px; color: var(--muted); }
+
+/* Foto del día */
+.daily-pair { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
+.daily-slot { position: relative; aspect-ratio: 3 / 4; border-radius: 18px; overflow: hidden; border: 1px solid var(--line); background: var(--soft); padding: 0; cursor: zoom-in; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 4px; text-align: center; color: var(--text); }
+.daily-slot.empty, .daily-slot.locked { cursor: default; padding: 10px; }
+.daily-slot.locked { background: linear-gradient(160deg, color-mix(in srgb, var(--g1) 25%, transparent), color-mix(in srgb, var(--g3) 25%, transparent)); backdrop-filter: blur(10px); }
+.daily-slot img { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; }
+.daily-cap { position: absolute; left: 0; right: 0; bottom: 0; padding: 18px 8px 7px; font-size: 11.5px; text-align: left; color: #fff; background: linear-gradient(transparent, rgba(0,0,0,.7)); }
+
+/* Mapa */
+.map-box { height: 52vh; min-height: 300px; border-radius: 24px; overflow: hidden; border: 1px solid var(--line); background: var(--soft); z-index: 0; }
+.map-pin { width: 34px; height: 34px; border-radius: 50% 50% 50% 0; transform: rotate(-45deg); background: var(--grad); display: grid; place-items: center; box-shadow: 0 6px 14px -6px rgba(0,0,0,.6); border: 2px solid #fff; }
+.map-pin span { transform: rotate(45deg); font-size: 16px; line-height: 1; }
+.leaflet-popup-content-wrapper, .leaflet-popup-tip { background: var(--panel); color: var(--text); border: 1px solid var(--line); }
+.leaflet-popup-content { font-family: var(--font); font-size: 13px; }
+.leaflet-popup-content a { color: var(--g2); }
+.leaflet-control-zoom a { background: var(--panel) !important; color: var(--text) !important; border-color: var(--line) !important; }
+
+/* Logros */
+.badges { display: grid; grid-template-columns: repeat(2, 1fr); gap: 10px; }
+.badge-card { border: 1px solid var(--line); background: var(--glass); border-radius: 20px; padding: 14px; display: flex; flex-direction: column; gap: 6px; align-items: flex-start; }
+.badge-card .be { font-size: 34px; filter: grayscale(1); opacity: .45; }
+.badge-card.on { border-color: color-mix(in srgb, var(--g2) 55%, transparent); background: color-mix(in srgb, var(--g2) 10%, var(--glass)); }
+.badge-card.on .be { filter: none; opacity: 1; }
+.badge-card .progress { width: 100%; }
+
+/* Bloqueo con PIN */
+.lock { position: fixed; inset: 0; z-index: 94; display: flex; align-items: center; justify-content: center; padding: 24px; background: var(--bg); }
+.lock::before { content: ""; position: absolute; inset: 0; background: radial-gradient(60vmax 60vmax at -10% -5%, color-mix(in srgb, var(--g1) 35%, transparent), transparent 60%), radial-gradient(60vmax 60vmax at 110% 110%, color-mix(in srgb, var(--g3) 28%, transparent), transparent 60%); }
+.lock-box { position: relative; display: flex; flex-direction: column; align-items: center; gap: 8px; width: 100%; max-width: 300px; text-align: center; }
+.lock-box h2 { margin-top: 8px; }
+.lock-box p { margin: 0 0 8px; min-height: 18px; }
+.lock-dots { display: flex; gap: 14px; margin: 6px 0 18px; }
+.lock-dots i { width: 14px; height: 14px; border-radius: 50%; border: 2px solid var(--muted); transition: background .15s, border-color .15s; }
+.lock-dots i.on { background: var(--grad); border-color: transparent; }
+.lock-keys { display: grid; grid-template-columns: repeat(3, 72px); gap: 14px; }
+.lock-keys button { width: 72px; height: 72px; border-radius: 50%; border: 1px solid var(--line); background: var(--glass); color: var(--text); font: 600 26px var(--font); cursor: pointer; display: grid; place-items: center; }
+.lock-keys button:active { background: var(--glass-2); }
+.lock-keys button.txt { border: 0; background: none; font-size: 14px; color: var(--muted); }
+.lock-box.shake { animation: shake .4s; }
+@keyframes shake { 20%, 60% { transform: translateX(-10px); } 40%, 80% { transform: translateX(10px); } }
+
+body:not([data-theme="light"]) .map-box .leaflet-tile-pane { filter: invert(1) hue-rotate(180deg) brightness(.9) contrast(.9) saturate(.7); }

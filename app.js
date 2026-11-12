@@ -21,13 +21,18 @@ import './games.js';
 import { applyAccent, applyTheme, uploadData } from './settings.js';
 import './search.js';
 import './admin.js';
+import './recipes.js';
+import './map.js';
+import './music.js';
+import { startBadgeWatch } from './badges.js';
+import { lockNow } from './lock.js';
 import { logVisit } from './tracking.js';
 import { maybeStartTour, resetTourCheck } from './tour.js';
 
 // La pantalla de carga se muestra al menos ~2 s para que se vea la animación (salvo con "reducir movimiento").
 const splashEnd = performance.now() + (matchMedia('(prefers-reduced-motion: reduce)').matches ? 0 : 2200);
 let nextState = null, stateTimer = null;
-const applyState = s => { document.body.classList.remove('loading', 'out', 'in', 'noconfig'); document.body.classList.add(s); if (s === 'in') requestAnimationFrame(placeTabPill); };
+const applyState = s => { document.body.classList.remove('loading', 'out', 'in', 'noconfig'); document.body.classList.add(s); if (s === 'in') { requestAnimationFrame(placeTabPill); lockNow(); } };
 const setState = s => {
   const wait = splashEnd - performance.now();
   if (document.body.classList.contains('loading') && wait > 0) {
@@ -94,6 +99,7 @@ function listen() {
   }
   rerenderAll(); updateBadges();
   logVisit();
+  startBadgeWatch();
 }
 
 function updateBadges() {

@@ -2,10 +2,17 @@
 import { writeBatch } from 'https://www.gstatic.com/firebasejs/11.0.2/firebase-firestore.js';
 import { $, S, db, esc, icon, paint, on, onShow, expose, toast, openSheet, closeSheet, write, ref, newRef,
          loadPhotos, cachePhoto, compressImage, makeThumb, thumbId, parseDate, fmtDate, todayKey, nameOf, uid, ask } from './core.js';
+import { dailyHTML, myDailyDone, partnerDailyDone } from './daily.js';
+
+let tab = 'timeline';
+function momTab(t) { tab = t; render(); }
 
 function render() {
   const items = [...S.data.moments].sort((a, b) => b.date.localeCompare(a.date) || b.createdAt - a.createdAt);
-  let html = `<div class="topbar"><h1>Momentos</h1><div class="row" style="gap:8px"><button class="icon-btn" aria-label="Galería" onclick="go('s-gallery')">${icon('grid')}</button><button class="btn small" onclick="openMoment()">${icon('plus')} Agregar</button></div></div>`;
+  const dot = !myDailyDone() && partnerDailyDone() ? '<b class="dot">1</b>' : '';
+  let html = `<div class="topbar"><h1>Momentos</h1><div class="row" style="gap:8px"><button class="icon-btn" aria-label="Galería" onclick="go('s-gallery')">${icon('grid')}</button>${tab === 'timeline' ? `<button class="btn small" onclick="openMoment()">${icon('plus')} Agregar</button>` : ''}</div></div>
+    <div class="seg"><button class="${tab === 'timeline' ? 'on' : ''}" onclick="momTab('timeline')">Línea de tiempo</button><button class="${tab === 'daily' ? 'on' : ''}" onclick="momTab('daily')">Foto del día${dot}</button></div>`;
+  if (tab === 'daily') { paint('s-moments', html + dailyHTML()); loadPhotos($('s-moments')); return; }
   if (!items.length) {
     html += `<div class="glass center stack"><div style="font-size:46px">📸</div><h2>Su historia empieza aquí</h2>
       <p class="muted" style="margin:0">Guarden momentos importantes con foto: la primera cita, viajes, logros…</p>
@@ -86,7 +93,7 @@ function renderGallery() {
   loadPhotos($('s-gallery'));
 }
 
-on('moments', render);
+on('moments daily profiles', render);
 on('moments', () => { if ($('s-gallery').classList.contains('active')) renderGallery(); });
 onShow('s-gallery', renderGallery);
-expose({ openMoment, pickPhoto, saveMoment, delMoment });
+expose({ momTab, openMoment, pickPhoto, saveMoment, delMoment });
