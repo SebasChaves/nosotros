@@ -2,7 +2,7 @@
 import { initializeApp } from 'https://www.gstatic.com/firebasejs/11.0.2/firebase-app.js';
 import { getAuth, connectAuthEmulator } from 'https://www.gstatic.com/firebasejs/11.0.2/firebase-auth.js';
 import { initializeFirestore, persistentLocalCache, persistentMultipleTabManager, memoryLocalCache,
-         connectFirestoreEmulator, doc, collection, getDoc } from 'https://www.gstatic.com/firebasejs/11.0.2/firebase-firestore.js';
+         connectFirestoreEmulator, doc, collection, getDoc, setDoc } from 'https://www.gstatic.com/firebasejs/11.0.2/firebase-firestore.js';
 import { firebaseConfig } from './firebase-config.js';
 
 /* ================= Interfaz ================= */
@@ -140,7 +140,7 @@ export const write = p => p.catch(err => {
 
 /* ================= Estado ================= */
 export const COLLECTIONS = ['bucket', 'ideas', 'notes', 'coupons', 'dates', 'moments', 'lists', 'answers',
-  'moods', 'challenges', 'groceries', 'expenses', 'places', 'trips', 'quiz', 'profiles', 'shows', 'events', 'cards', 'games'];
+  'moods', 'challenges', 'groceries', 'expenses', 'places', 'trips', 'quiz', 'profiles', 'shows', 'events', 'cards', 'games', 'thinks'];
 export const PRIVATE = ['gifts'];
 export const S = {
   me: null,
@@ -182,15 +182,37 @@ export function rerenderAll() {
 
 /* ================= Fotos ================= */
 const photoCache = {};
+const getPhoto = id => (photoCache[id] ??= getDoc(ref('photos', id)).then(s => s.data()?.data || '').catch(() => { delete photoCache[id]; return ''; }));
 export function cachePhoto(id, data) { photoCache[id] = Promise.resolve(data); }
 export function forgetPhoto(id) { delete photoCache[id]; }
+// Cada foto de un momento tiene una miniatura liviana (~30 KB) con id "t-<id>" para listas y galería.
+export const thumbId = id => `t-${id}`;
+export async function makeThumb(dataUrl, max = 480) {
+  const img = await new Promise((ok, bad) => { const i = new Image(); i.onload = () => ok(i); i.onerror = bad; i.src = dataUrl; });
+  const s = Math.min(1, max / Math.max(img.naturalWidth, img.naturalHeight));
+  const c = document.createElement('canvas');
+  c.width = Math.round(img.naturalWidth * s); c.height = Math.round(img.naturalHeight * s);
+  c.getContext('2d').drawImage(img, 0, 0, c.width, c.height);
+  return c.toDataURL('image/jpeg', 0.72);
+}
+async function fillPhoto(img) {
+  let src;
+  if (img.dataset.thumb) {
+    const id = img.dataset.thumb;
+    src = await getPhoto(thumbId(id));
+    if (!src) { // fotos de antes: se crea la miniatura una sola vez y se guarda
+      const full = await getPhoto(id);
+      if (full) { src = await makeThumb(full).catch(() => full); cachePhoto(thumbId(id), src); write(setDoc(ref('photos', thumbId(id)), { data: src })); }
+    }
+  } else src = await getPhoto(img.dataset.photo);
+  if (src) img.src = src; else img.remove();
+}
+// Las fotos se cargan solo cuando están por aparecer en pantalla.
+const photoIO = 'IntersectionObserver' in window
+  ? new IntersectionObserver(es => es.forEach(e => { if (e.isIntersecting) { photoIO.unobserve(e.target); fillPhoto(e.target); } }), { rootMargin: '500px 0px' })
+  : null;
 export function loadPhotos(root) {
-  root?.querySelectorAll('img[data-photo]').forEach(async img => {
-    const id = img.dataset.photo;
-    photoCache[id] ??= getDoc(ref('photos', id)).then(s => s.data()?.data || '').catch(() => { delete photoCache[id]; return ''; });
-    const src = await photoCache[id];
-    if (src) img.src = src; else img.remove();
-  });
+  root?.querySelectorAll('img[data-photo]:not([src]),img[data-thumb]:not([src])').forEach(img => photoIO ? photoIO.observe(img) : fillPhoto(img));
 }
 // Reduce la foto para que quepa en el plan gratis (máx. ~700 KB por foto).
 export async function compressImage(file, maxSide = 1280) {
@@ -209,7 +231,33 @@ export async function compressImage(file, maxSide = 1280) {
     return out;
   } finally { URL.revokeObjectURL(url); }
 }
-export function viewPhoto(img) { $('viewerImg').src = img.src; $('viewer').classList.add('show'); }
+// Abre la foto en grande: muestra la miniatura al instante y la cambia por la completa al cargar.
+export async function viewPhoto(img) {
+  $('viewerImg').src = img.src || ''; $('viewer').classList.add('show');
+  const id = img.dataset?.thumb;
+  if (id) { const full = await getPhoto(id); if (full && $('viewer').classList.contains('show')) $('viewerImg').src = full; }
+}
+
+/* ================= Celebraciones ================= */
+// Lluvia corta de corazones o confeti. No hace nada si el teléfono pide menos movimiento.
+export function celebrate(kind = 'confetti') {
+  if (matchMedia('(prefers-reduced-motion: reduce)').matches) return;
+  const layer = document.createElement('div');
+  layer.className = 'celebrate'; layer.setAttribute('aria-hidden', 'true');
+  const pieces = kind === 'hearts' ? ['❤️', '💕', '💖', '💗', '🧡'] : null;
+  const n = kind === 'hearts' ? 18 : 46;
+  for (let i = 0; i < n; i++) {
+    const p = document.createElement('i');
+    const x = Math.random() * 100, dx = (Math.random() - .5) * 40, rot = (Math.random() - .5) * 720;
+    p.style.cssText = `left:${x}vw;--dx:${dx}vw;--rot:${rot}deg;animation-delay:${Math.random() * .25}s;animation-duration:${1.1 + Math.random() * .9}s`;
+    if (pieces) { p.textContent = pick(pieces); p.className = 'h'; }
+    else p.style.background = pick(['var(--g1)', 'var(--g2)', 'var(--g3)', '#fff', '#5EE0A0']);
+    layer.appendChild(p);
+  }
+  document.body.appendChild(layer);
+  navigator.vibrate?.(kind === 'hearts' ? [20, 40, 20] : 30);
+  setTimeout(() => layer.remove(), 2400);
+}
 
 /* ================= Sorteo animado ================= */
 // Muestra opciones al azar cada vez más lento y termina en una.

@@ -7,10 +7,30 @@ import { backBar } from './lists.js';
 const cap = s => s.charAt(0).toUpperCase() + s.slice(1);
 let vy = today().getFullYear(), vm = today().getMonth(), sel = todayKey();
 
+// Repeticiones de un plan: none (una vez), weekly, biweekly, monthly, yearly; "until" opcional.
+export const REPEATS = [['none', 'No se repite'], ['weekly', 'Cada semana'], ['biweekly', 'Cada 2 semanas'], ['monthly', 'Cada mes'], ['yearly', 'Cada año']];
+const repeatLabel = r => REPEATS.find(x => x[0] === r)?.[1] || '';
+export function occursOn(ev, key) {
+  if (ev.date === key) return true;
+  if (!ev.repeat || ev.repeat === 'none' || key < ev.date || (ev.until && key > ev.until)) return false;
+  const a = parseDate(ev.date), d = parseDate(key);
+  if (ev.repeat === 'weekly') return a.getDay() === d.getDay();
+  if (ev.repeat === 'biweekly') return Math.round((d - a) / 864e5) % 14 === 0;
+  if (ev.repeat === 'monthly') return a.getDate() === d.getDate();
+  if (ev.repeat === 'yearly') return a.getMonth() === d.getMonth() && a.getDate() === d.getDate();
+  return false;
+}
+// Próxima fecha (desde hoy) en que ocurre un plan, o null si ya pasó.
+export function nextEventDate(ev, fromKey = todayKey()) {
+  let d = parseDate(ev.date > fromKey ? ev.date : fromKey);
+  for (let i = 0; i < 400; i++, d = new Date(d.getFullYear(), d.getMonth(), d.getDate() + 1)) { const k = dayKey(d); if (occursOn(ev, k)) return k; }
+  return null;
+}
+
 // Todo lo que pasa en un día: { kind: plan|date|love|trip, label, time?, ev? }
-function itemsFor(key) {
+export function itemsFor(key) {
   const out = [], d = parseDate(key);
-  for (const ev of S.data.events) if (ev.date === key) out.push({ kind: 'plan', label: ev.title, time: ev.time, ev });
+  for (const ev of S.data.events) if (occursOn(ev, key)) out.push({ kind: 'plan', label: ev.title, time: ev.time, ev });
   for (const f of S.data.dates) {
     const o = parseDate(f.date);
     const hit = f.yearly ? (o.getMonth() === d.getMonth() && o.getDate() === d.getDate() && d.getFullYear() >= o.getFullYear()) : f.date === key;
@@ -56,7 +76,7 @@ function render() {
       <button class="link" onclick="openEvent('${sel}')">${icon('plus')} Agregar</button></div>
       <ul class="list" style="margin-top:6px">${items.length ? items.map(i => i.kind === 'plan' ? `<li>
         ${i.ev.who === 'ambos' || !i.ev.who ? `<span class="avatars">${avatar(uid(), 28)}${p ? avatar(p, 28) : ''}</span>` : avatar(i.ev.who, 28)}
-        <div class="txt">${esc(i.label)}<span class="sub">${i.time ? esc(i.time) + ' · ' : ''}${i.ev.who === 'ambos' || !i.ev.who ? 'Los dos' : esc(nameOf(i.ev.who))}${i.ev.note ? ' · ' + esc(i.ev.note) : ''}</span></div>
+        <div class="txt">${esc(i.label)}<span class="sub">${i.ev.repeat && i.ev.repeat !== 'none' ? '↻ ' + repeatLabel(i.ev.repeat).toLowerCase() + ' · ' : ''}${i.time ? esc(i.time) + ' · ' : ''}${i.ev.who === 'ambos' || !i.ev.who ? 'Los dos' : esc(nameOf(i.ev.who))}${i.ev.note ? ' · ' + esc(i.ev.note) : ''}</span></div>
         <button class="del" aria-label="Agregar a mi calendario" onclick="exportEvent('${i.ev.id}')">${icon('cal')}</button>
         <button class="del" aria-label="Borrar plan" onclick="delEvent('${i.ev.id}')">${icon('trash')}</button></li>`
         : `<li><div class="txt">${esc(i.label)}</div></li>`).join('')
@@ -75,17 +95,30 @@ function openEvent(date) {
       <div><label class="f" for="evTime">Hora (opcional)</label><input type="time" id="evTime"></div></div>
     <div><label class="f" for="evWho">¿De quién?</label><select id="evWho"><option value="ambos">Los dos</option><option value="${uid()}">Solo yo</option>
       ${p ? `<option value="${p}">Solo ${esc(nameOf(p))}</option>` : ''}</select></div>
+    <div class="grid2"><div><label class="f" for="evRepeat">¿Se repite?</label><select id="evRepeat" onchange="document.getElementById('evUntilBox').hidden=this.value==='none'">${REPEATS.map(([k, l]) => `<option value="${k}">${l}</option>`).join('')}</select></div>
+      <div id="evUntilBox" hidden><label class="f" for="evUntil">Hasta (opcional)</label><input type="date" id="evUntil"></div></div>
     <input id="evNote" placeholder="Nota (opcional)" maxlength="120" aria-label="Nota">
     <button class="btn" onclick="saveEvent()">Guardar plan</button></div>`);
 }
 function saveEvent() {
   const title = $('evTitle').value.trim(), date = $('evDate').value;
   if (!title || !date) return toast('Pon el plan y el día');
-  write(setDoc(newRef('events'), { title, date, time: $('evTime').value || '', who: $('evWho').value, note: $('evNote').value.trim(), by: uid(), createdAt: Date.now() }));
+  write(setDoc(newRef('events'), { title, date, time: $('evTime').value || '', who: $('evWho').value, note: $('evNote').value.trim(),
+    repeat: $('evRepeat').value, until: $('evRepeat').value !== 'none' ? ($('evUntil').value || '') : '', by: uid(), createdAt: Date.now() }));
   sel = date; const d = parseDate(date); vy = d.getFullYear(); vm = d.getMonth();
   closeSheet(); toast('Plan guardado');
 }
-async function delEvent(id) { if (await ask('¿Borrar este plan para los dos?')) write(deleteDoc(ref('events', id))); }
+async function delEvent(id) {
+  const ev = S.data.events.find(e => e.id === id);
+  const rep = ev?.repeat && ev.repeat !== 'none';
+  if (await ask(rep ? '¿Borrar este plan y todas sus repeticiones para los dos?' : '¿Borrar este plan para los dos?')) write(deleteDoc(ref('events', id)));
+}
+// Regla de repetición para el calendario del teléfono y Google
+const rrule = ev => {
+  if (!ev.repeat || ev.repeat === 'none') return '';
+  const f = { weekly: 'FREQ=WEEKLY', biweekly: 'FREQ=WEEKLY;INTERVAL=2', monthly: 'FREQ=MONTHLY', yearly: 'FREQ=YEARLY' }[ev.repeat];
+  return 'RRULE:' + f + (ev.until ? ';UNTIL=' + ev.until.replace(/-/g, '') + 'T235959' : '');
+};
 
 /* ---------- Pasar un plan al calendario del teléfono ---------- */
 const compact = (date, time) => date.replace(/-/g, '') + (time ? 'T' + time.replace(':', '') + '00' : '');
@@ -101,7 +134,7 @@ function range(ev) {
 function exportEvent(id) {
   const ev = S.data.events.find(e => e.id === id); if (!ev) return;
   const [a, b] = range(ev);
-  const g = `https://calendar.google.com/calendar/render?action=TEMPLATE&text=${encodeURIComponent(ev.title)}&dates=${a}/${b}&details=${encodeURIComponent(ev.note || '')}`;
+  const g = `https://calendar.google.com/calendar/render?action=TEMPLATE&text=${encodeURIComponent(ev.title)}&dates=${a}/${b}&details=${encodeURIComponent(ev.note || '')}${rrule(ev) ? '&recur=' + encodeURIComponent(rrule(ev)) : ''}`;
   openSheet(`<div class="stack"><h2>Agregar a mi calendario</h2><p class="small muted" style="margin:0">${esc(ev.title)} · ${esc(fmtDay(parseDate(ev.date)))}${ev.time ? ' · ' + esc(ev.time) : ''}</p>
     <button class="btn" onclick="downloadIcs('${id}')">${icon('cal')} Calendario del iPhone</button>
     <a class="btn ghost" href="${g}" target="_blank" rel="noopener" style="text-decoration:none">Google Calendar</a></div>`);
@@ -113,7 +146,7 @@ function downloadIcs(id) {
   const ics = ['BEGIN:VCALENDAR', 'VERSION:2.0', 'PRODID:-//Futari//ES', 'BEGIN:VEVENT', `UID:${ev.id}@futari`,
     `DTSTAMP:${new Date().toISOString().replace(/[-:]/g, '').slice(0, 15)}Z`,
     allDay ? `DTSTART;VALUE=DATE:${a}` : `DTSTART:${a}`, allDay ? `DTEND;VALUE=DATE:${b}` : `DTEND:${b}`,
-    `SUMMARY:${clean(ev.title)}`, ev.note ? `DESCRIPTION:${clean(ev.note)}` : '', 'BEGIN:VALARM', 'TRIGGER:-PT1H', 'ACTION:DISPLAY',
+    `SUMMARY:${clean(ev.title)}`, rrule(ev), ev.note ? `DESCRIPTION:${clean(ev.note)}` : '', 'BEGIN:VALARM', 'TRIGGER:-PT1H', 'ACTION:DISPLAY',
     `DESCRIPTION:${clean(ev.title)}`, 'END:VALARM', 'END:VEVENT', 'END:VCALENDAR'].filter(Boolean).join('\r\n');
   const blob = new Blob([ics], { type: 'text/calendar' });
   const url = URL.createObjectURL(blob);

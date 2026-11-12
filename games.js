@@ -1,7 +1,7 @@
 // Juego de retos para jugar juntos en un teléfono: verdad o reto, reto rápido, contrarreloj, yo nunca y ¿qué prefieres?
 import { setDoc, deleteDoc, writeBatch } from 'https://www.gstatic.com/firebasejs/11.0.2/firebase-firestore.js';
 import { $, S, db, esc, icon, paint, on, onShow, expose, toast, openSheet, closeSheet, write, ref, newRef,
-         nameOf, partnerUid, plural, uid, ask } from './core.js';
+         nameOf, partnerUid, plural, uid, ask, celebrate } from './core.js';
 import { LEVELS, TRUTHS, DARES, NEVER, RATHER } from './games-data.js';
 import { backBar } from './lists.js';
 
@@ -177,6 +177,7 @@ function gameEnd() {
   }
   G.phase = G.mode === 'quick' || G.round === 0 ? 'setup' : 'end';
   render();
+  if (G.phase === 'end') celebrate();
 }
 function renderEnd() {
   const [a, b] = G.scores, n = G.players;

@@ -400,3 +400,10 @@ body[data-theme="light"] .tour { background: rgba(40, 20, 50, .35); }
   .sp-l, .sp-r, .sp-beat { animation: none; }
   .sp-ink { animation: none; fill-opacity: 1; stroke: none; }
 }
+
+/* Celebraciones */
+.celebrate { position: fixed; inset: 0; pointer-events: none; z-index: 99; overflow: hidden; }
+.celebrate i { position: absolute; top: -20px; width: 9px; height: 14px; border-radius: 2px; animation: fall 1.6s cubic-bezier(.2,.6,.4,1) forwards; }
+.celebrate i.h { width: auto; height: auto; font-style: normal; font-size: 26px; top: auto; bottom: -40px; animation-name: rise; }
+@keyframes fall { to { transform: translate(var(--dx), 105vh) rotate(var(--rot)); opacity: .9; } }
+@keyframes rise { 0% { transform: translate(0, 0) scale(.6); opacity: 0; } 15% { opacity: 1; } to { transform: translate(var(--dx), -105vh) scale(1.2); opacity: 0; } }

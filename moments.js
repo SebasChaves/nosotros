@@ -1,7 +1,7 @@
 // Momentos: línea de tiempo con fotos.
 import { writeBatch } from 'https://www.gstatic.com/firebasejs/11.0.2/firebase-firestore.js';
 import { $, S, db, esc, icon, paint, on, onShow, expose, toast, openSheet, closeSheet, write, ref, newRef,
-         loadPhotos, cachePhoto, compressImage, parseDate, fmtDate, todayKey, nameOf, uid, ask } from './core.js';
+         loadPhotos, cachePhoto, compressImage, makeThumb, thumbId, parseDate, fmtDate, todayKey, nameOf, uid, ask } from './core.js';
 
 function render() {
   const items = [...S.data.moments].sort((a, b) => b.date.localeCompare(a.date) || b.createdAt - a.createdAt);
@@ -15,7 +15,7 @@ function render() {
   for (const m of items) {
     const y = m.date.slice(0, 4);
     if (y !== year) { html += `<div class="year grad-text">${y}</div>`; year = y; }
-    html += `<div class="glass moment">${m.hasPhoto ? `<img data-photo="${m.id}" alt="${esc(m.title)}" onclick="viewPhoto(this)">` : ''}
+    html += `<div class="glass moment">${m.hasPhoto ? `<img data-thumb="${m.id}" alt="${esc(m.title)}" onclick="viewPhoto(this)">` : ''}
       <div class="body"><div class="title">${esc(m.title)}</div>${m.note ? `<div class="note">${esc(m.note)}</div>` : ''}
       <div class="row" style="margin-top:8px"><span class="tiny muted">${fmtDate(parseDate(m.date))} · ${esc(nameOf(m.by))}</span>
       <button class="del" aria-label="Borrar momento" onclick="delMoment('${m.id}')">${icon('trash')}</button></div></div></div>`;
@@ -48,11 +48,16 @@ async function pickPhoto(input) {
   } catch { toast('No se pudo leer esa foto'); }
   finally { btn.disabled = false; btn.textContent = 'Guardar momento'; }
 }
-function saveMoment() {
+async function saveMoment() {
   const title = $('momentTitle').value.trim(), date = $('momentDate').value;
   if (!title || !date) return toast('Pon qué pasó y la fecha');
+  $('momentSave').disabled = true;
   const r = newRef('moments'), batch = writeBatch(db);
-  if (pendingPhoto) { batch.set(ref('photos', r.id), { data: pendingPhoto }); cachePhoto(r.id, pendingPhoto); }
+  if (pendingPhoto) {
+    const thumb = await makeThumb(pendingPhoto).catch(() => null);
+    batch.set(ref('photos', r.id), { data: pendingPhoto }); cachePhoto(r.id, pendingPhoto);
+    if (thumb) { batch.set(ref('photos', thumbId(r.id)), { data: thumb }); cachePhoto(thumbId(r.id), thumb); }
+  }
   batch.set(r, { title, date, note: $('momentNote').value.trim(), hasPhoto: !!pendingPhoto, by: uid(), createdAt: Date.now() });
   write(batch.commit());
   pendingPhoto = null; closeSheet(); toast('Momento guardado');
@@ -60,7 +65,7 @@ function saveMoment() {
 async function delMoment(id) {
   if (!await ask('¿Borrar este momento para los dos?')) return;
   const batch = writeBatch(db);
-  batch.delete(ref('moments', id)); batch.delete(ref('photos', id));
+  batch.delete(ref('moments', id)); batch.delete(ref('photos', id)); batch.delete(ref('photos', thumbId(id)));
   write(batch.commit());
 }
 
@@ -74,7 +79,7 @@ function renderGallery() {
   for (const m of items) {
     const y = m.date.slice(0, 4);
     if (y !== year) { if (grid) html += `<div class="gallery">${grid}</div>`; grid = ''; html += `<div class="year grad-text">${y}</div>`; year = y; }
-    grid += `<button class="gal" aria-label="${esc(m.title)}" onclick="viewPhoto(this.querySelector('img'))"><img data-photo="${m.id}" alt="${esc(m.title)}" loading="lazy"></button>`;
+    grid += `<button class="gal" aria-label="${esc(m.title)}" onclick="viewPhoto(this.querySelector('img'))"><img data-thumb="${m.id}" alt="${esc(m.title)}"></button>`;
   }
   if (grid) html += `<div class="gallery">${grid}</div>`;
   paint('s-gallery', html);

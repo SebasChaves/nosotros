@@ -1,6 +1,6 @@
 // Quiz "¿Cuánto me conoces?": cada uno responde sobre sí mismo y luego adivina las respuestas del otro.
 import { setDoc, updateDoc, deleteDoc } from 'https://www.gstatic.com/firebasejs/11.0.2/firebase-firestore.js';
-import { S, esc, icon, paint, on, expose, toast, write, ref, newRef, fmtShort, partnerUid, partnerName, myName, uid } from './core.js';
+import { S, esc, icon, paint, on, expose, toast, write, ref, newRef, fmtShort, partnerUid, partnerName, myName, uid, celebrate } from './core.js';
 import { QUIZ } from './data.js';
 import { backBar } from './lists.js';
 
@@ -49,6 +49,7 @@ function questionCard(r, i, kind, title, q) {
     <div class="quiz-opts">${opts.map((o, k) => `<button onclick="quizPick('${r.id}','${kind}',${i},${k})">${esc(o)}</button>`).join('')}</div></div>`;
 }
 function results(r) {
+  if (!sessionStorage.getItem('quiz:' + r.id)) { sessionStorage.setItem('quiz:' + r.id, '1'); setTimeout(() => celebrate(), 200); }
   const p = partnerUid(), pn = esc(partnerName());
   const mine = scoreOf(r, uid(), p), theirs = scoreOf(r, p, uid());
   const verdict = mine === theirs ? '¡Empate! Se conocen igual de bien' : mine > theirs ? '¡Ganaste! Conoces mejor a tu pareja' : `¡Ganó ${pn}!`;

@@ -1,10 +1,76 @@
 // Inicio: contador, ánimo del día, pregunta del día, reto de la semana, próximas fechas y "un día como hoy".
-import { setDoc, deleteDoc } from 'https://www.gstatic.com/firebasejs/11.0.2/firebase-firestore.js';
+import { setDoc, deleteDoc, increment } from 'https://www.gstatic.com/firebasejs/11.0.2/firebase-firestore.js';
 import {
   $, S, esc, icon, paint, on, expose, toast, openSheet, closeSheet, write, ref, newRef, coupleRef, loadPhotos, profile,
   parseDate, today, daysBetween, fmtDate, fmtShort, dayKey, todayKey, whenText, addMonths, weekKey, epochDay, DAY,
-  nameOf, partnerUid, partnerName, myName, plural, uid, avatar, ask } from './core.js';
+  nameOf, partnerUid, partnerName, myName, plural, uid, avatar, ask, celebrate } from './core.js';
 import { QUESTIONS, MOODS, CHALLENGES, DATE_KINDS } from './data.js';
+import { itemsFor, nextEventDate } from './calendar.js';
+import { unreadNotes } from './love.js';
+import { listNeedsMyVote } from './decide.js';
+import { quizWaiting } from './quiz.js';
+
+/* ---------- Racha y "Pensando en ti" ---------- */
+// Un día cuenta para la racha si los dos hicieron algo: marcar ánimo, responder la pregunta o mandar un "pensando en ti".
+const didSomething = (key, who) => !!(S.data.moods.find(x => x.id === key)?.[who] || S.data.answers.find(x => x.id === key)?.answers?.[who] || S.data.thinks.find(x => x.id === key)?.[who]);
+const bothDid = key => { const p = partnerUid(); return !!p && didSomething(key, uid()) && didSomething(key, p); };
+const prevDay = d => new Date(d.getFullYear(), d.getMonth(), d.getDate() - 1);
+export function streak() {
+  let d = today(), n = 0;
+  if (!bothDid(dayKey(d))) d = prevDay(d); // hoy todavía cuenta si lo completan más tarde
+  while (n < 3660 && bothDid(dayKey(d))) { n++; d = prevDay(d); }
+  return n;
+}
+function bestStreak() {
+  const keys = [...new Set([...S.data.moods, ...S.data.answers, ...S.data.thinks].map(x => x.id))].filter(bothDid).sort();
+  let best = 0, run = 0, prev = null;
+  for (const k of keys) { run = prev && dayKey(new Date(parseDate(prev).getFullYear(), parseDate(prev).getMonth(), parseDate(prev).getDate() + 1)) === k ? run + 1 : 1; best = Math.max(best, run); prev = k; }
+  return best;
+}
+const thinksToday = who => S.data.thinks.find(x => x.id === todayKey())?.[who] || 0;
+function sendThink() {
+  write(setDoc(ref('thinks', todayKey()), { [uid()]: increment(1) }, { merge: true }));
+  celebrate('hearts');
+}
+// Aviso cuando llega un "pensando en ti" con la app abierta
+let lastPartnerThinks = null;
+function checkIncomingThink() {
+  const p = partnerUid(); if (!p) return;
+  const n = thinksToday(p);
+  if (lastPartnerThinks !== null && n > lastPartnerThinks) { toast(`💗 ${partnerName()} está pensando en ti`); celebrate('hearts'); }
+  lastPartnerThinks = n;
+}
+
+/* ---------- Tarjeta "Hoy" ---------- */
+function todayCard() {
+  const p = partnerUid(), pn = esc(partnerName()), tk = todayKey();
+  const tomorrow = dayKey(new Date(today().getFullYear(), today().getMonth(), today().getDate() + 1));
+  const rows = [];
+  const row = (e, text, action) => rows.push(`<button class="result-row" onclick="${action}"><span class="e">${e}</span><span class="grow">${text}</span>${icon('send')}</button>`);
+  for (const it of itemsFor(tk)) row(it.kind === 'plan' ? '📌' : it.kind === 'trip' ? '✈️' : '🎉', `<b>Hoy:</b> ${esc(it.label)}${it.time ? ' · ' + esc(it.time) : ''}`, `go('s-cal');calPick('${tk}')`);
+  for (const it of itemsFor(tomorrow).filter(i => i.kind !== 'trip')) row('⏰', `<b>Mañana:</b> ${esc(it.label)}`, `go('s-cal');calPick('${tomorrow}')`);
+  const ans = todayAnswers();
+  if (!ans?.answers?.[uid()]) row('💬', p && ans?.answers?.[p] ? `Responde la pregunta del día (${pn} ya respondió)` : 'Responde la pregunta del día', `document.getElementById('answerText')?.scrollIntoView({block:'center'});document.getElementById('answerText')?.focus()`);
+  const notes = unreadNotes(); if (notes) row('💌', `Tienes ${plural(notes, 'nota nueva', 'notas nuevas')} en el frasco`, `go('s-love');loveTab('notes')`);
+  const toDo = S.data.coupons.filter(c => c.fromUid === uid() && c.redeemedAt && !c.doneAt).length; if (toDo) row('🎟️', `${pn} canjeó ${plural(toDo, 'cupón', 'cupones')}: te toca cumplir`, `go('s-love');loveTab('coupons')`);
+  const fresh = S.data.coupons.filter(c => c.fromUid !== uid() && !c.seenAt).length; if (fresh) row('🎁', `${pn} te regaló ${plural(fresh, 'cupón', 'cupones')}`, `go('s-love');loveTab('coupons')`);
+  const votes = S.data.lists.filter(listNeedsMyVote).length; if (votes) row('🎲', `${pn} ya votó en ${plural(votes, 'lista', 'listas')}: falta tu voto`, `go('s-decide');decideTab('lists')`);
+  if (quizWaiting()) row('🧠', `${pn} ya jugó el quiz: te toca`, `go('s-quiz')`);
+  const tripVotes = S.data.trips.filter(t => [...(t.stays || []), ...(t.flights || [])].some(o => o.votes?.[uid()] === undefined)); if (tripVotes.length) row('🏨', `Hay opciones nuevas para votar en ${esc(tripVotes[0].name)}`, `openTrip('${tripVotes[0].id}')`);
+
+  const s = streak(), best = bestStreak(), meDone = didSomething(tk, uid()), themDone = p && didSomething(tk, p);
+  const mine = thinksToday(uid()), theirs = p ? thinksToday(p) : 0;
+  return `<div class="glass stack">
+    <div class="row"><span class="label">${icon('cal')} Hoy</span>
+      <span class="pill ${s ? 'hot' : ''}" title="Días seguidos en que los dos usaron la app">🔥 ${plural(s, 'día', 'días')}${best > s ? ` · récord ${best}` : ''}</span></div>
+    ${!meDone && p ? `<p class="small muted" style="margin:0">${s ? 'Para no perder la racha' : 'Para empezar una racha'}: marca tu ánimo, responde la pregunta o manda un corazón.${themDone ? `  ${pn} ya hizo lo suyo.` : ''}</p>` : ''}
+    <div class="row">
+      <button class="btn" style="flex:1" onclick="sendThink()">${icon('heart-f')} Pensando en ti</button>
+      ${p ? `<span class="small muted" style="text-align:right;line-height:1.35">${theirs ? `<b style="color:var(--text)">${pn}</b> pensó en ti ${plural(theirs, 'vez', 'veces')}` : `Aún no llegan corazones`}<br>tú: ${mine}</span>` : ''}
+    </div>
+    ${rows.length ? `<div>${rows.join('')}</div>` : '<p class="small muted center" style="margin:0">Todo al día ✨</p>'}
+  </div>`;
+}
 
 /* ---------- Fechas especiales ---------- */
 export function nextOccurrence(f) {
@@ -41,7 +107,7 @@ export function upcoming() {
   }
   for (const f of S.data.dates) { const occ = nextOccurrence(f); if (occ) list.push({ label: fechaLabel(f, occ), date: occ }); }
   for (const t of S.data.trips) if (t.start && parseDate(t.start) >= now) list.push({ label: `✈️ ${t.name}`, date: parseDate(t.start) });
-  for (const ev of S.data.events) if (ev.date && parseDate(ev.date) >= now) list.push({ label: `📌 ${ev.title}${ev.time ? ' · ' + ev.time : ''}`, date: parseDate(ev.date) });
+  for (const ev of S.data.events) { const k = ev.date && nextEventDate(ev); if (k) list.push({ label: `📌 ${ev.title}${ev.time ? ' · ' + ev.time : ''}`, date: parseDate(k) }); }
   return list.sort((a, b) => a.date - b.date);
 }
 function openFechas() {
@@ -146,7 +212,7 @@ function skipChallenge() { const { wk, doc } = thisWeekChallenge(); write(setDoc
 function doneChallenge() {
   const { wk, text } = thisWeekChallenge();
   write(setDoc(ref('challenges', wk), { doneAt: Date.now(), by: uid(), text }, { merge: true }));
-  toast('¡Reto cumplido! 🏆');
+  toast('¡Reto cumplido! 🏆'); celebrate();
 }
 
 /* ---------- Un día como hoy ---------- */
@@ -156,7 +222,7 @@ function memoryCard() {
   if (!m) return '';
   const years = now.getFullYear() - Number(m.date.slice(0, 4));
   return `<div class="glass"><span class="label">${icon('spark')} Un día como hoy</span>
-    <div class="memory" style="margin-top:10px">${m.hasPhoto ? `<img data-photo="${m.id}" alt="">` : ''}
+    <div class="memory" style="margin-top:10px">${m.hasPhoto ? `<img data-thumb="${m.id}" alt="">` : ''}
     <div><div style="font-weight:700">${esc(m.title)}</div><div class="small muted">Hace ${plural(years, 'año', 'años')}</div></div></div></div>`;
 }
 
@@ -188,6 +254,7 @@ function renderHome() {
       <button class="icon-btn" onclick="openSearch()" aria-label="Buscar">${icon('search')}</button>
       <button class="icon-btn" onclick="go('s-settings')" aria-label="Ajustes">${icon('gear')}</button></div></div>
     ${hero}
+    ${todayCard()}
     ${memoryCard()}
     ${moodCard()}
     ${questionCard()}
@@ -200,5 +267,6 @@ function renderHome() {
   loadPhotos($('s-home'));
 }
 
-on('dates moments moods answers challenges trips profiles events', renderHome);
-expose({ openFechas, addFecha, delFecha, answerQuestion, openAnswers, setMood, skipChallenge, doneChallenge });
+on('dates moments moods answers challenges trips profiles events thinks notes coupons lists quiz', renderHome);
+on('thinks', checkIncomingThink);
+expose({ sendThink, openFechas, addFecha, delFecha, answerQuestion, openAnswers, setMood, skipChallenge, doneChallenge });

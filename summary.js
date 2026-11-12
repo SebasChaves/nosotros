@@ -41,7 +41,7 @@ function render() {
   const parts = [];
   parts.push(card(s.together.toLocaleString('es'), `días juntos en ${year}`));
   if (cover) parts.push(`<div class="glass story"><span class="label" style="justify-content:center">${icon('photo')} El momento del año</span>
-    <img data-photo="${cover.id}" alt=""><h2 style="margin-top:12px">${esc(cover.title)}</h2></div>`);
+    <img data-thumb="${cover.id}" alt=""><h2 style="margin-top:12px">${esc(cover.title)}</h2></div>`);
   if (s.moments) parts.push(card(s.moments, `${s.moments === 1 ? 'momento guardado' : 'momentos guardados'}, ${plural(s.photos.length, 'con foto', 'con foto')}`));
   if (s.notesMe + s.notesThem) parts.push(card(s.notesMe + s.notesThem, `notas de amor: ${mn} escribió ${s.notesMe} y ${pn} ${s.notesThem}`));
   if (s.answers) parts.push(card(s.answers, 'preguntas del día respondidas por los dos'));

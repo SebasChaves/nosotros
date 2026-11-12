@@ -1,7 +1,7 @@
 // Hospedaje y vuelos de un viaje: búsquedas ya filtradas en otras páginas y opciones guardadas para comparar y votar.
 import { setDoc, updateDoc, deleteDoc, writeBatch } from 'https://www.gstatic.com/firebasejs/11.0.2/firebase-firestore.js';
 import { $, S, db, esc, icon, paint, expose, toast, openSheet, closeSheet, write, ref, newRef, loadPhotos,
-         parseDate, daysBetween, todayKey, fmtShort, fmtMoney, nameOf, partnerUid, avatar, plural, uid, ask } from './core.js';
+         parseDate, daysBetween, todayKey, fmtShort, fmtMoney, nameOf, partnerUid, avatar, plural, uid, ask, celebrate } from './core.js';
 import { parseAmount } from './money.js';
 
 let compare = { stays: false, flights: false };
@@ -194,7 +194,7 @@ async function bookOpt(tripId, kind, id) {
       cat: '✈️', date: todayKey(), tripId, createdAt: Date.now(), by: uid() });
   }
   batch.update(ref('trips', tripId), { [kind]: t[kind].map(x => x.id === id ? { ...x, booked: true, expenseId } : x) });
-  write(batch.commit()); toast(kind === 'stays' ? '¡Reservado!' : '¡Comprado!');
+  write(batch.commit()); toast(kind === 'stays' ? '¡Reservado!' : '¡Comprado!'); celebrate();
 }
 
 expose({ openStay, guessSite, calcTotal, saveStay, openFlight, saveFlight, toggleCompare, optVote, delOpt, bookOpt });

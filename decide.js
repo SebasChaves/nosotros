@@ -1,7 +1,7 @@
 // Decidir: listas con tres modos (al azar, por turnos, match) y la ruleta de ideas de citas.
 import { setDoc, updateDoc, deleteDoc } from 'https://www.gstatic.com/firebasejs/11.0.2/firebase-firestore.js';
 import { $, S, esc, icon, paint, on, expose, toast, openSheet, closeSheet, write, ref, newRef, animatePick,
-         nameOf, partnerUid, partnerName, uid, ask } from './core.js';
+         nameOf, partnerUid, partnerName, uid, ask, celebrate } from './core.js';
 import { DEFAULT_IDEAS, LIST_TEMPLATES } from './data.js';
 
 let tab = 'lists', selList = null, pendingSel = null, mode = null, turns = null, randomResult = null, lastIdea = null;
@@ -101,6 +101,8 @@ function renderMode() {
       <button class="link" onclick="resetVotes()">Empezar de nuevo</button>`);
   }
   const matches = opts.filter(o => mine[o] && theirs[o]);
+  const seenKey = `match:${l.id}:${matches.join('|')}`;
+  if (matches.length && !sessionStorage.getItem(seenKey)) { sessionStorage.setItem(seenKey, '1'); celebrate('hearts'); }
   if (!matches.length) {
     return paint(area, `<div class="glass center stack"><div style="font-size:40px">😅</div><h2>No coincidieron en nada</h2>
       <p class="muted" style="margin:0">Prueben "Por turnos" para desempatar.</p></div>
@@ -158,10 +160,10 @@ function delOption(i) {
 function decideRandom() {
   const l = curList(); $('dSpin').disabled = true; $('dWheel').classList.add('spinning');
   animatePick(l.options, o => { const t = $('dTxt'); if (t) t.textContent = o; }, o => {
-    randomResult = o; $('dWheel')?.classList.remove('spinning'); const b = $('dSpin'); if (b) b.disabled = false; toast(`¡${o}!`);
+    randomResult = o; $('dWheel')?.classList.remove('spinning'); const b = $('dSpin'); if (b) b.disabled = false; toast(`¡${o}!`); celebrate();
   });
 }
-function eliminate(i) { turns.remaining.splice(i, 1); turns.who++; renderMode(); }
+function eliminate(i) { turns.remaining.splice(i, 1); turns.who++; renderMode(); if (turns.remaining.length === 1) celebrate(); }
 function restartTurns() { turns = null; renderMode(); }
 function vote(yes) {
   const l = curList(); if (!l) return;
@@ -173,7 +175,7 @@ async function resetVotes() { const l = curList(); if (l && await ask('¿Borrar 
 function decideAmong() {
   const l = curList(), matches = l.options.filter(o => myVotes(l)[o] && theirVotes(l)[o]);
   $('mSpin').disabled = true;
-  animatePick(matches, o => { const t = $('mTxt'); if (t) t.textContent = o; }, o => { const b = $('mSpin'); if (b) b.disabled = false; toast(`¡${o}!`); });
+  animatePick(matches, o => { const t = $('mTxt'); if (t) t.textContent = o; }, o => { const b = $('mSpin'); if (b) b.disabled = false; toast(`¡${o}!`); celebrate(); });
 }
 
 /* ---------- Ideas de citas ---------- */
