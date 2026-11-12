@@ -15,6 +15,8 @@ import './trips.js';
 import './us.js';
 import { quizWaiting } from './quiz.js';
 import './summary.js';
+import './calendar.js';
+import './shows.js';
 import { applyAccent, uploadData } from './settings.js';
 
 const setState = s => { document.body.classList.remove('loading', 'out', 'in', 'noconfig'); document.body.classList.add(s); };

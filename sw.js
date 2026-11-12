@@ -1,11 +1,11 @@
 // Guarda la app en caché para que funcione sin internet.
 // Sube el número de versión cada vez que cambies archivos.
-const CACHE = 'nosotros-v5';
+const CACHE = 'nosotros-v6';
 const FILES = ['./', './index.html', './styles.css', './app.js', './core.js', './data.js', './home.js', './decide.js',
   './love.js', './moments.js', './lists.js', './money.js', './places.js', './trips.js', './us.js', './quiz.js',
-  './summary.js', './settings.js', './firebase-config.js', './manifest.json', './icon-180.png', './icon-192.png', './icon-512.png'];
-// Además de la app: la librería de Firebase y la tipografía.
-const HOSTS = ['www.gstatic.com', 'fonts.googleapis.com', 'fonts.gstatic.com'];
+  './summary.js', './settings.js', './calendar.js', './shows.js', './tmdb-config.js', './firebase-config.js', './manifest.json', './icon-180.png', './icon-192.png', './icon-512.png'];
+// Además de la app: la librería de Firebase, la tipografía y los pósters de películas.
+const HOSTS = ['www.gstatic.com', 'fonts.googleapis.com', 'fonts.gstatic.com', 'image.tmdb.org'];
 
 self.addEventListener('install', e => {
   e.waitUntil(caches.open(CACHE).then(c => c.addAll(FILES)));

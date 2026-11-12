@@ -3,7 +3,7 @@ import { setDoc, deleteDoc, writeBatch } from 'https://www.gstatic.com/firebasej
 import { signOut } from 'https://www.gstatic.com/firebasejs/11.0.2/firebase-auth.js';
 import { $, S, db, auth, esc, icon, paint, on, onShow, expose, toast, write, ref, privRef, coupleRef, go,
          COLLECTIONS, PRIVATE, cachePhoto, forgetPhoto, compressImage, loadPhotos, parseDate, today, dayKey,
-         fmtMoney, nameOf, partnerUid, partnerName, myName, profile, plural, uid } from './core.js';
+         fmtMoney, nameOf, partnerUid, partnerName, myName, profile, plural, uid, avatar } from './core.js';
 import { ACCENTS, CURRENCIES } from './data.js';
 import { backBar, groceryPending } from './lists.js';
 import { balance } from './money.js';
@@ -14,6 +14,8 @@ function renderMore() {
   const bal = balance(), pn = partnerName();
   const nextTrip = S.data.trips.filter(t => t.start && parseDate(t.start) >= today()).sort((a, b) => a.start.localeCompare(b.start))[0];
   const bucketDone = S.data.bucket.filter(b => b.done).length;
+  const tk = dayKey(today());
+  const nextPlan = S.data.events.filter(e => e.date >= tk).sort((a, b) => (a.date + (a.time || '')).localeCompare(b.date + (b.time || '')))[0];
   const tile = (id, ic, title, sub, dot = 0) => `<button class="tile" onclick="go('${id}')"><span class="badge-ic">${icon(ic)}</span>
     <div><b>${title}</b></div><span class="sub">${sub}</span>${dot ? `<b class="dot">${dot}</b>` : ''}</button>`;
   paint('s-more', `<div class="topbar"><h1>Más</h1><button class="icon-btn" aria-label="Ajustes" onclick="go('s-settings')">${icon('gear')}</button></div>
@@ -22,6 +24,8 @@ function renderMore() {
       ${tile('s-money', 'wallet', 'Gastos', bal > 0 ? `${pn} te debe ${fmtMoney(bal)}` : bal < 0 ? `Debes ${fmtMoney(-bal)}` : 'Están a mano')}
       ${tile('s-trips', 'plane', 'Viajes', nextTrip ? esc(nextTrip.name) : 'Planear un viaje')}
       ${tile('s-places', 'fork', 'Restaurantes', plural(S.data.places.length, 'lugar', 'lugares'))}
+      ${tile('s-shows', 'film', 'Pelis y series', plural(S.data.shows.filter(s => (s.status || 'want') === 'want').length, 'por ver', 'por ver'))}
+      ${tile('s-cal', 'cal', 'Calendario', nextPlan ? esc(nextPlan.title) : 'Planes de los dos')}
       ${tile('s-us', 'heart', 'Gustos y regalos', 'Tallas, antojos, ideas')}
       ${tile('s-quiz', 'brain', '¿Cuánto me conoces?', quizWaiting() ? `${esc(pn)} ya jugó` : 'Quiz de pareja', quizWaiting() ? 1 : 0)}
       ${tile('s-bucket', 'list', 'Bucket list', `${bucketDone} de ${S.data.bucket.length} cumplidas`)}
@@ -35,6 +39,9 @@ function renderSettings() {
   const accent = prefs.accent || document.body.dataset.accent || 'aurora';
   paint('s-settings', `${backBar('Ajustes')}
     <div class="glass stack"><span class="label">${icon('heart')} Ustedes</span>
+      <div class="row start" style="gap:14px">${avatar(uid(), 72)}<div class="stack" style="gap:6px">
+        <label class="btn ghost small">${icon('photo')} ${profile(uid()).avatar ? 'Cambiar foto' : 'Poner foto de perfil'}<input type="file" accept="image/*" hidden onchange="pickAvatar(this)"></label>
+        ${profile(uid()).avatar ? `<button class="link" style="text-align:left" onclick="removeAvatar()">Quitar foto</button>` : ''}</div></div>
       <div><label class="f" for="setName">Tu nombre</label><input id="setName" maxlength="30" value="${esc(myName())}"></div>
       <div><label class="f" for="setStart">¿Cuándo empezaron?</label><input type="date" id="setStart" value="${esc(S.settings.start || '')}"></div>
       <div><label class="f" for="setCurrency">Moneda para Gastos</label><select id="setCurrency">${CURRENCIES.map(([c, l]) =>
@@ -87,6 +94,26 @@ async function pickBg(input) {
     cachePhoto(`bg-${uid()}`, data);
     write(batch.commit()); toast('Foto de fondo lista');
   } catch { toast('No se pudo leer esa foto'); }
+}
+async function pickAvatar(input) {
+  const f = input.files[0]; input.value = ''; if (!f) return;
+  try {
+    const data = await compressImage(f, 400);
+    const old = profile(uid()).avatar, id = `avatar-${uid()}-${Date.now()}`;
+    const batch = writeBatch(db);
+    batch.set(ref('photos', id), { data });
+    if (old) batch.delete(ref('photos', old));
+    batch.set(ref('profiles', uid()), { avatar: id }, { merge: true });
+    cachePhoto(id, data);
+    write(batch.commit()); toast('Foto de perfil lista');
+  } catch { toast('No se pudo leer esa foto'); }
+}
+function removeAvatar() {
+  const old = profile(uid()).avatar; if (!old) return;
+  const batch = writeBatch(db);
+  batch.delete(ref('photos', old));
+  batch.set(ref('profiles', uid()), { avatar: null }, { merge: true });
+  write(batch.commit());
 }
 function removeBg() {
   const batch = writeBatch(db);
@@ -155,8 +182,8 @@ function importData(input) {
   input.value = '';
 }
 
-on('groceries expenses trips places bucket quiz', renderMore);
+on('groceries expenses trips places bucket quiz shows events', renderMore);
 on('ideas profiles', () => { if ($('s-settings').classList.contains('active')) renderSettings(); });
 onShow('s-settings', renderSettings);
 onShow('s-more', renderMore);
-expose({ saveSettings, setAccent, pickBg, removeBg, delIdea, logout, exportData, importData });
+expose({ saveSettings, setAccent, pickAvatar, removeAvatar, pickBg, removeBg, delIdea, logout, exportData, importData });

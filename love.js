@@ -1,7 +1,7 @@
 // Detalles: frasco de notas y cupones canjeables.
 import { setDoc, updateDoc, deleteDoc } from 'https://www.gstatic.com/firebasejs/11.0.2/firebase-firestore.js';
 import { $, S, esc, icon, paint, on, onShow, expose, toast, openSheet, closeSheet, write, ref, newRef, pick,
-         fmtDate, fmtShort, nameOf, partnerName, myName, plural, uid } from './core.js';
+         fmtDate, fmtShort, nameOf, partnerName, myName, plural, uid, avatar, loadPhotos } from './core.js';
 import { COUPON_TEMPLATES } from './data.js';
 
 let tab = 'notes';
@@ -35,13 +35,14 @@ function renderNotes() {
       <textarea id="newNote" placeholder="Algo bonito para leer en un día difícil…" maxlength="500" aria-label="Nota"></textarea>
       <button class="btn ghost" onclick="addNote()">Guardar en el frasco</button></div>
     <div class="glass"><div class="row"><h2>Notas que ya leíste</h2><span class="small muted">${read.length || ''}</span></div>
-      <ul class="list" style="margin-top:6px">${read.length ? read.map(n => `<li><div class="txt">${esc(n.text)}<span class="sub">De ${esc(fromLabel(n))} · ${fmtDate(new Date(n.createdAt))}</span></div></li>`).join('')
+      <ul class="list" style="margin-top:6px">${read.length ? read.map(n => `<li>${avatar(n.fromUid, 30)}<div class="txt">${esc(n.text)}<span class="sub">De ${esc(fromLabel(n))} · ${fmtDate(new Date(n.createdAt))}</span></div></li>`).join('')
         : '<li class="empty">Aún no has sacado notas</li>'}</ul></div>
     <div class="glass"><h2>Notas que escribiste</h2>
       <ul class="list" style="margin-top:6px">${mine.length ? mine.map(n => `<li><div class="txt">${esc(n.text)}<span class="sub">${fmtDate(new Date(n.createdAt))}</span></div>
         <span class="pill ${n.readAt ? 'ok' : ''}">${n.readAt ? 'Leída' : 'Sin leer'}</span>
         <button class="del" aria-label="Borrar nota" onclick="delNote('${n.id}')">${icon('trash')}</button></li>`).join('')
         : '<li class="empty">Todavía no escribes ninguna</li>'}</ul></div>`);
+  loadPhotos($('loveBody'));
 }
 function addNote() {
   const t = $('newNote').value.trim();
@@ -107,6 +108,6 @@ function markCouponsSeen() {
   for (const c of S.data.coupons) if (c.fromUid !== uid() && !c.seenAt) write(updateDoc(ref('coupons', c.id), { seenAt: Date.now() }));
 }
 
-on('notes coupons', render);
+on('notes coupons profiles', render);
 onShow('s-love', () => { if (tab === 'coupons') markCouponsSeen(); });
 expose({ loveTab, drawNote, addNote, delNote, useCouponTpl, addCoupon, redeemCoupon, fulfillCoupon, delCoupon });

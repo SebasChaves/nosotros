@@ -3,7 +3,7 @@ import { setDoc, deleteDoc } from 'https://www.gstatic.com/firebasejs/11.0.2/fir
 import {
   $, S, esc, icon, paint, on, expose, toast, openSheet, closeSheet, write, ref, newRef, coupleRef, loadPhotos, profile,
   parseDate, today, daysBetween, fmtDate, fmtShort, dayKey, todayKey, whenText, addMonths, weekKey, epochDay, DAY,
-  nameOf, partnerUid, partnerName, myName, initials, plural, uid,
+  nameOf, partnerUid, partnerName, myName, plural, uid, avatar,
 } from './core.js';
 import { QUESTIONS, MOODS, CHALLENGES, DATE_KINDS } from './data.js';
 
@@ -42,6 +42,7 @@ export function upcoming() {
   }
   for (const f of S.data.dates) { const occ = nextOccurrence(f); if (occ) list.push({ label: fechaLabel(f, occ), date: occ }); }
   for (const t of S.data.trips) if (t.start && parseDate(t.start) >= now) list.push({ label: `✈️ ${t.name}`, date: parseDate(t.start) });
+  for (const ev of S.data.events) if (ev.date && parseDate(ev.date) >= now) list.push({ label: `📌 ${ev.title}${ev.time ? ' · ' + ev.time : ''}`, date: parseDate(ev.date) });
   return list.sort((a, b) => a.date - b.date);
 }
 function openFechas() {
@@ -85,8 +86,8 @@ function questionCard() {
       <button class="btn" style="margin-top:10px" onclick="answerQuestion()">Responder</button>
       <p class="small muted" style="margin:10px 0 0">${theirs ? `${icon('lock')} ${pn} ya respondió. Responde para ver su respuesta.` : `${pn} aún no responde.`}</p>`;
   } else {
-    body = `<div class="answer"><b>Tú</b>${esc(mine.text)}</div>` +
-      (theirs ? `<div class="answer"><b>${pn}</b>${esc(theirs.text)}</div>` : `<p class="small muted" style="margin:10px 0 0">Esperando la respuesta de ${pn}…</p>`);
+    body = `<div class="answer"><b class="who">${avatar(uid(), 22)}Tú</b>${esc(mine.text)}</div>` +
+      (theirs ? `<div class="answer"><b class="who">${avatar(p, 22)}${pn}</b>${esc(theirs.text)}</div>` : `<p class="small muted" style="margin:10px 0 0">Esperando la respuesta de ${pn}…</p>`);
   }
   return `<div class="glass"><div class="row"><span class="label">${icon('chat')} Pregunta del día</span>
     <button class="link" onclick="openAnswers()">Anteriores</button></div><div class="q">${esc(q)}</div>${body}</div>`;
@@ -120,8 +121,8 @@ function moodCard() {
     <div class="moods">${MOODS.map(e => `<button class="${mine === e ? 'on' : ''}" onclick="setMood('${e}')" aria-label="Ánimo ${e}">${e}</button>`).join('')}</div>
     <div class="week" aria-label="Últimos 7 días">
       <span></span>${days.map(d => `<span class="d">${d.toLocaleDateString('es', { weekday: 'narrow' })}</span>`).join('')}
-      <span class="who">${esc(myName() || 'Tú')}</span>${days.map(d => `<span>${cell(d, uid())}</span>`).join('')}
-      ${p ? `<span class="who">${esc(partnerName())}</span>${days.map(d => `<span>${cell(d, p)}</span>`).join('')}` : ''}
+      <span class="who">${avatar(uid(), 24)}</span>${days.map(d => `<span>${cell(d, uid())}</span>`).join('')}
+      ${p ? `<span class="who">${avatar(p, 24)}</span>${days.map(d => `<span>${cell(d, p)}</span>`).join('')}` : ''}
     </div></div>`;
 }
 function setMood(e) { write(setDoc(ref('moods', todayKey()), { [uid()]: { e, at: Date.now() } }, { merge: true })); }
@@ -184,7 +185,7 @@ function renderHome() {
   const up = upcoming().slice(0, 5);
   paint('s-home', `
     <div class="topbar"><div class="title"><span class="hi">Hola${myName() ? ', ' + esc(myName()) : ''}</span><h1>Nosotros</h1></div>
-      <div class="row" style="gap:10px"><div class="avatars">${names.map(([, m]) => `<span>${esc(initials(m.name))}</span>`).join('')}</div>
+      <div class="row" style="gap:10px"><div class="avatars">${names.map(([id]) => avatar(id, 36)).join('')}</div>
       <button class="icon-btn" onclick="go('s-settings')" aria-label="Ajustes">${icon('gear')}</button></div></div>
     ${hero}
     ${memoryCard()}
@@ -192,12 +193,12 @@ function renderHome() {
     ${questionCard()}
     ${challengeCard()}
     <div class="glass"><div class="row"><span class="label">${icon('cal')} Próximos momentos</span>
-      <button class="link" onclick="openFechas()">Fechas especiales</button></div>
+      <div class="row" style="gap:0"><button class="link" onclick="go('s-cal')">Calendario</button><button class="link" onclick="openFechas()">Fechas</button></div></div>
       <div style="margin-top:6px">${up.length ? up.map(m => `<div class="event"><div>${esc(m.label)}<div class="tiny muted">${fmtDate(m.date)}</div></div>
         <span class="when">${whenText(daysBetween(today(), m.date))}</span></div>`).join('') : '<p class="empty">Agreguen cumpleaños, viajes o eventos</p>'}</div></div>
   `);
   loadPhotos($('s-home'));
 }
 
-on('dates moments moods answers challenges trips profiles', renderHome);
+on('dates moments moods answers challenges trips profiles events', renderHome);
 expose({ openFechas, addFecha, delFecha, answerQuestion, openAnswers, setMood, skipChallenge, doneChallenge });

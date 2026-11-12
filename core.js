@@ -117,7 +117,7 @@ export const write = p => p.catch(err => {
 
 /* ================= Estado ================= */
 export const COLLECTIONS = ['bucket', 'ideas', 'notes', 'coupons', 'dates', 'moments', 'lists', 'answers',
-  'moods', 'challenges', 'groceries', 'expenses', 'places', 'trips', 'quiz', 'profiles'];
+  'moods', 'challenges', 'groceries', 'expenses', 'places', 'trips', 'quiz', 'profiles', 'shows', 'events'];
 export const PRIVATE = ['gifts'];
 export const S = {
   me: null,
@@ -132,6 +132,10 @@ export const partnerName = () => { const p = partnerUid(); return p ? nameOf(p) 
 export const myName = () => S.settings.members?.[S.me.uid]?.name || '';
 export const profile = id => S.data.profiles.find(p => p.id === id) || {};
 export const initials = n => (n || '?').trim().charAt(0).toUpperCase();
+// Foto de perfil (o la inicial si no hay foto). Después de pintar, llamar loadPhotos(contenedor).
+export const avatar = (id, size = 36) => profile(id).avatar
+  ? `<img class="av" data-photo="${esc(profile(id).avatar)}" alt="${esc(nameOf(id))}" style="width:${size}px;height:${size}px">`
+  : `<span class="av" style="width:${size}px;height:${size}px;font-size:${Math.round(size * .4)}px">${esc(initials(nameOf(id)))}</span>`;
 
 export function fmtMoney(n) {
   try {
