@@ -20,6 +20,7 @@
     --accent: #e8536f;
     --accent-soft: #fde3e9;
     --line: #f1dfe3;
+    --ok: #2f9e6e;
     --radius: 18px;
   }
   @media (prefers-color-scheme: dark) {
@@ -31,6 +32,7 @@
       --accent: #ff6b86;
       --accent-soft: #3a2328;
       --line: #36272b;
+      --ok: #4cc28e;
     }
   }
   * { box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
@@ -44,7 +46,6 @@
     padding: calc(env(safe-area-inset-top) + 16px) 18px calc(env(safe-area-inset-bottom) + 96px);
     max-width: 560px; margin: 0 auto;
   }
-  /* Estados: cargando / sin sesión / con sesión */
   body:not(.in) main, body:not(.in) nav { display: none; }
   .gate { display: none; min-height: 100%; align-items: center; justify-content: center; padding: 24px; }
   body.loading #loadingGate, body.out #loginGate, body.noconfig #configGate { display: flex; }
@@ -55,10 +56,11 @@
 
   h1 { font-size: 30px; margin: 8px 0 18px; letter-spacing: -0.5px; }
   h2 { font-size: 17px; margin: 0 0 10px; }
-  .header { display: flex; align-items: center; justify-content: space-between; }
+  h3 { font-size: 14px; margin: 18px 0 8px; color: var(--muted); text-transform: uppercase; letter-spacing: .5px; }
+  .header { display: flex; align-items: center; justify-content: space-between; gap: 10px; }
   .icon-btn {
     background: var(--card); border: 1px solid var(--line); color: var(--text);
-    width: 40px; height: 40px; border-radius: 50%; font-size: 18px; cursor: pointer;
+    width: 40px; height: 40px; border-radius: 50%; font-size: 18px; cursor: pointer; flex-shrink: 0;
   }
   .card {
     background: var(--card); border-radius: var(--radius); padding: 18px;
@@ -66,47 +68,73 @@
   }
   .muted { color: var(--muted); }
   .small { font-size: 13px; }
+  .center { text-align: center; }
 
   button.primary {
     background: var(--accent); color: #fff; border: 0; border-radius: 14px;
-    padding: 14px 18px; font-size: 16px; font-weight: 600; width: 100%; cursor: pointer;
+    padding: 14px 18px; font-size: 16px; font-weight: 600; width: 100%; cursor: pointer; font-family: inherit;
   }
   button.primary:active { transform: scale(.98); }
   button.primary:disabled { opacity: .6; }
   button.ghost {
     background: var(--accent-soft); color: var(--accent); border: 0; border-radius: 12px;
-    padding: 10px 14px; font-size: 15px; font-weight: 600; cursor: pointer;
+    padding: 10px 14px; font-size: 15px; font-weight: 600; cursor: pointer; font-family: inherit;
   }
+  button.ghost.full { width: 100%; }
   button.link { background: none; border: 0; color: var(--accent); font: inherit; font-size: 14px; cursor: pointer; padding: 8px; }
   input, textarea, select {
     width: 100%; font: inherit; font-size: 16px; color: var(--text);
     background: var(--bg); border: 1px solid var(--line); border-radius: 12px; padding: 12px;
   }
+  input[type=checkbox] { width: auto; }
   textarea { resize: none; min-height: 90px; }
   label { display: block; font-size: 13px; color: var(--muted); margin: 12px 0 6px; }
+  label.inline { display: flex; align-items: center; gap: 8px; color: var(--text); font-size: 15px; }
   .row { display: flex; gap: 8px; align-items: center; }
-  .row > input { flex: 1; }
+  .row > input, .row > select { flex: 1; }
+  .gap { height: 10px; }
+
+  /* Pestañas internas */
+  .seg { display: flex; background: var(--card); border-radius: 14px; padding: 4px; border: 1px solid var(--line); margin-bottom: 14px; }
+  .seg button { flex: 1; border: 0; background: none; padding: 10px; border-radius: 10px; font: inherit; font-size: 15px; color: var(--muted); cursor: pointer; position: relative; }
+  .seg button.on { background: var(--accent-soft); color: var(--accent); font-weight: 600; }
+  .pane { display: none; }
+  .pane.on { display: block; }
 
   /* Contador */
   .hero { text-align: center; padding: 28px 18px; }
   .hero .names { font-size: 18px; font-weight: 600; }
   .hero .big { font-size: 64px; font-weight: 800; color: var(--accent); line-height: 1.05; margin: 10px 0 2px; }
-  .hero .heart { font-size: 26px; animation: beat 1.4s infinite; display: inline-block; }
+  .heart { font-size: 26px; animation: beat 1.4s infinite; display: inline-block; }
   @keyframes beat { 0%,100% { transform: scale(1);} 15% { transform: scale(1.2);} 30% { transform: scale(1);} 45% { transform: scale(1.12);} }
   .breakdown { display: grid; grid-template-columns: repeat(3, 1fr); gap: 10px; }
   .breakdown div { text-align: center; }
   .breakdown b { display: block; font-size: 26px; }
-  .milestone { display: flex; justify-content: space-between; align-items: center; padding: 10px 0; border-top: 1px solid var(--line); }
-  .milestone:first-of-type { border-top: 0; }
-  .milestone .when { color: var(--accent); font-weight: 600; white-space: nowrap; margin-left: 10px; }
+  .milestone { display: flex; justify-content: space-between; align-items: center; padding: 10px 0; border-top: 1px solid var(--line); gap: 10px; }
+  .milestone:first-child { border-top: 0; }
+  .milestone .when { color: var(--accent); font-weight: 600; white-space: nowrap; }
 
-  /* Ruleta */
+  /* Pregunta del día */
+  .question { font-size: 19px; font-weight: 700; line-height: 1.35; margin: 4px 0 14px; }
+  .answer { background: var(--bg); border-radius: 14px; padding: 12px 14px; margin-top: 10px; white-space: pre-wrap; word-break: break-word; }
+  .answer b { display: block; font-size: 13px; color: var(--accent); margin-bottom: 4px; }
+  .locked { color: var(--muted); font-size: 14px; margin-top: 10px; }
+
+  /* Un día como hoy */
+  .memory { display: flex; gap: 14px; align-items: center; }
+  .memory img { width: 72px; height: 72px; object-fit: cover; border-radius: 14px; flex-shrink: 0; }
+
+  /* Chips */
   .chips { display: flex; flex-wrap: wrap; gap: 8px; margin-bottom: 12px; }
   .chip {
     border: 1px solid var(--line); background: var(--card); color: var(--text);
-    border-radius: 999px; padding: 8px 14px; font-size: 14px; cursor: pointer;
+    border-radius: 999px; padding: 8px 14px; font-size: 14px; cursor: pointer; font-family: inherit;
   }
   .chip.on { background: var(--accent); color: #fff; border-color: var(--accent); }
+  .chip .x { margin-left: 6px; color: var(--muted); }
+  .chip.on .x { color: #fff; }
+
+  /* Ruleta */
   .wheel {
     min-height: 170px; display: flex; flex-direction: column; align-items: center; justify-content: center;
     text-align: center; font-size: 22px; font-weight: 700; padding: 24px;
@@ -115,13 +143,39 @@
   .wheel.spinning .txt { opacity: .55; }
   .wheel .meta { font-size: 13px; font-weight: 500; color: var(--muted); margin-top: 8px; }
 
+  /* Decidir */
+  .modes { display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px; }
+  .mode {
+    background: var(--card); border: 1px solid var(--line); border-radius: 16px; padding: 12px 6px;
+    text-align: center; cursor: pointer; font-family: inherit; color: var(--text); position: relative;
+  }
+  .mode span { display: block; font-size: 26px; margin-bottom: 4px; }
+  .mode b { font-size: 14px; }
+  .mode small { display: block; color: var(--muted); font-size: 11px; margin-top: 2px; }
+  .mode.on { border-color: var(--accent); background: var(--accent-soft); }
+  .opt-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
+  .opt-btn {
+    background: var(--bg); border: 1px solid var(--line); border-radius: 14px; padding: 14px 10px;
+    font: inherit; font-size: 15px; color: var(--text); cursor: pointer;
+  }
+  .opt-btn:active { transform: scale(.96); }
+  .vote-card { text-align: center; padding: 26px 18px; }
+  .vote-card .opt { font-size: 28px; font-weight: 800; margin: 8px 0 22px; }
+  .vote-btns { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
+  .vote-btns button { border: 0; border-radius: 16px; padding: 16px; font-size: 22px; cursor: pointer; font-family: inherit; }
+  .vote-no { background: var(--line); color: var(--text); }
+  .vote-yes { background: var(--accent); color: #fff; }
+  .winner { text-align: center; padding: 26px 18px; }
+  .winner .big-emoji { font-size: 54px; }
+  .winner .name { font-size: 28px; font-weight: 800; color: var(--accent); margin: 6px 0; }
+
   /* Listas */
   .list { list-style: none; padding: 0; margin: 0; }
   .list li { display: flex; align-items: center; gap: 12px; padding: 13px 0; border-top: 1px solid var(--line); }
   .list li:first-child { border-top: 0; }
   .list .txt { flex: 1; word-break: break-word; }
   .list .done .txt { text-decoration: line-through; color: var(--muted); }
-  .list .done .txt .small { text-decoration: none; }
+  .list .done .txt .small { text-decoration: none; display: block; }
   .check {
     width: 26px; height: 26px; border-radius: 50%; border: 2px solid var(--accent);
     background: transparent; flex-shrink: 0; cursor: pointer; color: #fff; font-size: 14px; padding: 0;
@@ -131,11 +185,42 @@
   .progress { height: 10px; background: var(--accent-soft); border-radius: 99px; overflow: hidden; margin-top: 8px; }
   .progress div { height: 100%; background: var(--accent); border-radius: 99px; transition: width .4s; }
   .empty { text-align: center; color: var(--muted); padding: 18px 0; justify-content: center; }
-  .badge { font-size: 12px; padding: 2px 8px; border-radius: 99px; background: var(--accent-soft); color: var(--accent); white-space: nowrap; }
+  .badge { font-size: 12px; padding: 3px 9px; border-radius: 99px; background: var(--accent-soft); color: var(--accent); white-space: nowrap; }
+  .badge.ok { background: color-mix(in srgb, var(--ok) 18%, transparent); color: var(--ok); }
 
   /* Frasco */
   .jar { text-align: center; font-size: 84px; margin: 4px 0; cursor: pointer; user-select: none; }
   .jar:active { transform: scale(.95); }
+
+  /* Cupones */
+  .ticket {
+    display: flex; align-items: center; gap: 14px; padding: 14px; margin-top: 10px;
+    border: 2px dashed var(--accent); border-radius: 16px; background: var(--accent-soft);
+  }
+  .ticket.used { border-color: var(--line); background: var(--bg); opacity: .7; }
+  .ticket .e { font-size: 32px; }
+  .ticket .txt { flex: 1; font-weight: 600; word-break: break-word; }
+  .ticket .txt small { display: block; font-weight: 400; color: var(--muted); margin-top: 3px; }
+  .ticket button.ghost { padding: 8px 12px; font-size: 14px; background: var(--accent); color: #fff; }
+  .tpl-chips { display: flex; gap: 8px; overflow-x: auto; padding-bottom: 6px; margin-bottom: 10px; -webkit-overflow-scrolling: touch; }
+  .tpl-chips .chip { white-space: nowrap; }
+
+  /* Momentos */
+  .year { font-size: 22px; font-weight: 800; margin: 22px 0 10px; color: var(--accent); }
+  .moment { padding: 0; overflow: hidden; }
+  .moment img { width: 100%; max-height: 420px; object-fit: cover; display: block; background: var(--line); cursor: zoom-in; }
+  .moment .body { padding: 14px 16px; }
+  .moment .title { font-weight: 700; font-size: 17px; }
+  .moment .note { margin-top: 6px; white-space: pre-wrap; word-break: break-word; }
+  .moment .foot { display: flex; justify-content: space-between; align-items: center; margin-top: 8px; }
+  .photo-pick {
+    display: flex; align-items: center; justify-content: center; flex-direction: column; gap: 6px;
+    border: 2px dashed var(--line); border-radius: 16px; min-height: 140px; cursor: pointer; overflow: hidden; color: var(--muted);
+  }
+  .photo-pick img { width: 100%; max-height: 260px; object-fit: cover; }
+  .viewer { position: fixed; inset: 0; background: #000; z-index: 70; display: none; align-items: center; justify-content: center; }
+  .viewer.show { display: flex; }
+  .viewer img { max-width: 100%; max-height: 100%; }
 
   /* Modal */
   .modal-bg {
@@ -161,12 +246,13 @@
   nav button span { font-size: 23px; filter: grayscale(1); opacity: .6; }
   nav button.active { color: var(--accent); font-weight: 600; }
   nav button.active span { filter: none; opacity: 1; }
-  nav .dot { position: absolute; top: 0; right: calc(50% - 20px); background: var(--accent); color: #fff; font-size: 10px; font-weight: 700; border-radius: 99px; min-width: 17px; height: 17px; line-height: 17px; padding: 0 4px; filter: none; opacity: 1; }
+  .dot { position: absolute; top: -2px; right: calc(50% - 22px); background: var(--accent); color: #fff; font-size: 10px; font-weight: 700; border-radius: 99px; min-width: 17px; height: 17px; line-height: 17px; padding: 0 4px; text-align: center; }
+  .seg .dot { top: 2px; right: 8px; }
 
   .toast {
     position: fixed; left: 50%; bottom: calc(env(safe-area-inset-bottom) + 90px); transform: translateX(-50%);
     background: var(--text); color: var(--bg); padding: 10px 18px; border-radius: 99px; font-size: 14px;
-    opacity: 0; transition: opacity .25s; pointer-events: none; z-index: 60; white-space: nowrap;
+    opacity: 0; transition: opacity .25s; pointer-events: none; z-index: 80; white-space: nowrap;
   }
   .toast.show { opacity: 1; }
   .offline { display: none; text-align: center; font-size: 12px; color: var(--muted); margin-top: -8px; margin-bottom: 10px; }
@@ -175,11 +261,11 @@
 </head>
 <body class="loading">
 
-<!-- ============ Pantallas de acceso ============ -->
-<div class="gate" id="loadingGate"><div style="font-size:48px" class="hero"><span class="heart">❤️</span></div></div>
+<!-- ============ Acceso ============ -->
+<div class="gate" id="loadingGate"><span class="heart" style="font-size:48px">❤️</span></div>
 
 <div class="gate" id="configGate">
-  <div class="card" style="max-width:380px;text-align:center">
+  <div class="card center" style="max-width:380px">
     <div style="font-size:44px">🛠️</div>
     <h2>Falta conectar Firebase</h2>
     <p class="muted">Pega los datos del proyecto en <b>firebase-config.js</b>.</p>
@@ -188,22 +274,22 @@
 
 <div class="gate" id="loginGate">
   <form class="card" style="max-width:380px;width:100%" onsubmit="event.preventDefault();login()">
-    <div style="text-align:center;font-size:52px">💞</div>
-    <h1 style="text-align:center;margin-top:4px">Nosotros</h1>
+    <div class="center" style="font-size:52px">💞</div>
+    <h1 class="center" style="margin-top:4px">Nosotros</h1>
     <label>Correo</label>
     <input type="email" id="loginEmail" autocomplete="username" autocapitalize="off" required>
     <label>Contraseña</label>
     <input type="password" id="loginPass" autocomplete="current-password" required>
     <div style="height:16px"></div>
     <button class="primary" id="loginBtn" type="submit">Entrar</button>
-    <div style="text-align:center;margin-top:6px"><button class="link" type="button" onclick="resetPass()">¿Olvidaste tu contraseña?</button></div>
+    <div class="center" style="margin-top:6px"><button class="link" type="button" onclick="resetPass()">¿Olvidaste tu contraseña?</button></div>
   </form>
 </div>
 
 <main>
   <div class="offline">📴 Sin conexión · los cambios se sincronizan al volver</div>
 
-  <!-- ============ CONTADOR ============ -->
+  <!-- ============ INICIO ============ -->
   <section class="screen active" id="s-home">
     <div class="header">
       <h1>Nosotros</h1>
@@ -230,39 +316,129 @@
           <div><b id="bD">0</b><span class="muted small">días</span></div>
         </div>
       </div>
+    </div>
+
+    <div class="card" id="memoryCard" style="display:none"></div>
+
+    <div class="card" id="questionCard"></div>
+
+    <div class="card">
+      <div class="header" style="margin-bottom:6px">
+        <h2 style="margin:0">Próximos momentos ✨</h2>
+        <button class="ghost" style="padding:7px 12px;font-size:14px" onclick="openFechas()">📅 Fechas</button>
+      </div>
+      <div id="milestones"></div>
+    </div>
+  </section>
+
+  <!-- ============ DECIDIR ============ -->
+  <section class="screen" id="s-decide">
+    <h1>¿Qué hacemos?</h1>
+    <div class="seg" data-group="decide">
+      <button class="on" data-pane="p-lists">🤔 Decidir algo<b class="dot" id="decideSegDot" hidden></b></button>
+      <button data-pane="p-citas">🎲 Ideas de citas</button>
+    </div>
+
+    <!-- Decidir algo -->
+    <div class="pane on" data-group="decide" id="p-lists">
+      <div id="listChips" class="chips"></div>
+      <div id="listTemplates"></div>
+      <div id="listArea"></div>
+    </div>
+
+    <!-- Ideas de citas -->
+    <div class="pane" data-group="decide" id="p-citas">
       <div class="card">
-        <h2>Próximos momentos ✨</h2>
-        <div id="milestones"></div>
+        <div class="chips" id="placeChips"></div>
+        <div class="chips" id="costChips" style="margin-bottom:0"></div>
+      </div>
+      <div class="card wheel" id="wheel">
+        <div class="emoji" id="wEmoji">🎲</div>
+        <div class="txt" id="wTxt">Toquen el botón para sortear una cita</div>
+        <div class="meta" id="wMeta"></div>
+      </div>
+      <button class="primary" id="spinBtn" onclick="spin()">🎰 Sortear cita</button>
+      <div class="gap"></div>
+      <button class="ghost full" id="toBucketBtn" onclick="ideaToBucket()" hidden>➕ Guardar en la bucket list</button>
+
+      <div class="card" style="margin-top:22px">
+        <h2>Agregar idea propia</h2>
+        <input id="newIdea" placeholder="Ej: Picnic en el parque" maxlength="80">
+        <div class="row" style="margin-top:8px">
+          <select id="newIdeaPlace"><option value="casa">🏠 En casa</option><option value="afuera">🌆 Afuera</option></select>
+          <select id="newIdeaCost"><option value="0">Gratis</option><option value="1">$</option><option value="2">$$</option><option value="3">$$$</option></select>
+        </div>
+        <div class="gap"></div>
+        <button class="ghost full" onclick="addIdea()">Agregar a la ruleta</button>
+        <p class="muted small center" id="ideaCount" style="margin:10px 0 0"></p>
       </div>
     </div>
   </section>
 
-  <!-- ============ RULETA ============ -->
-  <section class="screen" id="s-dates">
-    <h1>¿Qué hacemos?</h1>
-    <div class="card">
-      <div class="chips" id="placeChips"></div>
-      <div class="chips" id="costChips" style="margin-bottom:0"></div>
+  <!-- ============ MOMENTOS ============ -->
+  <section class="screen" id="s-moments">
+    <div class="header">
+      <h1>Momentos</h1>
+      <button class="ghost" onclick="openMoment()">＋ Agregar</button>
     </div>
-    <div class="card wheel" id="wheel">
-      <div class="emoji" id="wEmoji">🎲</div>
-      <div class="txt" id="wTxt">Toquen el botón para sortear una cita</div>
-      <div class="meta" id="wMeta"></div>
-    </div>
-    <button class="primary" id="spinBtn" onclick="spin()">🎰 Sortear cita</button>
-    <div style="height:10px"></div>
-    <button class="ghost" style="width:100%" id="toBucketBtn" onclick="ideaToBucket()" hidden>➕ Guardar en la bucket list</button>
+    <div id="momentsList"></div>
+  </section>
 
-    <div class="card" style="margin-top:22px">
-      <h2>Agregar idea propia</h2>
-      <input id="newIdea" placeholder="Ej: Picnic en el parque" maxlength="80">
-      <div class="row" style="margin-top:8px">
-        <select id="newIdeaPlace"><option value="casa">🏠 En casa</option><option value="afuera">🌆 Afuera</option></select>
-        <select id="newIdeaCost"><option value="0">Gratis</option><option value="1">$</option><option value="2">$$</option><option value="3">$$$</option></select>
+  <!-- ============ DETALLES (notas y cupones) ============ -->
+  <section class="screen" id="s-love">
+    <h1>Detalles</h1>
+    <div class="seg" data-group="love">
+      <button class="on" data-pane="p-notes">💌 Notas<b class="dot" id="notesSegDot" hidden></b></button>
+      <button data-pane="p-coupons">🎟️ Cupones<b class="dot" id="couponsSegDot" hidden></b></button>
+    </div>
+
+    <div class="pane on" data-group="love" id="p-notes">
+      <div class="card center">
+        <div class="jar" onclick="drawNote()">🫙</div>
+        <p class="muted" id="jarInfo" style="margin:0 0 14px"></p>
+        <button class="primary" onclick="drawNote()">💌 Sacar una nota</button>
       </div>
-      <div style="height:10px"></div>
-      <button class="ghost" style="width:100%" onclick="addIdea()">Agregar a la ruleta</button>
-      <p class="muted small" id="ideaCount" style="margin:10px 0 0;text-align:center"></p>
+      <div class="card">
+        <h2 id="writeTitle">Escribir una nota</h2>
+        <textarea id="newNote" placeholder="Algo bonito para leer en un día difícil…" maxlength="500"></textarea>
+        <div class="gap"></div>
+        <button class="ghost full" onclick="addNote()">Guardar en el frasco</button>
+      </div>
+      <div class="card">
+        <div class="row" style="justify-content:space-between">
+          <h2 style="margin:0">Notas que ya leíste</h2>
+          <span class="muted small" id="readCount"></span>
+        </div>
+        <ul class="list" id="readList" style="margin-top:8px"></ul>
+      </div>
+      <div class="card">
+        <h2 style="margin:0">Notas que escribiste</h2>
+        <ul class="list" id="mineList" style="margin-top:8px"></ul>
+      </div>
+    </div>
+
+    <div class="pane" data-group="love" id="p-coupons">
+      <div class="card">
+        <h2 id="couponTitle">Regalar un cupón</h2>
+        <div class="tpl-chips" id="couponTpls"></div>
+        <div class="row">
+          <select id="couponEmoji" style="flex:0 0 76px">
+            <option>🎟️</option><option>💆</option><option>🥞</option><option>🎬</option><option>🍽️</option><option>🧽</option>
+            <option>🤗</option><option>🍦</option><option>🎁</option><option>😴</option><option>🙊</option><option>💋</option><option>☕</option>
+          </select>
+          <input id="couponText" placeholder="Vale por…" maxlength="90">
+        </div>
+        <div class="gap"></div>
+        <button class="ghost full" onclick="addCoupon()">🎁 Regalar cupón</button>
+      </div>
+      <div class="card">
+        <h2 style="margin:0" id="forMeTitle">Tus cupones</h2>
+        <div id="couponsForMe"></div>
+      </div>
+      <div class="card">
+        <h2 style="margin:0">Cupones que regalaste</h2>
+        <div id="couponsMine"></div>
+      </div>
     </div>
   </section>
 
@@ -283,43 +459,17 @@
     </div>
     <div class="card"><ul class="list" id="bucketList"></ul></div>
   </section>
-
-  <!-- ============ NOTAS DE AMOR ============ -->
-  <section class="screen" id="s-notes">
-    <h1>Frasco de notas</h1>
-    <div class="card" style="text-align:center">
-      <div class="jar" onclick="drawNote()">🫙</div>
-      <p class="muted" id="jarInfo" style="margin:0 0 14px"></p>
-      <button class="primary" onclick="drawNote()">💌 Sacar una nota</button>
-    </div>
-    <div class="card">
-      <h2 id="writeTitle">Escribir una nota</h2>
-      <textarea id="newNote" placeholder="Algo bonito para leer en un día difícil…" maxlength="500"></textarea>
-      <div style="height:10px"></div>
-      <button class="ghost" style="width:100%" onclick="addNote()">Guardar en el frasco</button>
-    </div>
-    <div class="card">
-      <div class="row" style="justify-content:space-between">
-        <h2 style="margin:0">Notas que ya leíste</h2>
-        <span class="muted small" id="readCount"></span>
-      </div>
-      <ul class="list" id="readList" style="margin-top:8px"></ul>
-    </div>
-    <div class="card">
-      <h2 style="margin:0">Notas que escribiste</h2>
-      <ul class="list" id="mineList" style="margin-top:8px"></ul>
-    </div>
-  </section>
 </main>
 
 <nav>
-  <button class="active" data-s="s-home"><span>💞</span>Nosotros</button>
-  <button data-s="s-dates"><span>🎲</span>Citas</button>
+  <button class="active" data-s="s-home"><span>💞</span>Inicio<b class="dot" id="homeDot" hidden></b></button>
+  <button data-s="s-decide"><span>🎲</span>Decidir<b class="dot" id="decideDot" hidden></b></button>
+  <button data-s="s-moments"><span>📸</span>Momentos</button>
+  <button data-s="s-love"><span>💌</span>Detalles<b class="dot" id="loveDot" hidden></b></button>
   <button data-s="s-bucket"><span>✅</span>Bucket</button>
-  <button data-s="s-notes"><span>💌</span>Notas<b class="dot" id="notesDot" hidden></b></button>
 </nav>
 
-<!-- Modal de ajustes -->
+<!-- Ajustes -->
 <div class="modal-bg" id="settingsModal" onclick="if(event.target===this)closeModal(this)">
   <div class="modal">
     <h2>Ajustes</h2>
@@ -332,7 +482,7 @@
     <button class="primary" onclick="saveSettings()">Guardar</button>
 
     <h2 style="margin-top:26px">Respaldo</h2>
-    <p class="muted small" style="margin-top:0">Los datos están en la nube y se comparten entre los dos. Igual pueden descargar una copia cuando quieran.</p>
+    <p class="muted small" style="margin-top:0">Los datos están en la nube y se comparten entre los dos. Igual pueden descargar una copia (las fotos no se incluyen).</p>
     <div class="row">
       <button class="ghost" style="flex:1" onclick="exportData()">⬇️ Descargar</button>
       <button class="ghost" style="flex:1" onclick="document.getElementById('importFile').click()">⬆️ Subir respaldo</button>
@@ -344,16 +494,15 @@
 
     <h2 style="margin-top:26px">Sesión</h2>
     <p class="muted small" style="margin-top:0" id="sessionInfo"></p>
-    <button class="ghost" style="width:100%" onclick="logout()">Cerrar sesión</button>
-
-    <div style="height:10px"></div>
-    <button class="ghost" style="width:100%" onclick="closeModal(settingsModal)">Cerrar</button>
+    <button class="ghost full" onclick="logout()">Cerrar sesión</button>
+    <div class="gap"></div>
+    <button class="ghost full" onclick="closeModal(settingsModal)">Cerrar</button>
   </div>
 </div>
 
-<!-- Modal de nota -->
+<!-- Nota -->
 <div class="modal-bg" id="noteModal" onclick="if(event.target===this)closeModal(this)">
-  <div class="modal" style="text-align:center">
+  <div class="modal center">
     <div style="font-size:40px">💌</div>
     <div class="note-paper" id="noteText"></div>
     <p class="muted small" id="noteMeta"></p>
@@ -361,452 +510,75 @@
   </div>
 </div>
 
+<!-- Fechas especiales -->
+<div class="modal-bg" id="fechasModal" onclick="if(event.target===this)closeModal(this)">
+  <div class="modal">
+    <h2>Fechas especiales 📅</h2>
+    <ul class="list" id="fechasList"></ul>
+    <h2 style="margin-top:22px">Agregar fecha</h2>
+    <div class="row">
+      <select id="fechaKind" style="flex:0 0 140px"></select>
+      <input type="date" id="fechaDate">
+    </div>
+    <div class="gap"></div>
+    <input id="fechaTitle" placeholder="Ej: Cumpleaños de mamá, viaje a la playa…" maxlength="60">
+    <label class="inline"><input type="checkbox" id="fechaYearly" checked> Se repite cada año</label>
+    <div class="gap"></div>
+    <button class="primary" onclick="addFecha()">Guardar fecha</button>
+    <div class="gap"></div>
+    <button class="ghost full" onclick="closeModal(fechasModal)">Cerrar</button>
+  </div>
+</div>
+
+<!-- Respuestas anteriores -->
+<div class="modal-bg" id="answersModal" onclick="if(event.target===this)closeModal(this)">
+  <div class="modal">
+    <h2>Respuestas anteriores 💬</h2>
+    <div id="answersHistory"></div>
+    <div class="gap"></div>
+    <button class="ghost full" onclick="closeModal(answersModal)">Cerrar</button>
+  </div>
+</div>
+
+<!-- Nuevo momento -->
+<div class="modal-bg" id="momentModal">
+  <div class="modal">
+    <h2>Nuevo momento 📸</h2>
+    <label class="photo-pick" id="photoPick">
+      <span style="font-size:34px">🖼️</span><span>Agregar foto (opcional)</span>
+      <input type="file" accept="image/*" id="momentPhoto" hidden onchange="pickPhoto(this)">
+    </label>
+    <label>¿Qué pasó?</label>
+    <input id="momentTitle" maxlength="80" placeholder="Ej: Nuestro primer viaje juntos">
+    <label>Fecha</label>
+    <input type="date" id="momentDate">
+    <label>Nota (opcional)</label>
+    <textarea id="momentNote" maxlength="600" placeholder="Lo que no quieren olvidar…"></textarea>
+    <div style="height:14px"></div>
+    <button class="primary" id="momentSave" onclick="saveMoment()">Guardar momento</button>
+    <div class="gap"></div>
+    <button class="ghost full" onclick="closeMoment()">Cancelar</button>
+  </div>
+</div>
+
+<!-- Nueva lista -->
+<div class="modal-bg" id="listModal" onclick="if(event.target===this)closeModal(this)">
+  <div class="modal">
+    <h2>Nueva lista</h2>
+    <div class="row">
+      <input id="listEmoji" style="flex:0 0 64px;text-align:center" value="🤔" maxlength="4">
+      <input id="listName" placeholder="Ej: ¿Qué cenamos?" maxlength="40">
+    </div>
+    <p class="muted small">Luego le agregan las opciones.</p>
+    <button class="primary" onclick="createList()">Crear lista</button>
+    <div class="gap"></div>
+    <button class="ghost full" onclick="closeModal(listModal)">Cancelar</button>
+  </div>
+</div>
+
+<div class="viewer" id="viewer" onclick="this.classList.remove('show')"><img id="viewerImg" alt=""></div>
 <div class="toast" id="toast"></div>
 
-<script type="module">
-import { initializeApp } from 'https://www.gstatic.com/firebasejs/11.0.2/firebase-app.js';
-import { getAuth, onAuthStateChanged, signInWithEmailAndPassword, signOut, sendPasswordResetEmail }
-  from 'https://www.gstatic.com/firebasejs/11.0.2/firebase-auth.js';
-import { initializeFirestore, persistentLocalCache, persistentMultipleTabManager,
-         doc, collection, onSnapshot, setDoc, updateDoc, deleteDoc, writeBatch }
-  from 'https://www.gstatic.com/firebasejs/11.0.2/firebase-firestore.js';
-import { firebaseConfig } from './firebase-config.js';
-
-/* ================= Utilidades ================= */
-const $ = id => document.getElementById(id);
-const esc = s => String(s).replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
-const setState = s => { document.body.classList.remove('loading', 'out', 'in', 'noconfig'); document.body.classList.add(s); };
-function toast(msg) {
-  const t = $('toast'); t.textContent = msg; t.classList.add('show');
-  clearTimeout(toast.h); toast.h = setTimeout(() => t.classList.remove('show'), 2000);
-}
-function closeModal(m) { m.classList.remove('show'); }
-const updateOnline = () => document.body.classList.toggle('is-offline', !navigator.onLine);
-addEventListener('online', updateOnline); addEventListener('offline', updateOnline); updateOnline();
-
-if ('serviceWorker' in navigator) navigator.serviceWorker.register('sw.js').catch(() => {});
-
-if (!firebaseConfig.apiKey || firebaseConfig.apiKey === 'PEGAR_AQUI') {
-  setState('noconfig');
-  throw new Error('Falta firebase-config.js');
-}
-
-/* ================= Firebase ================= */
-const app = initializeApp(firebaseConfig);
-const auth = getAuth(app);
-const db = initializeFirestore(app, { localCache: persistentLocalCache({ tabManager: persistentMultipleTabManager() }) });
-const COUPLE = 'nosotros';
-const coupleRef = doc(db, 'couples', COUPLE);
-const col = name => collection(db, 'couples', COUPLE, name);
-// Las escrituras se aplican al instante en el teléfono y se sincronizan solas.
-// No se espera la respuesta del servidor para que todo funcione también sin internet.
-const write = p => p.catch(err => {
-  console.error(err);
-  toast(err.code === 'permission-denied' ? 'Esta cuenta no tiene permiso 🔒' : 'No se pudo guardar');
-});
-
-/* ================= Estado ================= */
-let me = null;
-let settings = { start: '', members: {} };
-let bucket = [], ideas = [], notes = [];
-let unsubs = [];
-
-const nameOf = uid => settings.members?.[uid]?.name || (uid === me?.uid ? 'Tú' : 'Tu pareja');
-const partnerUid = () => Object.keys(settings.members || {}).find(u => u !== me.uid);
-const partnerName = () => { const p = partnerUid(); return p ? nameOf(p) : 'tu pareja'; };
-
-/* ================= Sesión ================= */
-onAuthStateChanged(auth, user => {
-  unsubs.forEach(u => u()); unsubs = [];
-  me = user;
-  if (!user) { setState('out'); return; }
-  setState('in');
-  listen();
-});
-
-async function login() {
-  const btn = $('loginBtn'); btn.disabled = true; btn.textContent = 'Entrando…';
-  try {
-    await signInWithEmailAndPassword(auth, $('loginEmail').value.trim(), $('loginPass').value);
-    $('loginPass').value = '';
-  } catch (e) {
-    const msg = {
-      'auth/invalid-credential': 'Correo o contraseña incorrectos',
-      'auth/invalid-email': 'Ese correo no es válido',
-      'auth/too-many-requests': 'Demasiados intentos, espera un rato',
-      'auth/network-request-failed': 'Sin conexión a internet',
-    }[e.code] || 'No se pudo entrar';
-    toast(msg);
-  } finally { btn.disabled = false; btn.textContent = 'Entrar'; }
-}
-async function resetPass() {
-  const email = $('loginEmail').value.trim();
-  if (!email) return toast('Escribe tu correo arriba primero');
-  try { await sendPasswordResetEmail(auth, email); toast('Te mandamos un correo 📧'); }
-  catch { toast('No se pudo enviar el correo'); }
-}
-function logout() {
-  if (!confirm('¿Cerrar sesión en este teléfono?')) return;
-  closeModal($('settingsModal')); signOut(auth);
-}
-
-function listen() {
-  const fail = err => { console.error(err); if (err.code === 'permission-denied') toast('Esta cuenta no tiene acceso 🔒'); };
-  unsubs.push(onSnapshot(coupleRef, { includeMetadataChanges: true }, snap => {
-    settings = Object.assign({ start: '', members: {} }, snap.data());
-    renderHome(); renderNotes(); renderBucket();
-    if (!snap.metadata.fromCache) maybeMigrate();
-  }, fail));
-  unsubs.push(onSnapshot(col('bucket'), s => { bucket = s.docs.map(d => ({ id: d.id, ...d.data() })); renderBucket(); }, fail));
-  unsubs.push(onSnapshot(col('ideas'), s => { ideas = s.docs.map(d => ({ id: d.id, ...d.data() })); renderDates(); renderCustomIdeas(); }, fail));
-  unsubs.push(onSnapshot(col('notes'), s => { notes = s.docs.map(d => ({ id: d.id, ...d.data() })); renderNotes(); }, fail));
-  renderDates();
-}
-
-/* ================= Navegación ================= */
-document.querySelectorAll('nav button').forEach(b => b.onclick = () => {
-  document.querySelectorAll('nav button').forEach(x => x.classList.toggle('active', x === b));
-  document.querySelectorAll('.screen').forEach(s => s.classList.toggle('active', s.id === b.dataset.s));
-  window.scrollTo(0, 0);
-});
-
-/* ================= Contador ================= */
-const DAY = 86400000;
-const parseDate = s => { const [y, m, d] = s.split('-').map(Number); return new Date(y, m - 1, d); };
-const today = () => { const n = new Date(); return new Date(n.getFullYear(), n.getMonth(), n.getDate()); };
-const daysBetween = (a, b) => Math.round((b - a) / DAY);
-const fmtDate = d => d.toLocaleDateString('es', { day: 'numeric', month: 'long', year: 'numeric' });
-// Suma meses sin desbordar (31 ene + 1 mes = 28/29 feb)
-function addMonths(date, n) {
-  const d = new Date(date.getFullYear(), date.getMonth() + n, 1);
-  const last = new Date(d.getFullYear(), d.getMonth() + 1, 0).getDate();
-  d.setDate(Math.min(date.getDate(), last));
-  return d;
-}
-
-function renderHome() {
-  if (!me) return;
-  const myName = settings.members?.[me.uid]?.name;
-  const ready = settings.start && myName;
-  $('setupCard').style.display = ready ? 'none' : 'block';
-  $('counterArea').style.display = ready ? 'block' : 'none';
-  if (!ready) {
-    $('setupTitle').textContent = settings.start ? '¡Hola! 👋' : '¡Bienvenido!';
-    $('setupText').textContent = settings.start
-      ? 'Solo falta que pongas tu nombre.'
-      : 'Pon tu nombre y el día en que empezaron para activar el contador.';
-    return;
-  }
-
-  const start = parseDate(settings.start), now = today();
-  const days = daysBetween(start, now);
-  const names = Object.values(settings.members).sort((a, b) => (a.joined || 0) - (b.joined || 0)).map(m => m.name);
-  $('namesLbl').textContent = names.join(' & ');
-  $('daysBig').textContent = days.toLocaleString('es');
-
-  let months = (now.getFullYear() - start.getFullYear()) * 12 + now.getMonth() - start.getMonth();
-  if (addMonths(start, months) > now) months--;
-  months = Math.max(0, months);
-  $('bY').textContent = Math.floor(months / 12);
-  $('bM').textContent = months % 12;
-  $('bD').textContent = Math.max(0, daysBetween(addMonths(start, months), now));
-
-  const list = [];
-  const next100 = (Math.floor(days / 100) + 1) * 100;
-  list.push({ label: `${next100.toLocaleString('es')} días juntos`, date: new Date(start.getTime() + next100 * DAY) });
-  const next1000 = (Math.floor(days / 1000) + 1) * 1000;
-  if (next1000 !== next100) list.push({ label: `${next1000.toLocaleString('es')} días juntos 🎉`, date: new Date(start.getTime() + next1000 * DAY) });
-  const totalMonths = months + 1;
-  if (totalMonths % 12 === 0) {
-    list.push({ label: `Aniversario #${totalMonths / 12} 💍`, date: addMonths(start, totalMonths) });
-  } else {
-    list.push({ label: `Mesiversario #${totalMonths}`, date: addMonths(start, totalMonths) });
-    const nextYear = Math.floor(months / 12) + 1;
-    list.push({ label: `Aniversario #${nextYear} 💍`, date: addMonths(start, nextYear * 12) });
-  }
-  list.sort((a, b) => a.date - b.date);
-  $('milestones').innerHTML = list.map(m => {
-    const left = daysBetween(now, m.date);
-    const when = left === 0 ? '¡Hoy!' : left === 1 ? 'Mañana' : `en ${left} días`;
-    return `<div class="milestone"><div><div>${esc(m.label)}</div><div class="muted small">${fmtDate(m.date)}</div></div><div class="when">${when}</div></div>`;
-  }).join('');
-}
-
-/* ================= Ajustes ================= */
-function openSettings() {
-  $('setName').value = settings.members?.[me.uid]?.name || '';
-  $('setStart').value = settings.start || '';
-  const p = partnerUid();
-  $('partnerInfo').textContent = p
-    ? `Conectado con ${nameOf(p)} 💞`
-    : 'Tu pareja aparecerá aquí cuando entre por primera vez y ponga su nombre.';
-  $('sessionInfo').textContent = `Entraste como ${me.email}`;
-  renderCustomIdeas();
-  $('settingsModal').classList.add('show');
-}
-function saveSettings() {
-  const name = $('setName').value.trim(), start = $('setStart').value;
-  if (!name || !start) return toast('Completa tu nombre y la fecha');
-  if (parseDate(start) > today()) return toast('La fecha no puede ser futura');
-  const joined = settings.members?.[me.uid]?.joined || Date.now();
-  write(setDoc(coupleRef, { start, members: { [me.uid]: { name, joined } } }, { merge: true }));
-  closeModal($('settingsModal')); toast('Guardado 💾');
-}
-function renderCustomIdeas() {
-  $('customIdeasList').innerHTML = ideas.length
-    ? ideas.map(i => `<li><span class="txt">${esc(i.t)}</span><button class="del" onclick="delIdea('${i.id}')">✕</button></li>`).join('')
-    : '<li class="empty">Aún no agregan ideas propias</li>';
-}
-function delIdea(id) { write(deleteDoc(doc(col('ideas'), id))); }
-
-function exportData() {
-  const data = { version: 2, start: settings.start, members: settings.members, ideas, bucket, notes };
-  const blob = new Blob([JSON.stringify(data, null, 2)], { type: 'application/json' });
-  const a = document.createElement('a');
-  a.href = URL.createObjectURL(blob);
-  a.download = `nosotros-respaldo-${new Date().toISOString().slice(0, 10)}.json`;
-  a.click();
-  setTimeout(() => URL.revokeObjectURL(a.href), 1000);
-}
-
-// Sube datos de un respaldo o de la versión anterior (que guardaba solo en el teléfono).
-// Usa los mismos IDs, así que subir el mismo respaldo dos veces no duplica nada.
-async function uploadData(d) {
-  const batch = writeBatch(db);
-  const patch = {};
-  if (d.start && !settings.start) patch.start = d.start;
-  if (d.version === 2) {
-    if (d.members) patch.members = d.members;
-  } else if (d.name1 && !settings.members?.[me.uid]) {
-    patch.members = { [me.uid]: { name: d.name1, joined: Date.now() } };
-  }
-  if (Object.keys(patch).length) batch.set(coupleRef, patch, { merge: true });
-  for (const i of d.ideas || []) {
-    batch.set(doc(col('ideas'), i.id), { t: i.t, place: i.place, cost: i.cost, e: i.e || '💡', by: i.by || me.uid });
-  }
-  for (const b of d.bucket || []) {
-    batch.set(doc(col('bucket'), b.id), {
-      text: b.text, done: !!b.done, doneAt: b.doneAt || null,
-      createdAt: b.createdAt || Date.now(), by: b.by || me.uid,
-    });
-  }
-  for (const n of d.notes || []) {
-    // Versión anterior: from 1 = quien usaba el teléfono, from 2 = la pareja
-    const fromUid = n.fromUid || (n.from === 2 ? 'antes-pareja' : me.uid);
-    const fromName = n.fromName || (n.from === 2 ? d.name2 : d.name1) || '';
-    batch.set(doc(col('notes'), n.id), {
-      text: n.text, fromUid, fromName, createdAt: n.createdAt || Date.now(), readAt: n.readAt || null,
-    });
-  }
-  await batch.commit();
-}
-
-const OLD_KEY = 'nosotros-data';
-async function maybeMigrate() {
-  if (maybeMigrate.running || localStorage.getItem(OLD_KEY + '-subido')) return;
-  let old; try { old = JSON.parse(localStorage.getItem(OLD_KEY)); } catch {}
-  if (!old || !(old.bucket?.length || old.notes?.length || old.ideas?.length || old.start)) return;
-  maybeMigrate.running = true;
-  if (confirm('Encontré datos guardados en este teléfono de la versión anterior. ¿Subirlos para compartirlos?')) {
-    try { await uploadData(old); localStorage.setItem(OLD_KEY + '-subido', '1'); toast('Datos subidos ✅'); }
-    catch (e) { console.error(e); toast('No se pudieron subir, se intentará de nuevo'); }
-  } else {
-    localStorage.setItem(OLD_KEY + '-subido', 'no');
-  }
-  maybeMigrate.running = false;
-}
-
-function importData(input) {
-  const f = input.files[0]; if (!f) return;
-  f.text().then(txt => {
-    const d = JSON.parse(txt);
-    if (typeof d !== 'object' || !Array.isArray(d.bucket)) throw 0;
-    if (!confirm('Se agregarán los datos del respaldo a los actuales. ¿Continuar?')) return;
-    return uploadData(d).then(() => toast('Respaldo subido ✅'));
-  }).catch(() => toast('Ese archivo no es un respaldo válido'));
-  input.value = '';
-}
-
-/* ================= Ruleta de citas ================= */
-const DEFAULT_IDEAS = [
-  ['Noche de películas con palomitas', 'casa', 0, '🍿'],
-  ['Cocinar juntos una receta nueva', 'casa', 1, '👩‍🍳'],
-  ['Noche de juegos de mesa', 'casa', 0, '🎲'],
-  ['Spa en casa: mascarillas y masajes', 'casa', 1, '🧖'],
-  ['Picnic en la sala con velas', 'casa', 1, '🕯️'],
-  ['Armar un rompecabezas', 'casa', 0, '🧩'],
-  ['Noche de karaoke', 'casa', 0, '🎤'],
-  ['Hacer un fuerte de cobijas', 'casa', 0, '🏕️'],
-  ['Cata de vinos o quesos en casa', 'casa', 2, '🍷'],
-  ['Pintar un cuadro juntos', 'casa', 1, '🎨'],
-  ['Maratón de la saga favorita de uno de los dos', 'casa', 0, '📺'],
-  ['Hornear galletas o un pastel', 'casa', 1, '🍪'],
-  ['Ver fotos viejas y contar historias', 'casa', 0, '📸'],
-  ['Escribirse cartas y leerlas en voz alta', 'casa', 0, '✉️'],
-  ['Caminar por un lugar que no conocen', 'afuera', 0, '🚶'],
-  ['Ver el atardecer desde un mirador', 'afuera', 0, '🌅'],
-  ['Picnic en el parque', 'afuera', 1, '🧺'],
-  ['Probar un restaurante nuevo', 'afuera', 2, '🍽️'],
-  ['Ir por helado y pasear', 'afuera', 1, '🍦'],
-  ['Ir al cine', 'afuera', 2, '🎬'],
-  ['Ir a un museo o exposición', 'afuera', 1, '🖼️'],
-  ['Bolos o minigolf', 'afuera', 2, '🎳'],
-  ['Clase de baile, cocina o cerámica', 'afuera', 3, '💃'],
-  ['Cena elegante', 'afuera', 3, '🥂'],
-  ['Escapada de fin de semana', 'afuera', 3, '🧳'],
-  ['Desayuno en una cafetería bonita', 'afuera', 1, '☕'],
-  ['Ir a un mercado o feria', 'afuera', 1, '🛍️'],
-  ['Ver estrellas lejos de la ciudad', 'afuera', 0, '✨'],
-  ['Ir a un concierto o show en vivo', 'afuera', 3, '🎶'],
-  ['Andar en bici juntos', 'afuera', 0, '🚲'],
-  ['Hacer senderismo', 'afuera', 0, '🥾'],
-  ['Tomarse fotos en un photobooth', 'afuera', 1, '🤳'],
-].map(([t, place, cost, e]) => ({ t, place, cost, e }));
-
-const filters = { place: 'todo', cost: 'todo' };
-const PLACES = [['todo', 'Todo'], ['casa', '🏠 En casa'], ['afuera', '🌆 Afuera']];
-const COSTS = [['todo', 'Cualquier precio'], ['0', 'Gratis'], ['1', '$'], ['2', '$$'], ['3', '$$$']];
-const costLbl = c => ['Gratis', '$', '$$', '$$$'][c];
-let lastIdea = null;
-
-function renderChips(el, opts, key) {
-  el.innerHTML = opts.map(([v, l]) => `<button class="chip ${filters[key] === v ? 'on' : ''}" data-v="${v}">${l}</button>`).join('');
-  el.querySelectorAll('.chip').forEach(c => c.onclick = () => { filters[key] = c.dataset.v; renderDates(); });
-}
-const allIdeas = () => [...DEFAULT_IDEAS, ...ideas.map(i => ({ ...i, e: i.e || '💡' }))];
-const pool = () => allIdeas().filter(i =>
-  (filters.place === 'todo' || i.place === filters.place) &&
-  (filters.cost === 'todo' || String(i.cost) === filters.cost));
-
-function renderDates() {
-  renderChips($('placeChips'), PLACES, 'place');
-  renderChips($('costChips'), COSTS, 'cost');
-  const n = pool().length;
-  $('ideaCount').textContent = `${n} idea${n === 1 ? '' : 's'} con estos filtros · ${ideas.length} propia${ideas.length === 1 ? '' : 's'}`;
-}
-function spin() {
-  const p = pool();
-  if (!p.length) return toast('No hay ideas con esos filtros');
-  const btn = $('spinBtn'), w = $('wheel');
-  btn.disabled = true; w.classList.add('spinning'); $('toBucketBtn').hidden = true; $('wMeta').textContent = '';
-  let i = 0, delay = 40;
-  const tick = () => {
-    let pick; do { pick = p[Math.floor(Math.random() * p.length)]; } while (p.length > 1 && pick === lastIdea);
-    $('wEmoji').textContent = pick.e; $('wTxt').textContent = pick.t; lastIdea = pick;
-    if (navigator.vibrate) navigator.vibrate(5);
-    if (++i < 16) { delay *= 1.12; setTimeout(tick, delay); }
-    else {
-      w.classList.remove('spinning'); btn.disabled = false; btn.textContent = '🎰 Otra vez';
-      $('wMeta').textContent = `${pick.place === 'casa' ? '🏠 En casa' : '🌆 Afuera'} · ${costLbl(pick.cost)}`;
-      $('toBucketBtn').hidden = false;
-    }
-  };
-  tick();
-}
-function ideaToBucket() {
-  if (!lastIdea) return;
-  write(setDoc(doc(col('bucket')), { text: `${lastIdea.e} ${lastIdea.t}`, done: false, doneAt: null, createdAt: Date.now(), by: me.uid }));
-  $('toBucketBtn').hidden = true; toast('Agregada a la bucket list ✅');
-}
-function addIdea() {
-  const t = $('newIdea').value.trim();
-  if (!t) return toast('Escribe una idea');
-  write(setDoc(doc(col('ideas')), { t, place: $('newIdeaPlace').value, cost: Number($('newIdeaCost').value), e: '💡', by: me.uid }));
-  $('newIdea').value = ''; toast('Idea agregada 💡');
-}
-$('newIdea').addEventListener('keydown', e => e.key === 'Enter' && addIdea());
-
-/* ================= Bucket list ================= */
-function renderBucket() {
-  if (!me) return;
-  const items = [...bucket].sort((a, b) => (a.done - b.done) || (b.createdAt || 0) - (a.createdAt || 0));
-  const done = bucket.filter(b => b.done).length, total = bucket.length;
-  const pct = total ? Math.round(done / total * 100) : 0;
-  $('bucketCount').textContent = `${done} de ${total} cumplidas`;
-  $('bucketPct').textContent = `${pct}%`;
-  $('bucketBar').style.width = pct + '%';
-  $('bucketList').innerHTML = items.length ? items.map(b => `
-    <li class="${b.done ? 'done' : ''}">
-      <button class="check" onclick="toggleBucket('${b.id}')">${b.done ? '✓' : ''}</button>
-      <div class="txt">${esc(b.text)}<div class="muted small">${b.doneAt ? `Cumplida el ${fmtDate(new Date(b.doneAt))}` : `Agregado por ${esc(nameOf(b.by))}`}</div></div>
-      <button class="del" onclick="delBucket('${b.id}')">✕</button>
-    </li>`).join('') : '<li class="empty">Agreguen su primer sueño juntos ✨</li>';
-}
-function addBucket() {
-  const t = $('newBucket').value.trim();
-  if (!t) return;
-  write(setDoc(doc(col('bucket')), { text: t, done: false, doneAt: null, createdAt: Date.now(), by: me.uid }));
-  $('newBucket').value = '';
-}
-$('newBucket').addEventListener('keydown', e => e.key === 'Enter' && addBucket());
-function toggleBucket(id) {
-  const b = bucket.find(x => x.id === id); if (!b) return;
-  write(updateDoc(doc(col('bucket'), id), { done: !b.done, doneAt: b.done ? null : Date.now() }));
-  if (!b.done) toast('¡Una menos! 🎉');
-}
-function delBucket(id) {
-  if (!confirm('¿Borrar este elemento? Se borra para los dos.')) return;
-  write(deleteDoc(doc(col('bucket'), id)));
-}
-
-/* ================= Frasco de notas ================= */
-// Cada uno saca del frasco las notas que escribió el otro.
-const fromLabel = n => n.fromName || nameOf(n.fromUid);
-function renderNotes() {
-  if (!me) return;
-  const forMe = notes.filter(n => n.fromUid !== me.uid);
-  const unread = forMe.filter(n => !n.readAt).length;
-  $('notesDot').hidden = !unread; $('notesDot').textContent = unread;
-  $('writeTitle').textContent = `Escribirle una nota a ${partnerName()}`;
-  $('jarInfo').textContent = forMe.length
-    ? `${unread} nota${unread === 1 ? '' : 's'} sin leer para ti`
-    : `El frasco está vacío. Pídele a ${partnerName()} que te escriba una 😉`;
-
-  const read = forMe.filter(n => n.readAt).sort((a, b) => b.readAt - a.readAt);
-  $('readCount').textContent = read.length || '';
-  $('readList').innerHTML = read.length ? read.map(n => `
-    <li><div class="txt">${esc(n.text)}<div class="muted small">De ${esc(fromLabel(n))} · ${fmtDate(new Date(n.createdAt))}</div></div></li>`).join('')
-    : '<li class="empty">Aún no has sacado notas</li>';
-
-  const mine = notes.filter(n => n.fromUid === me.uid).sort((a, b) => b.createdAt - a.createdAt);
-  $('mineList').innerHTML = mine.length ? mine.map(n => `
-    <li><div class="txt">${esc(n.text)}<div class="muted small">${fmtDate(new Date(n.createdAt))}</div></div>
-    <span class="badge">${n.readAt ? 'Leída ✓' : 'Sin leer'}</span>
-    <button class="del" onclick="delNote('${n.id}')">✕</button></li>`).join('')
-    : '<li class="empty">Todavía no escribes ninguna</li>';
-}
-function addNote() {
-  const t = $('newNote').value.trim();
-  if (!t) return toast('Escribe algo bonito primero');
-  const myName = settings.members?.[me.uid]?.name || '';
-  write(setDoc(doc(col('notes')), { text: t, fromUid: me.uid, fromName: myName, createdAt: Date.now(), readAt: null }));
-  $('newNote').value = ''; toast('Nota guardada en el frasco 💌');
-}
-function drawNote() {
-  const forMe = notes.filter(n => n.fromUid !== me.uid);
-  if (!forMe.length) return toast('No hay notas para ti todavía');
-  const unread = forMe.filter(n => !n.readAt);
-  const src = unread.length ? unread : forMe;
-  const n = src[Math.floor(Math.random() * src.length)];
-  if (!n.readAt) write(updateDoc(doc(col('notes'), n.id), { readAt: Date.now() }));
-  $('noteText').textContent = n.text;
-  $('noteMeta').textContent = `De ${fromLabel(n)} · escrita el ${fmtDate(new Date(n.createdAt))}` +
-    (unread.length ? '' : ' · (ya leíste todas, esta es repetida)');
-  $('noteModal').classList.add('show');
-}
-function delNote(id) {
-  if (!confirm('¿Borrar esta nota?')) return;
-  write(deleteDoc(doc(col('notes'), id)));
-}
-
-// Actualiza el contador si la app queda abierta pasada la medianoche
-document.addEventListener('visibilitychange', () => !document.hidden && renderHome());
-
-// Las funciones que usan los botones del HTML
-Object.assign(window, {
-  login, resetPass, logout, openSettings, saveSettings, closeModal, delIdea, exportData, importData,
-  spin, ideaToBucket, addIdea, addBucket, toggleBucket, delBucket, drawNote, addNote, delNote,
-});
-</script>
+<script type="module" src="app.js"></script>
 </body>
 </html>
