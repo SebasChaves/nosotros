@@ -5,586 +5,96 @@
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover, user-scalable=no">
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="mobile-web-app-capable" content="yes">
-<meta name="apple-mobile-web-app-status-bar-style" content="default">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
 <meta name="apple-mobile-web-app-title" content="Nosotros">
-<meta name="theme-color" content="#fff5f7">
+<meta name="theme-color" content="#140C1C">
 <link rel="manifest" href="manifest.json">
 <link rel="apple-touch-icon" href="icon-180.png">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Sora:wght@400;600;700;800&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="styles.css">
 <title>Nosotros</title>
-<style>
-  :root {
-    --bg: #fff5f7;
-    --card: #ffffff;
-    --text: #2b1d22;
-    --muted: #8a7479;
-    --accent: #e8536f;
-    --accent-soft: #fde3e9;
-    --line: #f1dfe3;
-    --ok: #2f9e6e;
-    --radius: 18px;
-  }
-  @media (prefers-color-scheme: dark) {
-    :root {
-      --bg: #1a1214;
-      --card: #261b1e;
-      --text: #f6e9ec;
-      --muted: #a8939a;
-      --accent: #ff6b86;
-      --accent-soft: #3a2328;
-      --line: #36272b;
-      --ok: #4cc28e;
-    }
-  }
-  * { box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
-  html, body { margin: 0; height: 100%; }
-  body {
-    font-family: -apple-system, BlinkMacSystemFont, "SF Pro Rounded", "Segoe UI", sans-serif;
-    background: var(--bg); color: var(--text);
-    overscroll-behavior: none;
-  }
-  main {
-    padding: calc(env(safe-area-inset-top) + 16px) 18px calc(env(safe-area-inset-bottom) + 96px);
-    max-width: 560px; margin: 0 auto;
-  }
-  body:not(.in) main, body:not(.in) nav { display: none; }
-  .gate { display: none; min-height: 100%; align-items: center; justify-content: center; padding: 24px; }
-  body.loading #loadingGate, body.out #loginGate, body.noconfig #configGate { display: flex; }
-
-  .screen { display: none; }
-  .screen.active { display: block; animation: fade .25s ease; }
-  @keyframes fade { from { opacity: 0; transform: translateY(6px); } to { opacity: 1; transform: none; } }
-
-  h1 { font-size: 30px; margin: 8px 0 18px; letter-spacing: -0.5px; }
-  h2 { font-size: 17px; margin: 0 0 10px; }
-  h3 { font-size: 14px; margin: 18px 0 8px; color: var(--muted); text-transform: uppercase; letter-spacing: .5px; }
-  .header { display: flex; align-items: center; justify-content: space-between; gap: 10px; }
-  .icon-btn {
-    background: var(--card); border: 1px solid var(--line); color: var(--text);
-    width: 40px; height: 40px; border-radius: 50%; font-size: 18px; cursor: pointer; flex-shrink: 0;
-  }
-  .card {
-    background: var(--card); border-radius: var(--radius); padding: 18px;
-    margin-bottom: 14px; border: 1px solid var(--line);
-  }
-  .muted { color: var(--muted); }
-  .small { font-size: 13px; }
-  .center { text-align: center; }
-
-  button.primary {
-    background: var(--accent); color: #fff; border: 0; border-radius: 14px;
-    padding: 14px 18px; font-size: 16px; font-weight: 600; width: 100%; cursor: pointer; font-family: inherit;
-  }
-  button.primary:active { transform: scale(.98); }
-  button.primary:disabled { opacity: .6; }
-  button.ghost {
-    background: var(--accent-soft); color: var(--accent); border: 0; border-radius: 12px;
-    padding: 10px 14px; font-size: 15px; font-weight: 600; cursor: pointer; font-family: inherit;
-  }
-  button.ghost.full { width: 100%; }
-  button.link { background: none; border: 0; color: var(--accent); font: inherit; font-size: 14px; cursor: pointer; padding: 8px; }
-  input, textarea, select {
-    width: 100%; font: inherit; font-size: 16px; color: var(--text);
-    background: var(--bg); border: 1px solid var(--line); border-radius: 12px; padding: 12px;
-  }
-  input[type=checkbox] { width: auto; }
-  /* En iPhone el campo de fecha se centra, cambia de alto y se sale del ancho: lo igualamos a los demás */
-  input[type=date] {
-    -webkit-appearance: none; appearance: none;
-    display: block; min-width: 0; max-width: 100%; height: 47px; text-align: left;
-  }
-  input[type=date]::-webkit-date-and-time-value { text-align: left; margin: 0; }
-  input[type=date]::-webkit-calendar-picker-indicator { opacity: .6; }
-  textarea { resize: none; min-height: 90px; }
-  label { display: block; font-size: 13px; color: var(--muted); margin: 12px 0 6px; }
-  label.inline { display: flex; align-items: center; gap: 8px; color: var(--text); font-size: 15px; }
-  .row { display: flex; gap: 8px; align-items: center; }
-  .row > input, .row > select { flex: 1; }
-  .gap { height: 10px; }
-
-  /* Pestañas internas */
-  .seg { display: flex; background: var(--card); border-radius: 14px; padding: 4px; border: 1px solid var(--line); margin-bottom: 14px; }
-  .seg button { flex: 1; border: 0; background: none; padding: 10px; border-radius: 10px; font: inherit; font-size: 15px; color: var(--muted); cursor: pointer; position: relative; }
-  .seg button.on { background: var(--accent-soft); color: var(--accent); font-weight: 600; }
-  .pane { display: none; }
-  .pane.on { display: block; }
-
-  /* Contador */
-  .hero { text-align: center; padding: 28px 18px; }
-  .hero .names { font-size: 18px; font-weight: 600; }
-  .hero .big { font-size: 64px; font-weight: 800; color: var(--accent); line-height: 1.05; margin: 10px 0 2px; }
-  .heart { font-size: 26px; animation: beat 1.4s infinite; display: inline-block; }
-  @keyframes beat { 0%,100% { transform: scale(1);} 15% { transform: scale(1.2);} 30% { transform: scale(1);} 45% { transform: scale(1.12);} }
-  .breakdown { display: grid; grid-template-columns: repeat(3, 1fr); gap: 10px; }
-  .breakdown div { text-align: center; }
-  .breakdown b { display: block; font-size: 26px; }
-  .milestone { display: flex; justify-content: space-between; align-items: center; padding: 10px 0; border-top: 1px solid var(--line); gap: 10px; }
-  .milestone:first-child { border-top: 0; }
-  .milestone .when { color: var(--accent); font-weight: 600; white-space: nowrap; }
-
-  /* Pregunta del día */
-  .question { font-size: 19px; font-weight: 700; line-height: 1.35; margin: 4px 0 14px; }
-  .answer { background: var(--bg); border-radius: 14px; padding: 12px 14px; margin-top: 10px; white-space: pre-wrap; word-break: break-word; }
-  .answer b { display: block; font-size: 13px; color: var(--accent); margin-bottom: 4px; }
-  .locked { color: var(--muted); font-size: 14px; margin-top: 10px; }
-
-  /* Un día como hoy */
-  .memory { display: flex; gap: 14px; align-items: center; }
-  .memory img { width: 72px; height: 72px; object-fit: cover; border-radius: 14px; flex-shrink: 0; }
-
-  /* Chips */
-  .chips { display: flex; flex-wrap: wrap; gap: 8px; margin-bottom: 12px; }
-  .chip {
-    border: 1px solid var(--line); background: var(--card); color: var(--text);
-    border-radius: 999px; padding: 8px 14px; font-size: 14px; cursor: pointer; font-family: inherit;
-  }
-  .chip.on { background: var(--accent); color: #fff; border-color: var(--accent); }
-  .chip .x { margin-left: 6px; color: var(--muted); }
-  .chip.on .x { color: #fff; }
-
-  /* Ruleta */
-  .wheel {
-    min-height: 170px; display: flex; flex-direction: column; align-items: center; justify-content: center;
-    text-align: center; font-size: 22px; font-weight: 700; padding: 24px;
-  }
-  .wheel .emoji { font-size: 48px; margin-bottom: 8px; }
-  .wheel.spinning .txt { opacity: .55; }
-  .wheel .meta { font-size: 13px; font-weight: 500; color: var(--muted); margin-top: 8px; }
-
-  /* Decidir */
-  .modes { display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px; }
-  .mode {
-    background: var(--card); border: 1px solid var(--line); border-radius: 16px; padding: 12px 6px;
-    text-align: center; cursor: pointer; font-family: inherit; color: var(--text); position: relative;
-  }
-  .mode span { display: block; font-size: 26px; margin-bottom: 4px; }
-  .mode b { font-size: 14px; }
-  .mode small { display: block; color: var(--muted); font-size: 11px; margin-top: 2px; }
-  .mode.on { border-color: var(--accent); background: var(--accent-soft); }
-  .opt-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
-  .opt-btn {
-    background: var(--bg); border: 1px solid var(--line); border-radius: 14px; padding: 14px 10px;
-    font: inherit; font-size: 15px; color: var(--text); cursor: pointer;
-  }
-  .opt-btn:active { transform: scale(.96); }
-  .vote-card { text-align: center; padding: 26px 18px; }
-  .vote-card .opt { font-size: 28px; font-weight: 800; margin: 8px 0 22px; }
-  .vote-btns { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
-  .vote-btns button { border: 0; border-radius: 16px; padding: 16px; font-size: 22px; cursor: pointer; font-family: inherit; }
-  .vote-no { background: var(--line); color: var(--text); }
-  .vote-yes { background: var(--accent); color: #fff; }
-  .winner { text-align: center; padding: 26px 18px; }
-  .winner .big-emoji { font-size: 54px; }
-  .winner .name { font-size: 28px; font-weight: 800; color: var(--accent); margin: 6px 0; }
-
-  /* Listas */
-  .list { list-style: none; padding: 0; margin: 0; }
-  .list li { display: flex; align-items: center; gap: 12px; padding: 13px 0; border-top: 1px solid var(--line); }
-  .list li:first-child { border-top: 0; }
-  .list .txt { flex: 1; word-break: break-word; }
-  .list .done .txt { text-decoration: line-through; color: var(--muted); }
-  .list .done .txt .small { text-decoration: none; display: block; }
-  .check {
-    width: 26px; height: 26px; border-radius: 50%; border: 2px solid var(--accent);
-    background: transparent; flex-shrink: 0; cursor: pointer; color: #fff; font-size: 14px; padding: 0;
-  }
-  .done .check { background: var(--accent); }
-  .del { background: none; border: 0; color: var(--muted); font-size: 18px; cursor: pointer; padding: 4px 6px; }
-  .progress { height: 10px; background: var(--accent-soft); border-radius: 99px; overflow: hidden; margin-top: 8px; }
-  .progress div { height: 100%; background: var(--accent); border-radius: 99px; transition: width .4s; }
-  .empty { text-align: center; color: var(--muted); padding: 18px 0; justify-content: center; }
-  .badge { font-size: 12px; padding: 3px 9px; border-radius: 99px; background: var(--accent-soft); color: var(--accent); white-space: nowrap; }
-  .badge.ok { background: color-mix(in srgb, var(--ok) 18%, transparent); color: var(--ok); }
-
-  /* Frasco */
-  .jar { text-align: center; font-size: 84px; margin: 4px 0; cursor: pointer; user-select: none; }
-  .jar:active { transform: scale(.95); }
-
-  /* Cupones */
-  .ticket {
-    display: flex; align-items: center; gap: 14px; padding: 14px; margin-top: 10px;
-    border: 2px dashed var(--accent); border-radius: 16px; background: var(--accent-soft);
-  }
-  .ticket.used { border-color: var(--line); background: var(--bg); opacity: .7; }
-  .ticket .e { font-size: 32px; }
-  .ticket .txt { flex: 1; font-weight: 600; word-break: break-word; }
-  .ticket .txt small { display: block; font-weight: 400; color: var(--muted); margin-top: 3px; }
-  .ticket button.ghost { padding: 8px 12px; font-size: 14px; background: var(--accent); color: #fff; }
-  .tpl-chips { display: flex; gap: 8px; overflow-x: auto; padding-bottom: 6px; margin-bottom: 10px; -webkit-overflow-scrolling: touch; }
-  .tpl-chips .chip { white-space: nowrap; }
-
-  /* Momentos */
-  .year { font-size: 22px; font-weight: 800; margin: 22px 0 10px; color: var(--accent); }
-  .moment { padding: 0; overflow: hidden; }
-  .moment img { width: 100%; max-height: 420px; object-fit: cover; display: block; background: var(--line); cursor: zoom-in; }
-  .moment .body { padding: 14px 16px; }
-  .moment .title { font-weight: 700; font-size: 17px; }
-  .moment .note { margin-top: 6px; white-space: pre-wrap; word-break: break-word; }
-  .moment .foot { display: flex; justify-content: space-between; align-items: center; margin-top: 8px; }
-  .photo-pick {
-    display: flex; align-items: center; justify-content: center; flex-direction: column; gap: 6px;
-    border: 2px dashed var(--line); border-radius: 16px; min-height: 140px; cursor: pointer; overflow: hidden; color: var(--muted);
-  }
-  .photo-pick img { width: 100%; max-height: 260px; object-fit: cover; }
-  .viewer { position: fixed; inset: 0; background: #000; z-index: 70; display: none; align-items: center; justify-content: center; }
-  .viewer.show { display: flex; }
-  .viewer img { max-width: 100%; max-height: 100%; }
-
-  /* Modal */
-  .modal-bg {
-    position: fixed; inset: 0; background: rgba(0,0,0,.45); display: none;
-    align-items: center; justify-content: center; padding: 24px; z-index: 50;
-  }
-  .modal-bg.show { display: flex; animation: fade .2s; }
-  .modal { background: var(--card); border-radius: 24px; padding: 26px; max-width: 420px; width: 100%; max-height: 85vh; overflow: auto; }
-  .note-paper { font-size: 21px; line-height: 1.45; text-align: center; padding: 10px 0 18px; white-space: pre-wrap; }
-
-  /* Barra de pestañas */
-  nav {
-    position: fixed; bottom: 0; left: 0; right: 0; display: flex; justify-content: space-around;
-    background: color-mix(in srgb, var(--card) 88%, transparent);
-    backdrop-filter: blur(16px); -webkit-backdrop-filter: blur(16px);
-    border-top: 1px solid var(--line);
-    padding: 8px 4px calc(env(safe-area-inset-bottom) + 8px); z-index: 40;
-  }
-  nav button {
-    background: none; border: 0; color: var(--muted); font-size: 11px; display: flex; flex-direction: column;
-    align-items: center; gap: 3px; flex: 1; cursor: pointer; font-family: inherit; position: relative;
-  }
-  nav button span { font-size: 23px; filter: grayscale(1); opacity: .6; }
-  nav button.active { color: var(--accent); font-weight: 600; }
-  nav button.active span { filter: none; opacity: 1; }
-  .dot { position: absolute; top: -2px; right: calc(50% - 22px); background: var(--accent); color: #fff; font-size: 10px; font-weight: 700; border-radius: 99px; min-width: 17px; height: 17px; line-height: 17px; padding: 0 4px; text-align: center; }
-  .seg .dot { top: 2px; right: 8px; }
-
-  .toast {
-    position: fixed; left: 50%; bottom: calc(env(safe-area-inset-bottom) + 90px); transform: translateX(-50%);
-    background: var(--text); color: var(--bg); padding: 10px 18px; border-radius: 99px; font-size: 14px;
-    opacity: 0; transition: opacity .25s; pointer-events: none; z-index: 80; white-space: nowrap;
-  }
-  .toast.show { opacity: 1; }
-  .offline { display: none; text-align: center; font-size: 12px; color: var(--muted); margin-top: -8px; margin-bottom: 10px; }
-  body.is-offline .offline { display: block; }
-</style>
 </head>
-<body class="loading">
+<body class="loading" data-accent="aurora">
+<script>try { const a = localStorage.getItem('nosotros-accent'); if (a) document.body.dataset.accent = a; } catch {}</script>
+<div id="bgfx"></div>
 
-<!-- ============ Acceso ============ -->
-<div class="gate" id="loadingGate"><span class="heart" style="font-size:48px">❤️</span></div>
+<!-- Íconos -->
+<svg width="0" height="0" style="position:absolute" aria-hidden="true"><defs>
+  <symbol id="i-heart" viewBox="0 0 24 24"><path fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" d="M12 20s-7-4.4-9.2-9A5 5 0 0 1 12 6.3 5 5 0 0 1 21.2 11C19 15.6 12 20 12 20Z"/></symbol>
+  <symbol id="i-heart-f" viewBox="0 0 24 24"><path fill="currentColor" d="M12 20s-7-4.4-9.2-9A5 5 0 0 1 12 6.3 5 5 0 0 1 21.2 11C19 15.6 12 20 12 20Z"/></symbol>
+  <symbol id="i-dice" viewBox="0 0 24 24"><rect x="4" y="4" width="16" height="16" rx="4" fill="none" stroke="currentColor" stroke-width="2"/><g fill="currentColor"><circle cx="9" cy="9" r="1.4"/><circle cx="15" cy="15" r="1.4"/><circle cx="15" cy="9" r="1.4"/><circle cx="9" cy="15" r="1.4"/></g></symbol>
+  <symbol id="i-photo" viewBox="0 0 24 24"><g fill="none" stroke="currentColor" stroke-width="2" stroke-linejoin="round"><rect x="3" y="6" width="18" height="14" rx="3"/><circle cx="12" cy="13" r="3.5"/><path d="M8.5 6 10 3.5h4L15.5 6"/></g></symbol>
+  <symbol id="i-gift" viewBox="0 0 24 24"><g fill="none" stroke="currentColor" stroke-width="2" stroke-linejoin="round"><rect x="3" y="8" width="18" height="5" rx="1.5"/><path d="M5 13v7h14v-7M12 8v12M12 8S10.5 3.5 8 4.5 9 8 12 8Zm0 0s1.5-4.5 4-3.5S15 8 12 8Z"/></g></symbol>
+  <symbol id="i-grid" viewBox="0 0 24 24"><g fill="none" stroke="currentColor" stroke-width="2"><rect x="4" y="4" width="6.5" height="6.5" rx="2"/><rect x="13.5" y="4" width="6.5" height="6.5" rx="2"/><rect x="4" y="13.5" width="6.5" height="6.5" rx="2"/><rect x="13.5" y="13.5" width="6.5" height="6.5" rx="2"/></g></symbol>
+  <symbol id="i-check" viewBox="0 0 24 24"><path fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round" d="m6 12.5 4 4 8-9"/></symbol>
+  <symbol id="i-list" viewBox="0 0 24 24"><g fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="4" y="4" width="16" height="16" rx="5"/><path d="m8.5 12 2.5 2.5 4.5-5"/></g></symbol>
+  <symbol id="i-x" viewBox="0 0 24 24"><path fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" d="M6 6l12 12M18 6 6 18"/></symbol>
+  <symbol id="i-chat" viewBox="0 0 24 24"><path fill="none" stroke="currentColor" stroke-width="2" stroke-linejoin="round" d="M4 5h16v11H9l-5 4V5Z"/></symbol>
+  <symbol id="i-cal" viewBox="0 0 24 24"><g fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><rect x="4" y="5" width="16" height="15" rx="3"/><path d="M4 10h16M9 3v4M15 3v4"/></g></symbol>
+  <symbol id="i-plus" viewBox="0 0 24 24"><path fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" d="M12 5v14M5 12h14"/></symbol>
+  <symbol id="i-back" viewBox="0 0 24 24"><path fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" d="M15 5l-7 7 7 7"/></symbol>
+  <symbol id="i-gear" viewBox="0 0 24 24"><g fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="3"/><path d="M12 2.5v3M12 18.5v3M2.5 12h3M18.5 12h3M5.3 5.3l2.1 2.1M16.6 16.6l2.1 2.1M5.3 18.7l2.1-2.1M16.6 7.4l2.1-2.1"/></g></symbol>
+  <symbol id="i-cart" viewBox="0 0 24 24"><g fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 4h2.5l2.2 11h10.6L20.5 8H6.8"/><circle cx="9.5" cy="19.5" r="1.4"/><circle cx="17" cy="19.5" r="1.4"/></g></symbol>
+  <symbol id="i-wallet" viewBox="0 0 24 24"><g fill="none" stroke="currentColor" stroke-width="2" stroke-linejoin="round"><rect x="3" y="6" width="18" height="14" rx="3"/><path d="M3 10h18M16 15h2"/><path d="M6 6 15 3l1 3"/></g></symbol>
+  <symbol id="i-plane" viewBox="0 0 24 24"><path fill="none" stroke="currentColor" stroke-width="2" stroke-linejoin="round" d="M21 15.5v-2l-8-5V4.2a1.5 1.5 0 0 0-3 0v4.3l-8 5v2l8-2.5v4.5L8 19v1.8l4-1 4 1V19l-2-1.5V13Z" transform="translate(.5 0)"/></symbol>
+  <symbol id="i-star" viewBox="0 0 24 24"><path fill="currentColor" d="m12 3 2.7 5.6 6.1.9-4.4 4.3 1 6.1L12 17l-5.4 2.9 1-6.1-4.4-4.3 6.1-.9Z"/></symbol>
+  <symbol id="i-fork" viewBox="0 0 24 24"><g fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M7 3v8a2 2 0 0 0 2 2v8M5 3v5M9 3v5M17 21V3c-2 1.5-3 4-3 7v3h3"/></g></symbol>
+  <symbol id="i-trophy" viewBox="0 0 24 24"><g fill="none" stroke="currentColor" stroke-width="2" stroke-linejoin="round"><path d="M7 4h10v5a5 5 0 0 1-10 0V4ZM7 6H4v1a3 3 0 0 0 3 3M17 6h3v1a3 3 0 0 1-3 3M12 14v4M8 21h8M9 18h6"/></g></symbol>
+  <symbol id="i-spark" viewBox="0 0 24 24"><path fill="currentColor" d="M12 2c.6 4.6 2.4 6.4 7 7-4.6.6-6.4 2.4-7 7-.6-4.6-2.4-6.4-7-7 4.6-.6 6.4-2.4 7-7Zm7 12c.3 2.2 1 3 3 3.3-2 .3-2.7 1-3 3.2-.3-2.2-1-2.9-3-3.2 2-.3 2.7-1.1 3-3.3Z"/></symbol>
+  <symbol id="i-user" viewBox="0 0 24 24"><g fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="8" r="4"/><path d="M4 21c1-4 4.5-6 8-6s7 2 8 6" stroke-linecap="round"/></g></symbol>
+  <symbol id="i-trash" viewBox="0 0 24 24"><g fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 7h16M10 11v6M14 11v6M6 7l1 13h10l1-13M9 7V4h6v3"/></g></symbol>
+  <symbol id="i-lock" viewBox="0 0 24 24"><g fill="none" stroke="currentColor" stroke-width="2"><rect x="5" y="10" width="14" height="10" rx="3"/><path d="M8 10V7a4 4 0 0 1 8 0v3"/></g></symbol>
+  <symbol id="i-send" viewBox="0 0 24 24"><path fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" d="M5 12h14M13 6l6 6-6 6"/></symbol>
+  <symbol id="i-flag" viewBox="0 0 24 24"><path fill="none" stroke="currentColor" stroke-width="2" stroke-linejoin="round" stroke-linecap="round" d="M5 21V4M5 4h11l-2 4 2 4H5"/></symbol>
+  <symbol id="i-brain" viewBox="0 0 24 24"><g fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><circle cx="12" cy="12" r="8.5"/><path d="M9.5 9.5a2.5 2.5 0 1 1 3.5 2.3c-.6.3-1 .8-1 1.5V14M12 17.2v.3"/></g></symbol>
+</defs></svg>
 
-<div class="gate" id="configGate">
-  <div class="card center" style="max-width:380px">
-    <div style="font-size:44px">🛠️</div>
-    <h2>Falta conectar Firebase</h2>
-    <p class="muted">Pega los datos del proyecto en <b>firebase-config.js</b>.</p>
-  </div>
-</div>
-
+<!-- Acceso -->
+<div class="gate" id="loadingGate"><span class="beat" style="font-size:52px">❤️</span></div>
+<div class="gate" id="configGate"><div class="glass center" style="max-width:360px"><h2>Falta conectar Firebase</h2><p class="muted">Pega los datos del proyecto en firebase-config.js.</p></div></div>
 <div class="gate" id="loginGate">
-  <form class="card" style="max-width:380px;width:100%" onsubmit="event.preventDefault();login()">
-    <div class="center" style="font-size:52px">💞</div>
-    <h1 class="center" style="margin-top:4px">Nosotros</h1>
-    <label>Correo</label>
-    <input type="email" id="loginEmail" autocomplete="username" autocapitalize="off" required>
-    <label>Contraseña</label>
-    <input type="password" id="loginPass" autocomplete="current-password" required>
-    <div style="height:16px"></div>
-    <button class="primary" id="loginBtn" type="submit">Entrar</button>
-    <div class="center" style="margin-top:6px"><button class="link" type="button" onclick="resetPass()">¿Olvidaste tu contraseña?</button></div>
+  <form class="glass stack" style="max-width:380px;width:100%;padding:26px" onsubmit="event.preventDefault();login()">
+    <div class="center" style="font-size:50px">💞</div>
+    <h1 class="center grad-text" style="font-size:34px">Nosotros</h1>
+    <div><label class="f" for="loginEmail">Correo</label><input type="email" id="loginEmail" autocomplete="username" autocapitalize="off" required></div>
+    <div><label class="f" for="loginPass">Contraseña</label><input type="password" id="loginPass" autocomplete="current-password" required></div>
+    <button class="btn" id="loginBtn" type="submit" style="margin-top:8px">Entrar</button>
+    <button class="link" type="button" onclick="resetPass()">¿Olvidaste tu contraseña?</button>
   </form>
 </div>
 
 <main>
-  <div class="offline">📴 Sin conexión · los cambios se sincronizan al volver</div>
-
-  <!-- ============ INICIO ============ -->
-  <section class="screen active" id="s-home">
-    <div class="header">
-      <h1>Nosotros</h1>
-      <button class="icon-btn" onclick="openSettings()" aria-label="Ajustes">⚙️</button>
-    </div>
-
-    <div class="card hero" id="setupCard" style="display:none">
-      <div style="font-size:44px">💞</div>
-      <h2 style="margin-top:8px" id="setupTitle">¡Bienvenido!</h2>
-      <p class="muted" id="setupText"></p>
-      <button class="primary" onclick="openSettings()">Configurar</button>
-    </div>
-
-    <div id="counterArea" style="display:none">
-      <div class="card hero">
-        <div class="names" id="namesLbl"></div>
-        <div class="big" id="daysBig">0</div>
-        <div class="muted">días juntos <span class="heart">❤️</span></div>
-      </div>
-      <div class="card">
-        <div class="breakdown">
-          <div><b id="bY">0</b><span class="muted small">años</span></div>
-          <div><b id="bM">0</b><span class="muted small">meses</span></div>
-          <div><b id="bD">0</b><span class="muted small">días</span></div>
-        </div>
-      </div>
-    </div>
-
-    <div class="card" id="memoryCard" style="display:none"></div>
-
-    <div class="card" id="questionCard"></div>
-
-    <div class="card">
-      <div class="header" style="margin-bottom:6px">
-        <h2 style="margin:0">Próximos momentos ✨</h2>
-        <button class="ghost" style="padding:7px 12px;font-size:14px" onclick="openFechas()">📅 Fechas</button>
-      </div>
-      <div id="milestones"></div>
-    </div>
-  </section>
-
-  <!-- ============ DECIDIR ============ -->
-  <section class="screen" id="s-decide">
-    <h1>¿Qué hacemos?</h1>
-    <div class="seg" data-group="decide">
-      <button class="on" data-pane="p-lists">🤔 Decidir algo<b class="dot" id="decideSegDot" hidden></b></button>
-      <button data-pane="p-citas">🎲 Ideas de citas</button>
-    </div>
-
-    <!-- Decidir algo -->
-    <div class="pane on" data-group="decide" id="p-lists">
-      <div id="listChips" class="chips"></div>
-      <div id="listTemplates"></div>
-      <div id="listArea"></div>
-    </div>
-
-    <!-- Ideas de citas -->
-    <div class="pane" data-group="decide" id="p-citas">
-      <div class="card">
-        <div class="chips" id="placeChips"></div>
-        <div class="chips" id="costChips" style="margin-bottom:0"></div>
-      </div>
-      <div class="card wheel" id="wheel">
-        <div class="emoji" id="wEmoji">🎲</div>
-        <div class="txt" id="wTxt">Toquen el botón para sortear una cita</div>
-        <div class="meta" id="wMeta"></div>
-      </div>
-      <button class="primary" id="spinBtn" onclick="spin()">🎰 Sortear cita</button>
-      <div class="gap"></div>
-      <button class="ghost full" id="toBucketBtn" onclick="ideaToBucket()" hidden>➕ Guardar en la bucket list</button>
-
-      <div class="card" style="margin-top:22px">
-        <h2>Agregar idea propia</h2>
-        <input id="newIdea" placeholder="Ej: Picnic en el parque" maxlength="80">
-        <div class="row" style="margin-top:8px">
-          <select id="newIdeaPlace"><option value="casa">🏠 En casa</option><option value="afuera">🌆 Afuera</option></select>
-          <select id="newIdeaCost"><option value="0">Gratis</option><option value="1">$</option><option value="2">$$</option><option value="3">$$$</option></select>
-        </div>
-        <div class="gap"></div>
-        <button class="ghost full" onclick="addIdea()">Agregar a la ruleta</button>
-        <p class="muted small center" id="ideaCount" style="margin:10px 0 0"></p>
-      </div>
-    </div>
-  </section>
-
-  <!-- ============ MOMENTOS ============ -->
-  <section class="screen" id="s-moments">
-    <div class="header">
-      <h1>Momentos</h1>
-      <button class="ghost" onclick="openMoment()">＋ Agregar</button>
-    </div>
-    <div id="momentsList"></div>
-  </section>
-
-  <!-- ============ DETALLES (notas y cupones) ============ -->
-  <section class="screen" id="s-love">
-    <h1>Detalles</h1>
-    <div class="seg" data-group="love">
-      <button class="on" data-pane="p-notes">💌 Notas<b class="dot" id="notesSegDot" hidden></b></button>
-      <button data-pane="p-coupons">🎟️ Cupones<b class="dot" id="couponsSegDot" hidden></b></button>
-    </div>
-
-    <div class="pane on" data-group="love" id="p-notes">
-      <div class="card center">
-        <div class="jar" onclick="drawNote()">🫙</div>
-        <p class="muted" id="jarInfo" style="margin:0 0 14px"></p>
-        <button class="primary" onclick="drawNote()">💌 Sacar una nota</button>
-      </div>
-      <div class="card">
-        <h2 id="writeTitle">Escribir una nota</h2>
-        <textarea id="newNote" placeholder="Algo bonito para leer en un día difícil…" maxlength="500"></textarea>
-        <div class="gap"></div>
-        <button class="ghost full" onclick="addNote()">Guardar en el frasco</button>
-      </div>
-      <div class="card">
-        <div class="row" style="justify-content:space-between">
-          <h2 style="margin:0">Notas que ya leíste</h2>
-          <span class="muted small" id="readCount"></span>
-        </div>
-        <ul class="list" id="readList" style="margin-top:8px"></ul>
-      </div>
-      <div class="card">
-        <h2 style="margin:0">Notas que escribiste</h2>
-        <ul class="list" id="mineList" style="margin-top:8px"></ul>
-      </div>
-    </div>
-
-    <div class="pane" data-group="love" id="p-coupons">
-      <div class="card">
-        <h2 id="couponTitle">Regalar un cupón</h2>
-        <div class="tpl-chips" id="couponTpls"></div>
-        <div class="row">
-          <select id="couponEmoji" style="flex:0 0 76px">
-            <option>🎟️</option><option>💆</option><option>🥞</option><option>🎬</option><option>🍽️</option><option>🧽</option>
-            <option>🤗</option><option>🍦</option><option>🎁</option><option>😴</option><option>🙊</option><option>💋</option><option>☕</option>
-          </select>
-          <input id="couponText" placeholder="Vale por…" maxlength="90">
-        </div>
-        <div class="gap"></div>
-        <button class="ghost full" onclick="addCoupon()">🎁 Regalar cupón</button>
-      </div>
-      <div class="card">
-        <h2 style="margin:0" id="forMeTitle">Tus cupones</h2>
-        <div id="couponsForMe"></div>
-      </div>
-      <div class="card">
-        <h2 style="margin:0">Cupones que regalaste</h2>
-        <div id="couponsMine"></div>
-      </div>
-    </div>
-  </section>
-
-  <!-- ============ BUCKET LIST ============ -->
-  <section class="screen" id="s-bucket">
-    <h1>Bucket list</h1>
-    <div class="card">
-      <div class="row" style="justify-content:space-between">
-        <b id="bucketCount">0 de 0</b><span class="muted small" id="bucketPct">0%</span>
-      </div>
-      <div class="progress"><div id="bucketBar" style="width:0%"></div></div>
-    </div>
-    <div class="card">
-      <div class="row">
-        <input id="newBucket" placeholder="Algo que queremos hacer juntos…" maxlength="120">
-        <button class="ghost" onclick="addBucket()">Agregar</button>
-      </div>
-    </div>
-    <div class="card"><ul class="list" id="bucketList"></ul></div>
-  </section>
+  <div class="offline">Sin conexión · los cambios se sincronizan al volver</div>
+  <section class="screen active" id="s-home" data-tab="home"></section>
+  <section class="screen" id="s-decide" data-tab="decide"></section>
+  <section class="screen" id="s-moments" data-tab="moments"></section>
+  <section class="screen" id="s-love" data-tab="love"></section>
+  <section class="screen" id="s-more" data-tab="more"></section>
+  <section class="screen" id="s-bucket" data-tab="more"></section>
+  <section class="screen" id="s-grocery" data-tab="more"></section>
+  <section class="screen" id="s-money" data-tab="more"></section>
+  <section class="screen" id="s-places" data-tab="more"></section>
+  <section class="screen" id="s-trips" data-tab="more"></section>
+  <section class="screen" id="s-trip" data-tab="more"></section>
+  <section class="screen" id="s-us" data-tab="more"></section>
+  <section class="screen" id="s-quiz" data-tab="more"></section>
+  <section class="screen" id="s-summary" data-tab="more"></section>
+  <section class="screen" id="s-settings" data-tab="more"></section>
 </main>
 
-<nav>
-  <button class="active" data-s="s-home"><span>💞</span>Inicio<b class="dot" id="homeDot" hidden></b></button>
-  <button data-s="s-decide"><span>🎲</span>Decidir<b class="dot" id="decideDot" hidden></b></button>
-  <button data-s="s-moments"><span>📸</span>Momentos</button>
-  <button data-s="s-love"><span>💌</span>Detalles<b class="dot" id="loveDot" hidden></b></button>
-  <button data-s="s-bucket"><span>✅</span>Bucket</button>
+<nav class="tabbar" aria-label="Secciones">
+  <button data-tab="home" class="on" onclick="go('s-home')" aria-label="Inicio"><svg><use href="#i-heart"/></svg><b class="dot" id="dot-home" hidden></b></button>
+  <button data-tab="decide" onclick="go('s-decide')" aria-label="Decidir"><svg><use href="#i-dice"/></svg><b class="dot" id="dot-decide" hidden></b></button>
+  <button data-tab="moments" onclick="go('s-moments')" aria-label="Momentos"><svg><use href="#i-photo"/></svg></button>
+  <button data-tab="love" onclick="go('s-love')" aria-label="Detalles"><svg><use href="#i-gift"/></svg><b class="dot" id="dot-love" hidden></b></button>
+  <button data-tab="more" onclick="go('s-more')" aria-label="Más"><svg><use href="#i-grid"/></svg><b class="dot" id="dot-more" hidden></b></button>
 </nav>
 
-<!-- Ajustes -->
-<div class="modal-bg" id="settingsModal" onclick="if(event.target===this)closeModal(this)">
-  <div class="modal">
-    <h2>Ajustes</h2>
-    <label>Tu nombre</label>
-    <input id="setName" maxlength="30">
-    <label>¿Cuándo empezaron?</label>
-    <input type="date" id="setStart">
-    <p class="muted small" id="partnerInfo" style="margin:10px 0 0"></p>
-    <div style="height:16px"></div>
-    <button class="primary" onclick="saveSettings()">Guardar</button>
-
-    <h2 style="margin-top:26px">Respaldo</h2>
-    <p class="muted small" style="margin-top:0">Los datos están en la nube y se comparten entre los dos. Igual pueden descargar una copia (las fotos no se incluyen).</p>
-    <div class="row">
-      <button class="ghost" style="flex:1" onclick="exportData()">⬇️ Descargar</button>
-      <button class="ghost" style="flex:1" onclick="document.getElementById('importFile').click()">⬆️ Subir respaldo</button>
-    </div>
-    <input type="file" id="importFile" accept="application/json,.json" hidden onchange="importData(this)">
-
-    <h2 style="margin-top:26px">Ideas propias de la ruleta</h2>
-    <ul class="list" id="customIdeasList"></ul>
-
-    <h2 style="margin-top:26px">Sesión</h2>
-    <p class="muted small" style="margin-top:0" id="sessionInfo"></p>
-    <button class="ghost full" onclick="logout()">Cerrar sesión</button>
-    <div class="gap"></div>
-    <button class="ghost full" onclick="closeModal(settingsModal)">Cerrar</button>
-  </div>
-</div>
-
-<!-- Nota -->
-<div class="modal-bg" id="noteModal" onclick="if(event.target===this)closeModal(this)">
-  <div class="modal center">
-    <div style="font-size:40px">💌</div>
-    <div class="note-paper" id="noteText"></div>
-    <p class="muted small" id="noteMeta"></p>
-    <button class="primary" onclick="closeModal(noteModal)">❤️ Gracias</button>
-  </div>
-</div>
-
-<!-- Fechas especiales -->
-<div class="modal-bg" id="fechasModal" onclick="if(event.target===this)closeModal(this)">
-  <div class="modal">
-    <h2>Fechas especiales 📅</h2>
-    <ul class="list" id="fechasList"></ul>
-    <h2 style="margin-top:22px">Agregar fecha</h2>
-    <div class="row">
-      <select id="fechaKind" style="flex:0 0 140px"></select>
-      <input type="date" id="fechaDate">
-    </div>
-    <div class="gap"></div>
-    <input id="fechaTitle" placeholder="Ej: Cumpleaños de mamá, viaje a la playa…" maxlength="60">
-    <label class="inline"><input type="checkbox" id="fechaYearly" checked> Se repite cada año</label>
-    <div class="gap"></div>
-    <button class="primary" onclick="addFecha()">Guardar fecha</button>
-    <div class="gap"></div>
-    <button class="ghost full" onclick="closeModal(fechasModal)">Cerrar</button>
-  </div>
-</div>
-
-<!-- Respuestas anteriores -->
-<div class="modal-bg" id="answersModal" onclick="if(event.target===this)closeModal(this)">
-  <div class="modal">
-    <h2>Respuestas anteriores 💬</h2>
-    <div id="answersHistory"></div>
-    <div class="gap"></div>
-    <button class="ghost full" onclick="closeModal(answersModal)">Cerrar</button>
-  </div>
-</div>
-
-<!-- Nuevo momento -->
-<div class="modal-bg" id="momentModal">
-  <div class="modal">
-    <h2>Nuevo momento 📸</h2>
-    <label class="photo-pick" id="photoPick">
-      <span style="font-size:34px">🖼️</span><span>Agregar foto (opcional)</span>
-      <input type="file" accept="image/*" id="momentPhoto" hidden onchange="pickPhoto(this)">
-    </label>
-    <label>¿Qué pasó?</label>
-    <input id="momentTitle" maxlength="80" placeholder="Ej: Nuestro primer viaje juntos">
-    <label>Fecha</label>
-    <input type="date" id="momentDate">
-    <label>Nota (opcional)</label>
-    <textarea id="momentNote" maxlength="600" placeholder="Lo que no quieren olvidar…"></textarea>
-    <div style="height:14px"></div>
-    <button class="primary" id="momentSave" onclick="saveMoment()">Guardar momento</button>
-    <div class="gap"></div>
-    <button class="ghost full" onclick="closeMoment()">Cancelar</button>
-  </div>
-</div>
-
-<!-- Nueva lista -->
-<div class="modal-bg" id="listModal" onclick="if(event.target===this)closeModal(this)">
-  <div class="modal">
-    <h2>Nueva lista</h2>
-    <div class="row">
-      <input id="listEmoji" style="flex:0 0 64px;text-align:center" value="🤔" maxlength="4">
-      <input id="listName" placeholder="Ej: ¿Qué cenamos?" maxlength="40">
-    </div>
-    <p class="muted small">Luego le agregan las opciones.</p>
-    <button class="primary" onclick="createList()">Crear lista</button>
-    <div class="gap"></div>
-    <button class="ghost full" onclick="closeModal(listModal)">Cancelar</button>
-  </div>
-</div>
-
+<div class="sheet" id="sheet" onclick="if(event.target===this)closeSheet()"><div class="panel"><div class="grabber"></div><div id="sheetBody"></div></div></div>
 <div class="viewer" id="viewer" onclick="this.classList.remove('show')"><img id="viewerImg" alt=""></div>
-<div class="toast" id="toast"></div>
+<div class="toast" id="toast" role="status"></div>
 
 <script type="module" src="app.js"></script>
 </body>

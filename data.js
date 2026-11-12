@@ -126,3 +126,106 @@ export const QUESTIONS = [
   '¿Qué es lo primero que notaste de mí?',
   '¿Qué mascota tendríamos y cómo se llamaría?',
 ];
+
+export const MOODS = ['🥰', '😄', '🙂', '😐', '😴', '😔', '😢', '😤'];
+
+export const CHALLENGES = [
+  'Cocinar juntos una receta que nunca han probado',
+  'Una cena sin celulares',
+  'Escribirse una carta a mano',
+  'Salir a caminar 30 minutos sin rumbo',
+  'Ver el amanecer o el atardecer juntos',
+  'Hacer una lista de 10 cosas que aman del otro',
+  'Bailar su canción en la sala',
+  'Planear juntos el próximo viaje (aunque sea soñado)',
+  'Probar un postre nuevo',
+  'Ver una película que el otro eligió sin quejarse',
+  'Darse un masaje de 10 minutos cada uno',
+  'Recrear su primera cita',
+  'Hacer un picnic, aunque sea en casa',
+  'Tomarse 10 fotos juntos en un solo día',
+  'Aprender juntos algo nuevo con un video',
+  'Desayunar juntos sin prisa',
+  'Ordenar juntos un rincón de la casa',
+  'Hacer una playlist de canciones de ustedes',
+  'Visitar un lugar del barrio donde nunca han entrado',
+  'Hacer una noche de juegos de mesa',
+  'Escribir 3 metas de pareja para este año',
+  'Llamar o visitar juntos a la familia de uno',
+  'Ver fotos viejas y contarse una historia nueva',
+  'Hacer algo amable por alguien más, juntos',
+  'Probar un deporte o actividad nueva',
+  'Cocinar el plato favorito del otro',
+  'Ir a un mercado y comprar algo que no conozcan',
+  'Una noche de spa en casa',
+  'Leer juntos el mismo capítulo de un libro',
+  'Sorprender al otro con un detalle pequeño',
+  'Hacer una cita de 0 pesos',
+  'Contarse un miedo y un sueño',
+  'Armar juntos un rompecabezas o un Lego',
+  'Escribir la bucket list de este año',
+  'Una tarde entera sin pantallas',
+  'Hacer helado, galletas o pan en casa',
+];
+
+// "¿Cuánto me conoces?": cada uno responde sobre sí mismo y luego adivina al otro.
+export const QUIZ = [
+  ['¿Playa o montaña?', ['Playa', 'Montaña']],
+  ['¿Café o té?', ['Café', 'Té', 'Ninguno']],
+  ['¿Dulce o salado?', ['Dulce', 'Salado']],
+  ['¿Perro o gato?', ['Perro', 'Gato', 'Ninguno']],
+  ['¿Madrugar o trasnochar?', ['Madrugar', 'Trasnochar']],
+  ['¿Película o serie?', ['Película', 'Serie']],
+  ['¿Frío o calor?', ['Frío', 'Calor']],
+  ['¿Pizza o hamburguesa?', ['Pizza', 'Hamburguesa']],
+  ['¿Plan en casa o salir?', ['En casa', 'Salir']],
+  ['¿Llamada o mensaje?', ['Llamada', 'Mensaje']],
+  ['¿Qué superpoder elegiría?', ['Volar', 'Ser invisible', 'Leer mentes', 'Teletransportarse']],
+  ['¿Qué haría con un día libre?', ['Dormir', 'Salir', 'Ver series', 'Hacer deporte']],
+  ['¿Qué tipo de viaje prefiere?', ['Playa y descanso', 'Ciudad y museos', 'Aventura y naturaleza', 'Comer de todo']],
+  ['¿Cómo prefiere recibir cariño?', ['Palabras bonitas', 'Abrazos', 'Detalles', 'Tiempo juntos', 'Que le ayuden']],
+  ['¿Qué le estresa más?', ['Llegar tarde', 'El desorden', 'El ruido', 'Las multitudes']],
+  ['¿Su comida favorita es…?', ['Italiana', 'Mexicana', 'Asiática', 'Típica de casa']],
+  ['¿Qué estación prefiere?', ['Primavera', 'Verano', 'Otoño', 'Invierno']],
+  ['¿Con qué música se pone de buen humor?', ['Reguetón o urbano', 'Pop', 'Rock', 'Baladas', 'Otra']],
+  ['¿Cuál sería su regalo ideal?', ['Una experiencia', 'Algo hecho a mano', 'Ropa o accesorios', 'Tecnología', 'Comida rica']],
+  ['¿Cómo toma las decisiones?', ['Rápido', 'Lo piensa mucho', 'Pide opinión']],
+  ['¿Qué haría primero si ganara la lotería?', ['Viajar', 'Comprar casa', 'Ayudar a la familia', 'Ahorrar']],
+  ['¿Le gusta planear o improvisar?', ['Planear', 'Improvisar']],
+  ['¿Cuál es su momento favorito del día?', ['Mañana', 'Tarde', 'Noche']],
+  ['¿Qué prefiere en una cita?', ['Cena rica', 'Algo de aventura', 'Plan tranquilo', 'Sorpresa']],
+  ['¿Cómo se pone cuando tiene hambre?', ['De mal humor', 'Callado', 'Igual que siempre', 'Muy intenso']],
+  ['¿Desayuno favorito?', ['Pinto o desayuno típico', 'Pancakes', 'Fruta', 'Solo café']],
+  ['¿Qué mascota tendría?', ['Perro', 'Gato', 'Ave', 'Ninguna']],
+  ['¿Prefiere dar o recibir sorpresas?', ['Dar', 'Recibir']],
+  ['¿En una pelea, qué necesita?', ['Hablar en el momento', 'Un rato a solas', 'Un abrazo']],
+  ['¿Su lugar soñado para vivir?', ['Ciudad grande', 'Pueblo tranquilo', 'Cerca del mar', 'En la montaña']],
+];
+
+export const EXPENSE_CATS = [
+  ['🍽️', 'Comida'], ['🛒', 'Súper'], ['🎬', 'Salidas'], ['✈️', 'Viajes'],
+  ['🏠', 'Casa'], ['🎁', 'Regalos'], ['🚗', 'Transporte'], ['📦', 'Otro'],
+];
+
+export const CURRENCIES = [
+  ['CRC', '₡ Colón'], ['USD', '$ Dólar'], ['MXN', '$ Peso mexicano'], ['COP', '$ Peso colombiano'],
+  ['EUR', '€ Euro'], ['GTQ', 'Q Quetzal'], ['PEN', 'S/ Sol'], ['ARS', '$ Peso argentino'], ['CLP', '$ Peso chileno'],
+];
+
+export const GROCERY_TPL = ['Leche', 'Huevos', 'Pan', 'Café', 'Arroz', 'Frijoles', 'Fruta', 'Verduras', 'Pollo', 'Queso', 'Papel higiénico', 'Jabón'];
+
+export const PACKING_TPL = ['Pasaporte o cédula', 'Cargadores', 'Bloqueador', 'Traje de baño', 'Medicinas', 'Cepillo de dientes', 'Ropa interior', 'Lentes de sol', 'Audífonos', 'Sombrilla'];
+
+export const LIKE_FIELDS = [
+  ['talla', 'Talla de ropa'], ['zapatos', 'Talla de zapatos'], ['comida', 'Comida favorita'],
+  ['postre', 'Postre o antojo favorito'], ['flores', 'Flores y colores favoritos'], ['bebida', 'Bebida favorita'],
+  ['alergias', 'Alergias o cosas que no le gustan'], ['otros', 'Otras cosas que le encantan'],
+];
+
+export const ACCENTS = [
+  ['aurora', 'Aurora', '#FF5C8A', '#FFB547'],
+  ['atardecer', 'Atardecer', '#FF6A3D', '#FFD166'],
+  ['lavanda', 'Lavanda', '#C084FC', '#F9A8D4'],
+  ['oceano', 'Océano', '#2DD4BF', '#7DD3FC'],
+  ['bosque', 'Bosque', '#4ADE80', '#D9F99D'],
+];
