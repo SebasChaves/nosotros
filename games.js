@@ -1,7 +1,7 @@
 // Juego de retos para jugar juntos en un teléfono: verdad o reto, reto rápido, contrarreloj, yo nunca y ¿qué prefieres?
 import { setDoc, deleteDoc, writeBatch } from 'https://www.gstatic.com/firebasejs/11.0.2/firebase-firestore.js';
 import { $, S, db, esc, icon, paint, on, onShow, expose, toast, openSheet, closeSheet, write, ref, newRef,
-         nameOf, partnerUid, plural, uid } from './core.js';
+         nameOf, partnerUid, plural, uid, ask } from './core.js';
 import { LEVELS, TRUTHS, DARES, NEVER, RATHER } from './games-data.js';
 import { backBar } from './lists.js';
 
@@ -226,7 +226,7 @@ function cardsList() {
     <button class="del" aria-label="Borrar carta" onclick="cardDel('${c.id}')">${icon('trash')}</button></li>`).join('')}</ul>` : '<p class="empty">Todavía no escriben cartas</p>'}
     <button class="btn ghost" onclick="cardsAdd()">${icon('plus')} Agregar</button></div>`);
 }
-function cardDel(id) { if (confirm('¿Borrar esta carta?')) { write(deleteDoc(ref('cards', id))); G.decks = {}; setTimeout(cardsList, 150); } }
+async function cardDel(id) { if (await ask('¿Borrar esta carta?')) { write(deleteDoc(ref('cards', id))); G.decks = {}; setTimeout(cardsList, 150); } }
 
 on('cards games', () => { if ($('s-game').classList.contains('active') && G.phase !== 'play') render(); });
 onShow('s-game', () => { if (G.phase !== 'play') render(); });

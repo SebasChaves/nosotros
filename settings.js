@@ -3,7 +3,7 @@ import { setDoc, deleteDoc, writeBatch } from 'https://www.gstatic.com/firebasej
 import { signOut } from 'https://www.gstatic.com/firebasejs/11.0.2/firebase-auth.js';
 import { $, S, db, auth, esc, icon, paint, on, onShow, expose, toast, write, ref, privRef, coupleRef, go,
          COLLECTIONS, PRIVATE, cachePhoto, forgetPhoto, compressImage, loadPhotos, parseDate, today, dayKey,
-         fmtMoney, nameOf, partnerUid, partnerName, myName, profile, plural, uid, avatar } from './core.js';
+         fmtMoney, nameOf, partnerUid, partnerName, myName, profile, plural, uid, avatar, ask } from './core.js';
 import { ACCENTS, CURRENCIES } from './data.js';
 import { backBar, groceryPending } from './lists.js';
 import { balance } from './money.js';
@@ -123,7 +123,7 @@ function removeBg() {
   forgetPhoto(`bg-${uid()}`); write(batch.commit());
 }
 function delIdea(id) { write(deleteDoc(ref('ideas', id))); }
-function logout() { if (confirm('¿Cerrar sesión en este teléfono?')) { go('s-home'); signOut(auth); } }
+async function logout() { if (await ask('¿Cerrar sesión en este teléfono?')) { go('s-home'); signOut(auth); } }
 
 /* ---------- Respaldo ---------- */
 function exportData() {
@@ -175,10 +175,10 @@ export async function uploadData(raw) {
 }
 function importData(input) {
   const f = input.files[0]; if (!f) return;
-  f.text().then(txt => {
+  f.text().then(async txt => {
     const d = JSON.parse(txt);
     if (typeof d !== 'object' || !Array.isArray(d.bucket)) throw 0;
-    if (!confirm('Se agregarán los datos del respaldo a los actuales. ¿Continuar?')) return;
+    if (!await ask('Se agregarán los datos del respaldo a los actuales. ¿Continuar?')) return;
     return uploadData(d).then(() => toast('Respaldo subido'));
   }).catch(() => toast('Ese archivo no es un respaldo válido'));
   input.value = '';

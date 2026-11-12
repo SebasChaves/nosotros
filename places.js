@@ -1,7 +1,7 @@
 // Restaurantes: a dónde quieren ir, dónde ya fueron, calificaciones y qué pidieron.
 import { setDoc, updateDoc, deleteDoc } from 'https://www.gstatic.com/firebasejs/11.0.2/firebase-firestore.js';
 import { $, S, esc, icon, paint, on, expose, toast, openSheet, closeSheet, write, ref, newRef, go,
-         parseDate, fmtShort, todayKey, nameOf, partnerUid, uid } from './core.js';
+         parseDate, fmtShort, todayKey, nameOf, partnerUid, uid, ask } from './core.js';
 import { backBar } from './lists.js';
 import { createList } from './decide.js';
 
@@ -64,7 +64,7 @@ function saveVisit(id) {
   tab = 'been'; closeSheet(); toast('¡Visita guardada! Califíquenlo');
 }
 function ratePlace(id, n) { write(updateDoc(ref('places', id), { [`ratings.${uid()}`]: n })); }
-function delPlace(id) { if (confirm('¿Borrar este restaurante?')) write(deleteDoc(ref('places', id))); }
+async function delPlace(id) { if (await ask('¿Borrar este restaurante?')) write(deleteDoc(ref('places', id))); }
 // Crea (o actualiza) una lista en Decidir con los lugares pendientes y los mejor calificados.
 function placesToDecide() {
   const opts = [...new Set(S.data.places.filter(p => p.status !== 'been' || avg(p) >= 3.5).map(p => p.name))].slice(0, 30);

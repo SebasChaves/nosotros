@@ -1,7 +1,7 @@
 // Gustos de cada uno (compartidos) e ideas de regalo (privadas: solo las ve quien las escribe).
 import { setDoc, updateDoc, deleteDoc } from 'https://www.gstatic.com/firebasejs/11.0.2/firebase-firestore.js';
 import { $, S, esc, icon, paint, on, expose, toast, write, ref, privRef, newPrivRef,
-         nameOf, partnerUid, partnerName, profile, uid } from './core.js';
+         nameOf, partnerUid, partnerName, profile, uid, ask } from './core.js';
 import { LIKE_FIELDS } from './data.js';
 import { backBar } from './lists.js';
 
@@ -54,7 +54,7 @@ function addGift() {
   $('newGift').value = '';
 }
 function toggleGift(id) { const g = S.priv.gifts.find(x => x.id === id); if (g) write(updateDoc(privRef('gifts', id), { done: !g.done })); }
-function delGift(id) { if (confirm('¿Borrar esta idea?')) write(deleteDoc(privRef('gifts', id))); }
+async function delGift(id) { if (await ask('¿Borrar esta idea?')) write(deleteDoc(privRef('gifts', id))); }
 
 on('profiles gifts', render);
 expose({ usTab, editLikes, saveLikes, addGift, toggleGift, delGift });

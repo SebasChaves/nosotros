@@ -1,7 +1,7 @@
 // Calendario compartido: planes de los dos más fechas especiales, mesiversarios y viajes.
 import { setDoc, deleteDoc } from 'https://www.gstatic.com/firebasejs/11.0.2/firebase-firestore.js';
 import { $, S, esc, icon, paint, on, onShow, expose, toast, openSheet, closeSheet, write, ref, newRef, loadPhotos,
-         parseDate, today, dayKey, todayKey, fmtDay, addMonths, nameOf, partnerUid, partnerName, avatar, uid } from './core.js';
+         parseDate, today, dayKey, todayKey, fmtDay, addMonths, nameOf, partnerUid, partnerName, avatar, uid, ask } from './core.js';
 import { backBar } from './lists.js';
 
 const cap = s => s.charAt(0).toUpperCase() + s.slice(1);
@@ -85,7 +85,7 @@ function saveEvent() {
   sel = date; const d = parseDate(date); vy = d.getFullYear(); vm = d.getMonth();
   closeSheet(); toast('Plan guardado');
 }
-function delEvent(id) { if (confirm('¿Borrar este plan para los dos?')) write(deleteDoc(ref('events', id))); }
+async function delEvent(id) { if (await ask('¿Borrar este plan para los dos?')) write(deleteDoc(ref('events', id))); }
 
 /* ---------- Pasar un plan al calendario del teléfono ---------- */
 const compact = (date, time) => date.replace(/-/g, '') + (time ? 'T' + time.replace(':', '') + '00' : '');

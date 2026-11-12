@@ -3,8 +3,7 @@ import { setDoc, deleteDoc } from 'https://www.gstatic.com/firebasejs/11.0.2/fir
 import {
   $, S, esc, icon, paint, on, expose, toast, openSheet, closeSheet, write, ref, newRef, coupleRef, loadPhotos, profile,
   parseDate, today, daysBetween, fmtDate, fmtShort, dayKey, todayKey, whenText, addMonths, weekKey, epochDay, DAY,
-  nameOf, partnerUid, partnerName, myName, plural, uid, avatar,
-} from './core.js';
+  nameOf, partnerUid, partnerName, myName, plural, uid, avatar, ask } from './core.js';
 import { QUESTIONS, MOODS, CHALLENGES, DATE_KINDS } from './data.js';
 
 /* ---------- Fechas especiales ---------- */
@@ -71,7 +70,7 @@ function addFecha() {
   write(setDoc(newRef('dates'), { title, date, emoji: $('fechaKind').value, yearly: $('fechaYearly').checked, by: uid() }));
   closeSheet(); toast('Fecha guardada');
 }
-function delFecha(id) { if (confirm('¿Borrar esta fecha?')) { write(deleteDoc(ref('dates', id))); closeSheet(); } }
+async function delFecha(id) { if (await ask('¿Borrar esta fecha?')) { write(deleteDoc(ref('dates', id))); closeSheet(); } }
 
 /* ---------- Pregunta del día ---------- */
 export const todayQuestion = () => QUESTIONS[epochDay() % QUESTIONS.length];

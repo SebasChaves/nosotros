@@ -1,6 +1,6 @@
 // Bucket list y lista del súper.
 import { setDoc, updateDoc, deleteDoc, writeBatch } from 'https://www.gstatic.com/firebasejs/11.0.2/firebase-firestore.js';
-import { $, S, db, esc, icon, paint, on, expose, toast, write, ref, newRef, fmtDate, nameOf, uid } from './core.js';
+import { $, S, db, esc, icon, paint, on, expose, toast, write, ref, newRef, fmtDate, nameOf, uid, ask } from './core.js';
 import { GROCERY_TPL } from './data.js';
 
 export const backBar = (title, to = 's-more', extra = '') =>
@@ -32,7 +32,7 @@ function toggleBucket(id) {
   write(updateDoc(ref('bucket', id), { done: !b.done, doneAt: b.done ? null : Date.now() }));
   if (!b.done) toast('¡Una menos!');
 }
-function delBucket(id) { if (confirm('¿Borrar este elemento? Se borra para los dos.')) write(deleteDoc(ref('bucket', id))); }
+async function delBucket(id) { if (await ask('¿Borrar este elemento? Se borra para los dos.')) write(deleteDoc(ref('bucket', id))); }
 
 /* ---------- Súper ---------- */
 export const groceryPending = () => S.data.groceries.filter(g => !g.done).length;

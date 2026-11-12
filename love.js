@@ -1,7 +1,7 @@
 // Detalles: frasco de notas y cupones canjeables.
 import { setDoc, updateDoc, deleteDoc } from 'https://www.gstatic.com/firebasejs/11.0.2/firebase-firestore.js';
 import { $, S, esc, icon, paint, on, onShow, expose, toast, openSheet, closeSheet, write, ref, newRef, pick,
-         fmtDate, fmtShort, nameOf, partnerName, myName, plural, uid, avatar, loadPhotos } from './core.js';
+         fmtDate, fmtShort, nameOf, partnerName, myName, plural, uid, avatar, loadPhotos, ask } from './core.js';
 import { COUPON_TEMPLATES } from './data.js';
 
 let tab = 'notes';
@@ -59,7 +59,7 @@ function drawNote() {
     <p class="small muted" style="margin:0">De ${esc(fromLabel(n))} · escrita el ${fmtDate(new Date(n.createdAt))}${unread.length ? '' : ' · ya leíste todas, esta es repetida'}</p>
     <button class="btn" onclick="closeSheet()">${icon('heart-f')} Gracias</button></div>`);
 }
-function delNote(id) { if (confirm('¿Borrar esta nota?')) write(deleteDoc(ref('notes', id))); }
+async function delNote(id) { if (await ask('¿Borrar esta nota?')) write(deleteDoc(ref('notes', id))); }
 
 /* ---------- Cupones ---------- */
 function couponStatus(c) {
@@ -98,12 +98,12 @@ function addCoupon() {
   write(setDoc(newRef('coupons'), { text, emoji: $('couponEmoji').value.trim() || '🎟️', fromUid: uid(), createdAt: Date.now(), seenAt: null, redeemedAt: null, doneAt: null }));
   $('couponText').value = ''; toast(`Cupón regalado a ${partnerName()}`);
 }
-function redeemCoupon(id) {
-  if (!confirm('¿Canjear este cupón ahora?')) return;
+async function redeemCoupon(id) {
+  if (!await ask('¿Canjear este cupón ahora?')) return;
   write(updateDoc(ref('coupons', id), { redeemedAt: Date.now(), seenAt: Date.now() })); toast('¡Canjeado!');
 }
 function fulfillCoupon(id) { write(updateDoc(ref('coupons', id), { doneAt: Date.now() })); toast('¡Cumplido!'); }
-function delCoupon(id) { if (confirm('¿Borrar este cupón?')) write(deleteDoc(ref('coupons', id))); }
+async function delCoupon(id) { if (await ask('¿Borrar este cupón?')) write(deleteDoc(ref('coupons', id))); }
 function markCouponsSeen() {
   for (const c of S.data.coupons) if (c.fromUid !== uid() && !c.seenAt) write(updateDoc(ref('coupons', c.id), { seenAt: Date.now() }));
 }

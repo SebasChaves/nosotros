@@ -3,7 +3,7 @@ import { onAuthStateChanged, signInWithEmailAndPassword, sendPasswordResetEmail 
   from 'https://www.gstatic.com/firebasejs/11.0.2/firebase-auth.js';
 import { onSnapshot } from 'https://www.gstatic.com/firebasejs/11.0.2/firebase-firestore.js';
 import { $, S, auth, configured, coupleRef, col, privCol, COLLECTIONS, PRIVATE, toast, expose, rerender, rerenderAll,
-         partnerUid, profile, uid } from './core.js';
+         partnerUid, profile, uid, ask } from './core.js';
 import { todayAnswers } from './home.js';
 import { listNeedsMyVote } from './decide.js';
 import { unreadNotes, couponAlerts } from './love.js';
@@ -99,7 +99,7 @@ async function maybeMigrate() {
   let old; try { old = JSON.parse(localStorage.getItem(OLD_KEY)); } catch {}
   if (!old || !(old.bucket?.length || old.notes?.length || old.ideas?.length || old.start)) return;
   migrating = true;
-  if (confirm('Encontré datos guardados en este teléfono de la versión anterior. ¿Subirlos para compartirlos?')) {
+  if (await ask('Encontré datos guardados en este teléfono de la versión anterior. ¿Subirlos para compartirlos?')) {
     try { await uploadData(old); localStorage.setItem(OLD_KEY + '-subido', '1'); toast('Datos subidos'); }
     catch (e) { console.error(e); toast('No se pudieron subir, se intentará de nuevo'); }
   } else localStorage.setItem(OLD_KEY + '-subido', 'no');

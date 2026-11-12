@@ -1,7 +1,7 @@
 // Gastos compartidos: quién pagó qué y quién le debe a quién.
 import { setDoc, deleteDoc } from 'https://www.gstatic.com/firebasejs/11.0.2/firebase-firestore.js';
 import { $, S, esc, icon, paint, on, expose, toast, openSheet, closeSheet, write, ref, newRef,
-         parseDate, fmtShort, todayKey, fmtMoney, nameOf, partnerUid, partnerName, uid } from './core.js';
+         parseDate, fmtShort, todayKey, fmtMoney, nameOf, partnerUid, partnerName, uid, ask } from './core.js';
 import { EXPENSE_CATS } from './data.js';
 import { backBar } from './lists.js';
 
@@ -77,15 +77,15 @@ function saveExpense() {
   }));
   closeSheet(); toast('Gasto guardado');
 }
-function settleUp() {
+async function settleUp() {
   const bal = balance(), p = partnerUid();
   if (!bal || !p) return;
   const debtor = bal < 0 ? uid() : p;
-  if (!confirm(`¿Registrar que ${nameOf(debtor)} pagó ${fmtMoney(Math.abs(bal))} y quedan a mano?`)) return;
+  if (!await ask(`¿Registrar que ${nameOf(debtor)} pagó ${fmtMoney(Math.abs(bal))} y quedan a mano?`)) return;
   write(setDoc(newRef('expenses'), { type: 'settle', amount: Math.abs(bal), paidBy: debtor, date: todayKey(), createdAt: Date.now(), by: uid() }));
   toast('¡Quedaron a mano!');
 }
-function delExpense(id) { if (confirm('¿Borrar este movimiento?')) write(deleteDoc(ref('expenses', id))); }
+async function delExpense(id) { if (await ask('¿Borrar este movimiento?')) write(deleteDoc(ref('expenses', id))); }
 
 on('expenses trips', render);
 expose({ openExpense, saveExpense, settleUp, delExpense });

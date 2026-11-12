@@ -1,7 +1,7 @@
 // Viajes: itinerario por día, maleta compartida y presupuesto (unido a Gastos).
 import { setDoc, updateDoc, deleteDoc } from 'https://www.gstatic.com/firebasejs/11.0.2/firebase-firestore.js';
 import { $, S, esc, icon, paint, on, expose, toast, openSheet, closeSheet, write, ref, newRef, go,
-         parseDate, today, daysBetween, fmtShort, fmtDay, dayKey, whenText, fmtMoney, nameOf, plural, uid } from './core.js';
+         parseDate, today, daysBetween, fmtShort, fmtDay, dayKey, whenText, fmtMoney, nameOf, plural, uid, ask } from './core.js';
 import { PACKING_TPL } from './data.js';
 import { backBar } from './lists.js';
 import { parseAmount, catOf } from './money.js';
@@ -154,8 +154,8 @@ function setBudget() {
   if (!(v >= 0)) return toast('Monto no válido');
   write(updateDoc(ref('trips', current), { budget: v })); $('tBudgetEdit').value = '';
 }
-function delTrip() {
-  if (!confirm('¿Borrar este viaje? Los gastos quedan en Gastos.')) return;
+async function delTrip() {
+  if (!await ask('¿Borrar este viaje? Los gastos quedan en Gastos.')) return;
   write(deleteDoc(ref('trips', current))); current = null; go('s-trips');
 }
 

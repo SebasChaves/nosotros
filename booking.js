@@ -1,7 +1,7 @@
 // Hospedaje y vuelos de un viaje: búsquedas ya filtradas en otras páginas y opciones guardadas para comparar y votar.
 import { setDoc, updateDoc, deleteDoc, writeBatch } from 'https://www.gstatic.com/firebasejs/11.0.2/firebase-firestore.js';
 import { $, S, db, esc, icon, paint, expose, toast, openSheet, closeSheet, write, ref, newRef, loadPhotos,
-         parseDate, daysBetween, todayKey, fmtShort, fmtMoney, nameOf, partnerUid, avatar, plural, uid } from './core.js';
+         parseDate, daysBetween, todayKey, fmtShort, fmtMoney, nameOf, partnerUid, avatar, plural, uid, ask } from './core.js';
 import { parseAmount } from './money.js';
 
 let compare = { stays: false, flights: false };
@@ -169,26 +169,26 @@ function optVote(tripId, kind, id, val) {
   const t = tripOf(tripId);
   write(updateDoc(ref('trips', tripId), { [kind]: (t[kind] || []).map(o => o.id === id ? { ...o, votes: { ...(o.votes || {}), [uid()]: val } } : o) }));
 }
-function delOpt(tripId, kind, id) {
+async function delOpt(tripId, kind, id) {
   const t = tripOf(tripId), o = (t[kind] || []).find(x => x.id === id);
-  if (!confirm(o?.booked ? '¿Quitar esta opción? También se borra su gasto.' : '¿Quitar esta opción?')) return;
+  if (!await ask(o?.booked ? '¿Quitar esta opción? También se borra su gasto.' : '¿Quitar esta opción?')) return;
   const batch = writeBatch(db);
   if (o?.expenseId) batch.delete(ref('expenses', o.expenseId));
   batch.update(ref('trips', tripId), { [kind]: (t[kind] || []).filter(x => x.id !== id) });
   write(batch.commit());
 }
 // Marcar como reservado crea el gasto en Gastos (pagado por quien lo marca, mitad y mitad). Desmarcar lo borra.
-function bookOpt(tripId, kind, id) {
+async function bookOpt(tripId, kind, id) {
   const t = tripOf(tripId), o = (t[kind] || []).find(x => x.id === id); if (!o) return;
   const batch = writeBatch(db);
   if (o.booked) {
-    if (!confirm('¿Quitar la reserva? Se borra el gasto que se había agregado.')) return;
+    if (!await ask('¿Quitar la reserva? Se borra el gasto que se había agregado.')) return;
     if (o.expenseId) batch.delete(ref('expenses', o.expenseId));
     batch.update(ref('trips', tripId), { [kind]: t[kind].map(x => x.id === id ? { ...x, booked: false, expenseId: null } : x) });
     write(batch.commit()); return;
   }
   let expenseId = null;
-  if (o.total > 0 && confirm(`¿Agregar ${fmtMoney(o.total)} a Gastos, pagado por ti y dividido mitad y mitad? (Luego se puede cambiar en Gastos)`)) {
+  if (o.total > 0 && await ask(`¿Agregar ${fmtMoney(o.total)} a Gastos, pagado por ti y dividido mitad y mitad? (Luego se puede cambiar en Gastos)`)) {
     const er = newRef('expenses'); expenseId = er.id;
     batch.set(er, { desc: `${kind === 'stays' ? 'Hospedaje' : 'Vuelo'}: ${o.name || o.airline}`, amount: o.total, paidBy: uid(), split: 'half',
       cat: '✈️', date: todayKey(), tripId, createdAt: Date.now(), by: uid() });

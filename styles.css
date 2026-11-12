@@ -309,3 +309,10 @@ li.done .check-btn, .check-btn.on { background: var(--grad); border-color: trans
 body.is-offline .offline { display: block; }
 .beat { display: inline-block; animation: beat 1.4s infinite; }
 @keyframes beat { 0%,100% { transform: scale(1);} 15% { transform: scale(1.2);} 30% { transform: scale(1);} 45% { transform: scale(1.12);} }
+
+/* Ventana de confirmación propia */
+.dialog { position: fixed; inset: 0; z-index: 95; display: flex; align-items: center; justify-content: center; padding: 24px; background: rgba(5, 2, 8, .62); animation: fadein .15s; }
+.dialog .box { width: 100%; max-width: 340px; background: #1D1326; border: 1px solid var(--line); border-radius: 24px; padding: 22px 18px 18px; box-shadow: 0 30px 60px -20px rgba(0,0,0,.6); animation: pop .18s ease; }
+.dialog p { margin: 0 0 18px; font-size: 16px; line-height: 1.45; text-align: center; text-wrap: balance; }
+.dialog.out { opacity: 0; transition: opacity .15s; }
+@keyframes pop { from { transform: scale(.94); opacity: 0; } to { transform: none; opacity: 1; } }

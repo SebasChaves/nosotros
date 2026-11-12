@@ -16,6 +16,29 @@ export function toast(msg) {
   const t = $('toast'); t.textContent = msg; t.classList.add('show');
   clearTimeout(toast.h); toast.h = setTimeout(() => t.classList.remove('show'), 2200);
 }
+// Ventana de confirmación con el estilo de la app (reemplaza confirm() del navegador).
+// Uso: if (!(await ask('¿Borrar esta nota?'))) return;
+export function ask(message, opts = {}) {
+  const m = /^¿(Borrar|Quitar|Cerrar sesión)/.exec(message);
+  const danger = opts.danger ?? !!m;
+  const ok = opts.ok || (m ? m[1] : 'Sí');
+  const cancel = opts.cancel || (m ? 'Cancelar' : 'No');
+  return new Promise(resolve => {
+    const prev = document.activeElement;
+    const el = document.createElement('div');
+    el.className = 'dialog';
+    el.innerHTML = `<div class="box" role="alertdialog" aria-modal="true" aria-labelledby="dlgMsg">
+      <p id="dlgMsg">${esc(message)}</p>
+      <div class="grid2"><button class="btn ghost" data-v="0">${esc(cancel)}</button><button class="btn ${danger ? 'danger' : ''}" data-v="1">${esc(ok)}</button></div></div>`;
+    const done = v => { document.removeEventListener('keydown', key, true); el.classList.add('out'); setTimeout(() => el.remove(), 160); prev?.focus?.({ preventScroll: true }); resolve(v); };
+    const key = e => { if (e.key === 'Escape') { e.preventDefault(); done(false); } if (e.key === 'Enter') { e.preventDefault(); done(true); } };
+    el.addEventListener('click', e => { const b = e.target.closest('button[data-v]'); if (b) done(b.dataset.v === '1'); else if (e.target === el) done(false); });
+    document.addEventListener('keydown', key, true);
+    document.body.appendChild(el);
+    el.querySelector('button[data-v="1"]').focus({ preventScroll: true });
+  });
+}
+
 export function openSheet(html) { $('sheetBody').innerHTML = html; $('sheet').classList.add('show'); }
 export function closeSheet() { $('sheet').classList.remove('show'); }
 

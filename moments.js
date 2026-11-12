@@ -1,7 +1,7 @@
 // Momentos: línea de tiempo con fotos.
 import { writeBatch } from 'https://www.gstatic.com/firebasejs/11.0.2/firebase-firestore.js';
 import { $, S, db, esc, icon, paint, on, expose, toast, openSheet, closeSheet, write, ref, newRef,
-         loadPhotos, cachePhoto, compressImage, parseDate, fmtDate, todayKey, nameOf, uid } from './core.js';
+         loadPhotos, cachePhoto, compressImage, parseDate, fmtDate, todayKey, nameOf, uid, ask } from './core.js';
 
 function render() {
   const items = [...S.data.moments].sort((a, b) => b.date.localeCompare(a.date) || b.createdAt - a.createdAt);
@@ -57,8 +57,8 @@ function saveMoment() {
   write(batch.commit());
   pendingPhoto = null; closeSheet(); toast('Momento guardado');
 }
-function delMoment(id) {
-  if (!confirm('¿Borrar este momento para los dos?')) return;
+async function delMoment(id) {
+  if (!await ask('¿Borrar este momento para los dos?')) return;
   const batch = writeBatch(db);
   batch.delete(ref('moments', id)); batch.delete(ref('photos', id));
   write(batch.commit());

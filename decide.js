@@ -1,7 +1,7 @@
 // Decidir: listas con tres modos (al azar, por turnos, match) y la ruleta de ideas de citas.
 import { setDoc, updateDoc, deleteDoc } from 'https://www.gstatic.com/firebasejs/11.0.2/firebase-firestore.js';
 import { $, S, esc, icon, paint, on, expose, toast, openSheet, closeSheet, write, ref, newRef, animatePick,
-         nameOf, partnerUid, partnerName, uid } from './core.js';
+         nameOf, partnerUid, partnerName, uid, ask } from './core.js';
 import { DEFAULT_IDEAS, LIST_TEMPLATES } from './data.js';
 
 let tab = 'lists', selList = null, pendingSel = null, mode = null, turns = null, randomResult = null, lastIdea = null;
@@ -46,6 +46,7 @@ function renderLists() {
     html += `<div class="glass stack">
       <div class="row"><h2>${esc(l.emoji)} ${esc(l.name)}</h2><button class="del" aria-label="Borrar lista" onclick="delList('${l.id}')">${icon('trash')}</button></div>
       <div class="chips">${opts.map((o, i) => `<span class="chip">${esc(o)}<span class="x" role="button" tabindex="0" aria-label="Quitar ${esc(o)}" onclick="delOption(${i})">${icon('x')}</span></span>`).join('') || '<span class="small muted">Sin opciones todavía</span>'}</div>
+      ${suggestions(l).length ? `<button class="link" style="text-align:left;padding:0" onclick="addSuggestions()">${icon('plus')} Agregar ${suggestions(l).length} opciones sugeridas</button>` : ''}
       <div class="add-row"><input id="newOption" placeholder="Agregar opción…" maxlength="40" aria-label="Nueva opción" onkeydown="if(event.key==='Enter')addOption()">
         <button class="btn" aria-label="Agregar" onclick="addOption()">${icon('plus')}</button></div></div>
       <div class="modes">
@@ -116,6 +117,8 @@ function renderMode() {
     <button class="link" onclick="resetVotes()">Votar de nuevo</button>`);
 }
 
+const suggestions = l => { const tpl = LIST_TEMPLATES.find(x => x.name === l.name); return tpl ? tpl.options.filter(o => !(l.options || []).includes(o)) : []; };
+function addSuggestions() { const l = curList(); if (!l) return; write(updateDoc(ref('lists', l.id), { options: [...(l.options || []), ...suggestions(l)] })); turns = null; toast('Opciones agregadas'); }
 function selectList(id) { selList = id; mode = null; turns = null; randomResult = null; render(); }
 function setMode(m) { mode = m; turns = null; randomResult = null; render(); }
 export function createList(name, emoji, options) {
@@ -139,7 +142,7 @@ function createListFromSheet() {
   createList(name, $('listEmoji').value.trim() || '🤔', []);
   closeSheet();
 }
-function delList(id) { if (confirm('¿Borrar esta lista para los dos?')) { write(deleteDoc(ref('lists', id))); selList = null; } }
+async function delList(id) { if (await ask('¿Borrar esta lista para los dos?')) { write(deleteDoc(ref('lists', id))); selList = null; } }
 function addOption() {
   const l = curList(), v = $('newOption').value.trim();
   if (!l || !v) return;
@@ -166,7 +169,7 @@ function vote(yes) {
   if (o === undefined) return;
   write(updateDoc(ref('lists', l.id), { [`votes.${uid()}`]: { ...myVotes(l), [o]: yes } }));
 }
-function resetVotes() { const l = curList(); if (l && confirm('¿Borrar los votos de los dos y empezar de nuevo?')) write(updateDoc(ref('lists', l.id), { votes: {} })); }
+async function resetVotes() { const l = curList(); if (l && await ask('¿Borrar los votos de los dos y empezar de nuevo?')) write(updateDoc(ref('lists', l.id), { votes: {} })); }
 function decideAmong() {
   const l = curList(), matches = l.options.filter(o => myVotes(l)[o] && theirVotes(l)[o]);
   $('mSpin').disabled = true;
@@ -215,5 +218,5 @@ function addIdea() {
 }
 
 on('lists ideas', render);
-expose({ decideTab, selectList, setMode, fromTemplate, newList, createListFromSheet, delList, addOption, delOption,
+expose({ decideTab, addSuggestions, selectList, setMode, fromTemplate, newList, createListFromSheet, delList, addOption, delOption,
   decideRandom, eliminate, restartTurns, vote, resetVotes, decideAmong, setFilter, spin, ideaToBucket, addIdea });
