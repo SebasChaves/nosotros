@@ -4,6 +4,7 @@ import { $, S, esc, icon, paint, onShow, expose, go, parseDate, fmtShort, fmtMon
 const norm = s => String(s ?? '').normalize('NFD').replace(/\p{Diacritic}/gu, '').toLowerCase();
 let lastQ = '', searchFrom = 's-home';
 // Abre la búsqueda recordando desde qué pantalla se vino, para volver ahí.
+function closeSearch() { go(searchFrom === 's-search' ? 's-home' : searchFrom); }
 function openSearch() { searchFrom = document.querySelector('.screen.active')?.id || 's-home'; go('s-search'); }
 
 // Cada fuente: [grupo, ícono, lista de { text, sub, open }]
@@ -56,7 +57,7 @@ function search(q) {
 function openResult(i) { current[i]?.open(); }
 
 function render() {
-  paint('s-search', `<div class="topbar"><div class="row start"><button class="icon-btn" aria-label="Volver" onclick="go(searchFrom)">${icon('back')}</button><h1>Buscar</h1></div></div>
+  paint('s-search', `<div class="topbar"><div class="row start"><button class="icon-btn" aria-label="Volver" onclick="closeSearch()">${icon('back')}</button><h1>Buscar</h1></div></div>
     <input id="searchInput" type="search" placeholder="Notas, viajes, pelis, gastos…" autocomplete="off" aria-label="Buscar" oninput="runSearch(this.value)">
     <div id="searchResults" class="stack"></div>`);
   const inp = $('searchInput');
@@ -65,4 +66,4 @@ function render() {
 }
 
 onShow('s-search', render);
-expose({ runSearch: search, openResult, openSearch });
+expose({ runSearch: search, openResult, openSearch, closeSearch });
