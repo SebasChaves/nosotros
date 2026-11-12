@@ -18,7 +18,9 @@ import './summary.js';
 import './calendar.js';
 import './shows.js';
 import './games.js';
-import { applyAccent, uploadData } from './settings.js';
+import { applyAccent, applyTheme, uploadData } from './settings.js';
+import './search.js';
+import { maybeStartTour, resetTourCheck } from './tour.js';
 
 const setState = s => { document.body.classList.remove('loading', 'out', 'in', 'noconfig'); document.body.classList.add(s); };
 const updateOnline = () => document.body.classList.toggle('is-offline', !navigator.onLine);
@@ -30,7 +32,7 @@ let unsubs = [];
 if (!configured) setState('noconfig');
 else onAuthStateChanged(auth, user => {
   unsubs.forEach(u => u()); unsubs = [];
-  S.me = user;
+  S.me = user; resetTourCheck();
   if (!user) { setState('out'); return; }
   setState('in');
   listen();
@@ -68,7 +70,7 @@ function listen() {
   for (const name of COLLECTIONS) {
     unsubs.push(onSnapshot(col(name), s => {
       S.data[name] = s.docs.map(d => ({ id: d.id, ...d.data() }));
-      if (name === 'profiles') applyAccent(profile(uid()).prefs?.accent);
+      if (name === 'profiles') { applyAccent(profile(uid()).prefs?.accent); applyTheme(profile(uid()).prefs?.theme); if (!s.metadata.fromCache || profile(uid()).prefs) maybeStartTour(); }
       rerender(name); updateBadges();
     }, fail));
   }

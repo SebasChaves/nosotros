@@ -1,11 +1,11 @@
 // Momentos: línea de tiempo con fotos.
 import { writeBatch } from 'https://www.gstatic.com/firebasejs/11.0.2/firebase-firestore.js';
-import { $, S, db, esc, icon, paint, on, expose, toast, openSheet, closeSheet, write, ref, newRef,
+import { $, S, db, esc, icon, paint, on, onShow, expose, toast, openSheet, closeSheet, write, ref, newRef,
          loadPhotos, cachePhoto, compressImage, parseDate, fmtDate, todayKey, nameOf, uid, ask } from './core.js';
 
 function render() {
   const items = [...S.data.moments].sort((a, b) => b.date.localeCompare(a.date) || b.createdAt - a.createdAt);
-  let html = `<div class="topbar"><h1>Momentos</h1><button class="btn small" onclick="openMoment()">${icon('plus')} Agregar</button></div>`;
+  let html = `<div class="topbar"><h1>Momentos</h1><div class="row" style="gap:8px"><button class="icon-btn" aria-label="Galería" onclick="go('s-gallery')">${icon('grid')}</button><button class="btn small" onclick="openMoment()">${icon('plus')} Agregar</button></div></div>`;
   if (!items.length) {
     html += `<div class="glass center stack"><div style="font-size:46px">📸</div><h2>Su historia empieza aquí</h2>
       <p class="muted" style="margin:0">Guarden momentos importantes con foto: la primera cita, viajes, logros…</p>
@@ -64,5 +64,24 @@ async function delMoment(id) {
   write(batch.commit());
 }
 
+/* ---------- Galería ---------- */
+function renderGallery() {
+  const items = S.data.moments.filter(m => m.hasPhoto).sort((a, b) => b.date.localeCompare(a.date));
+  let html = `<div class="topbar"><div class="row start"><button class="icon-btn" aria-label="Volver" onclick="go('s-moments')">${icon('back')}</button><h1>Galería</h1></div>
+    <span class="small muted">${items.length} fotos</span></div>`;
+  if (!items.length) html += '<div class="glass center muted">Cuando agreguen momentos con foto, aparecen aquí.</div>';
+  let year = null, grid = '';
+  for (const m of items) {
+    const y = m.date.slice(0, 4);
+    if (y !== year) { if (grid) html += `<div class="gallery">${grid}</div>`; grid = ''; html += `<div class="year grad-text">${y}</div>`; year = y; }
+    grid += `<button class="gal" aria-label="${esc(m.title)}" onclick="viewPhoto(this.querySelector('img'))"><img data-photo="${m.id}" alt="${esc(m.title)}" loading="lazy"></button>`;
+  }
+  if (grid) html += `<div class="gallery">${grid}</div>`;
+  paint('s-gallery', html);
+  loadPhotos($('s-gallery'));
+}
+
 on('moments', render);
+on('moments', () => { if ($('s-gallery').classList.contains('active')) renderGallery(); });
+onShow('s-gallery', renderGallery);
 expose({ openMoment, pickPhoto, saveMoment, delMoment });

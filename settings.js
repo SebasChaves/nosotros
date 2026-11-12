@@ -18,7 +18,7 @@ function renderMore() {
   const nextPlan = S.data.events.filter(e => e.date >= tk).sort((a, b) => (a.date + (a.time || '')).localeCompare(b.date + (b.time || '')))[0];
   const tile = (id, ic, title, sub, dot = 0) => `<button class="tile" onclick="go('${id}')"><span class="badge-ic">${icon(ic)}</span>
     <div><b>${title}</b></div><span class="sub">${sub}</span>${dot ? `<b class="dot">${dot}</b>` : ''}</button>`;
-  paint('s-more', `<div class="topbar"><h1>Más</h1><button class="icon-btn" aria-label="Ajustes" onclick="go('s-settings')">${icon('gear')}</button></div>
+  paint('s-more', `<div class="topbar"><h1>Más</h1><div class="row" style="gap:8px"><button class="icon-btn" aria-label="Buscar" onclick="openSearch()">${icon('search')}</button><button class="icon-btn" aria-label="Ajustes" onclick="go('s-settings')">${icon('gear')}</button></div></div>
     <div class="tiles">
       ${tile('s-grocery', 'cart', 'Súper', groceryPending() ? plural(groceryPending(), 'cosa por comprar', 'cosas por comprar') : 'Nada pendiente')}
       ${tile('s-money', 'wallet', 'Gastos', bal > 0 ? `${pn} te debe ${fmtMoney(bal)}` : bal < 0 ? `Debes ${fmtMoney(-bal)}` : 'Están a mano')}
@@ -53,6 +53,8 @@ function renderSettings() {
     <div class="glass stack"><span class="label">${icon('spark')} Tu estilo</span>
       <p class="small muted" style="margin:0">Solo cambia cómo se ve la app en tu teléfono.</p>
       <div class="swatches">${ACCENTS.map(([k, l, a, b]) => `<button class="${accent === k ? 'on' : ''}" style="background:linear-gradient(135deg,${a},${b})" aria-label="${l}" title="${l}" onclick="setAccent('${k}')"></button>`).join('')}</div>
+      <span class="label" style="margin-top:6px">Apariencia</span>
+      <div class="seg">${[['dark', 'Oscuro'], ['light', 'Claro'], ['auto', 'Automático']].map(([k, l]) => `<button class="${(prefs.theme || 'dark') === k ? 'on' : ''}" onclick="setTheme('${k}')">${l}</button>`).join('')}</div>
       <span class="label" style="margin-top:6px">Foto de fondo del contador</span>
       ${prefs.bg ? `<img data-photo="bg-${uid()}" alt="" style="width:100%;max-height:180px;object-fit:cover;border-radius:16px">` : ''}
       <div class="grid2"><label class="btn ghost small" style="width:100%">${icon('photo')} ${prefs.bg ? 'Cambiar' : 'Elegir foto'}<input type="file" accept="image/*" hidden onchange="pickBg(this)"></label>
@@ -68,6 +70,7 @@ function renderSettings() {
         <button class="del" aria-label="Borrar" onclick="delIdea('${i.id}')">${icon('trash')}</button></li>`).join('') : '<li class="empty">Aún no agregan ideas propias</li>'}</ul></div>
 
     <div class="glass stack"><span class="label">Sesión</span><p class="small muted" style="margin:0">Entraste como ${esc(S.me.email)}</p>
+      <button class="btn ghost" onclick="startTour()">Ver la guía otra vez</button>
       <button class="btn danger" onclick="logout()">Cerrar sesión</button></div>`);
   loadPhotos($('s-settings'));
 }
@@ -84,6 +87,17 @@ export function applyAccent(a) {
   document.body.dataset.accent = a;
   try { localStorage.setItem('nosotros-accent', a); } catch {}
 }
+// Tema claro u oscuro; "auto" sigue al teléfono.
+const darkMQ = matchMedia('(prefers-color-scheme: dark)');
+export function applyTheme(th) {
+  th = th || localStorage.getItem('nosotros-theme') || 'dark';
+  const real = th === 'auto' ? (darkMQ.matches ? 'dark' : 'light') : th;
+  document.body.dataset.theme = real;
+  document.querySelector('meta[name="theme-color"]')?.setAttribute('content', real === 'light' ? '#FBF6F8' : '#140C1C');
+  try { localStorage.setItem('nosotros-theme', th); } catch {}
+}
+darkMQ.addEventListener?.('change', () => { if ((localStorage.getItem('nosotros-theme') || 'dark') === 'auto') applyTheme('auto'); });
+function setTheme(th) { applyTheme(th); write(setDoc(ref('profiles', uid()), { prefs: { theme: th } }, { merge: true })); }
 function setAccent(a) { applyAccent(a); write(setDoc(ref('profiles', uid()), { prefs: { accent: a } }, { merge: true })); }
 async function pickBg(input) {
   const f = input.files[0]; input.value = ''; if (!f) return;
@@ -188,4 +202,4 @@ on('groceries expenses trips places bucket quiz shows events', renderMore);
 on('ideas profiles', () => { if ($('s-settings').classList.contains('active')) renderSettings(); });
 onShow('s-settings', renderSettings);
 onShow('s-more', renderMore);
-expose({ saveSettings, setAccent, pickAvatar, removeAvatar, pickBg, removeBg, delIdea, logout, exportData, importData });
+expose({ saveSettings, setTheme, setAccent, pickAvatar, removeAvatar, pickBg, removeBg, delIdea, logout, exportData, importData });

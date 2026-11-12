@@ -185,6 +185,7 @@ function renderHome() {
   paint('s-home', `
     <div class="topbar"><div class="title"><span class="hi">Hola${myName() ? ', ' + esc(myName()) : ''}</span><h1>Nosotros</h1></div>
       <div class="row" style="gap:10px"><div class="avatars">${names.map(([id]) => avatar(id, 36)).join('')}</div>
+      <button class="icon-btn" onclick="openSearch()" aria-label="Buscar">${icon('search')}</button>
       <button class="icon-btn" onclick="go('s-settings')" aria-label="Ajustes">${icon('gear')}</button></div></div>
     ${hero}
     ${memoryCard()}
