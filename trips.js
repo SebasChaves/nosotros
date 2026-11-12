@@ -5,6 +5,10 @@ import { $, S, esc, icon, paint, on, expose, toast, openSheet, closeSheet, write
 import { PACKING_TPL } from './data.js';
 import { backBar } from './lists.js';
 import { parseAmount, catOf } from './money.js';
+import { renderStays, renderFlights } from './booking.js';
+
+// Opciones que guardó tu pareja y que tú aún no votas
+const pendingVotes = (t, k) => { const n = (t[k] || []).filter(o => o.votes?.[uid()] === undefined).length; return n ? `<b class="dot">${n}</b>` : ''; };
 
 let current = null, tab = 'plan', pendingTrip = null;
 const trip = () => S.data.trips.find(t => t.id === current);
@@ -33,22 +37,35 @@ function renderTrips() {
       <button class="btn" onclick="newTrip()">Planear un viaje</button></div>`}
     ${past.length ? `<span class="label">Viajes pasados</span>${past.map(card).join('')}` : ''}`);
 }
-function newTrip() {
-  openSheet(`<div class="stack"><h2>Nuevo viaje</h2>
-    <input id="tName" placeholder="Nombre del viaje" maxlength="50" aria-label="Nombre">
-    <input id="tDest" placeholder="Destino" maxlength="60" aria-label="Destino">
-    <div class="grid2"><div><label class="f" for="tStart">Ida</label><input type="date" id="tStart"></div>
-      <div><label class="f" for="tEnd">Vuelta</label><input type="date" id="tEnd"></div></div>
-    <input id="tBudget" inputmode="decimal" placeholder="Presupuesto total (opcional)" aria-label="Presupuesto">
-    <button class="btn" onclick="saveTrip()">Crear viaje</button></div>`);
+let editing = null;
+function tripForm(t = {}) {
+  editing = t.id || null;
+  openSheet(`<div class="stack"><h2>${editing ? 'Editar viaje' : 'Nuevo viaje'}</h2>
+    <input id="tName" placeholder="Nombre del viaje" maxlength="50" aria-label="Nombre" value="${esc(t.name || '')}">
+    <input id="tDest" placeholder="Destino (ej. Tamarindo, Costa Rica)" maxlength="60" aria-label="Destino" value="${esc(t.dest || '')}">
+    <div class="grid2"><div><label class="f" for="tStart">Ida</label><input type="date" id="tStart" value="${esc(t.start || '')}"></div>
+      <div><label class="f" for="tEnd">Vuelta</label><input type="date" id="tEnd" value="${esc(t.end || '')}"></div></div>
+    <div class="grid2"><div><label class="f" for="tGuests">Personas</label><input id="tGuests" type="number" min="1" max="16" inputmode="numeric" value="${esc(t.guests || 2)}"></div>
+      <div><label class="f" for="tBudget">Presupuesto</label><input id="tBudget" inputmode="decimal" placeholder="Opcional" value="${t.budget ? esc(t.budget) : ''}"></div></div>
+    <span class="label" style="margin-top:6px">Para buscar vuelos (opcional)</span>
+    <input id="tOrigin" placeholder="Salen desde (ej. San José)" maxlength="60" aria-label="Ciudad de salida" value="${esc(t.origin || '')}">
+    <div class="grid2"><input id="tOCode" placeholder="Aeropuerto salida (SJO)" maxlength="3" autocapitalize="characters" aria-label="Código aeropuerto de salida" value="${esc(t.originCode || '')}">
+      <input id="tDCode" placeholder="Aeropuerto llegada (LIR)" maxlength="3" autocapitalize="characters" aria-label="Código aeropuerto de llegada" value="${esc(t.destCode || '')}"></div>
+    <button class="btn" onclick="saveTrip()">${editing ? 'Guardar cambios' : 'Crear viaje'}</button></div>`);
 }
+function newTrip() { tripForm(); }
+function editTrip() { tripForm(trip()); }
 function saveTrip() {
   const name = $('tName').value.trim(), start = $('tStart').value, end = $('tEnd').value;
   if (!name) return toast('Ponle nombre al viaje');
   if (start && end && end < start) return toast('La vuelta no puede ser antes de la ida');
+  const code = v => v.trim().toUpperCase().replace(/[^A-Z]/g, '').slice(0, 3);
+  const fields = { name, dest: $('tDest').value.trim(), start, end, budget: parseAmount($('tBudget').value) || 0,
+    guests: Math.min(16, Math.max(1, parseInt($('tGuests').value, 10) || 2)), origin: $('tOrigin').value.trim(),
+    originCode: code($('tOCode').value), destCode: code($('tDCode').value) };
+  if (editing) { write(updateDoc(ref('trips', editing), fields)); closeSheet(); toast('Viaje actualizado'); return; }
   const r = newRef('trips');
-  write(setDoc(r, { name, dest: $('tDest').value.trim(), start, end, budget: parseAmount($('tBudget').value) || 0,
-    plan: [], packing: [], createdAt: Date.now(), by: uid() }));
+  write(setDoc(r, { ...fields, plan: [], packing: [], stays: [], flights: [], createdAt: Date.now(), by: uid() }));
   pendingTrip = r.id; closeSheet(); openTrip(r.id);
 }
 
@@ -59,13 +76,12 @@ function renderTrip() {
   if (!t) { if (current !== pendingTrip && $('s-trip').classList.contains('active')) go('s-trips'); return; }
   const left = t.start ? daysBetween(today(), parseDate(t.start)) : null;
   if (!$('tripBody')) $('s-trip').innerHTML = `<div id="tripHead" class="stack"></div><div id="tripBody" class="stack" style="gap:14px"></div>`;
-  paint('tripHead', `${backBar(esc(t.name), 's-trips', `<button class="icon-btn" aria-label="Borrar viaje" onclick="delTrip()">${icon('trash')}</button>`)}
+  paint('tripHead', `${backBar(esc(t.name), 's-trips', `<div class="row" style="gap:8px"><button class="icon-btn" aria-label="Editar viaje" onclick="editTrip()">${icon('gear')}</button><button class="icon-btn" aria-label="Borrar viaje" onclick="delTrip()">${icon('trash')}</button></div>`)}
     <div class="glass center"><div class="small muted">${esc(t.dest || '')}${t.start ? ` · ${fmtShort(parseDate(t.start))}${t.end ? ' – ' + fmtShort(parseDate(t.end)) : ''}` : ''}</div>
       ${left !== null && left > 0 ? `<div class="big grad-text" style="font-size:48px;margin-top:6px">${left}</div><div class="muted">${left === 1 ? 'día' : 'días'} para el viaje</div>` : left !== null && left <= 0 && (!t.end || parseDate(t.end) >= today()) ? '<h2 style="margin-top:6px">¡Están de viaje!</h2>' : ''}</div>
-    <div class="seg"><button class="${tab === 'plan' ? 'on' : ''}" onclick="tripTab('plan')">Itinerario</button>
-      <button class="${tab === 'pack' ? 'on' : ''}" onclick="tripTab('pack')">Maleta</button>
-      <button class="${tab === 'money' ? 'on' : ''}" onclick="tripTab('money')">Presupuesto</button></div>`);
-  if (tab === 'plan') renderPlan(t); else if (tab === 'pack') renderPack(t); else renderBudget(t);
+    <div class="seg">${[['plan', 'Plan'], ['stays', 'Estadía'], ['flights', 'Vuelos'], ['pack', 'Maleta'], ['money', 'Dinero']].map(([k, l]) =>
+      `<button class="${tab === k ? 'on' : ''}" style="padding:10px 2px;font-size:12.5px" onclick="tripTab('${k}')">${l}${k === 'stays' || k === 'flights' ? pendingVotes(t, k) : ''}</button>`).join('')}</div>`);
+  ({ plan: renderPlan, stays: renderStays, flights: renderFlights, pack: renderPack, money: renderBudget }[tab] || renderPlan)(t);
 }
 function tripTab(x) { tab = x; renderTrip(); }
 
@@ -144,4 +160,4 @@ function delTrip() {
 }
 
 on('trips expenses', () => { renderTrips(); if (current) renderTrip(); });
-expose({ newTrip, saveTrip, openTrip, tripTab, addPlan, delPlan, addPack, togglePack, delPack, setBudget, delTrip });
+expose({ newTrip, editTrip, saveTrip, openTrip, tripTab, addPlan, delPlan, addPack, togglePack, delPack, setBudget, delTrip });
