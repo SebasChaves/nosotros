@@ -1,6 +1,6 @@
 // Guarda la app en caché para que funcione sin internet.
 // Sube el número de versión cada vez que cambies archivos.
-const CACHE = 'nosotros-v3';
+const CACHE = 'nosotros-v4';
 const FILES = ['./', './index.html', './app.js', './data.js', './manifest.json', './firebase-config.js','./icon-180.png', './icon-192.png', './icon-512.png'];
 
 self.addEventListener('install', e => {
