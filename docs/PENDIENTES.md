@@ -18,8 +18,9 @@
 - Instantáneas (v32): acceso directo «Instantánea» del ícono en Android (puede tardar hasta un día en aparecer en la
   app instalada); en iPhone no existen esos accesos directos.
 
-- Avisos programados (v35): que llegue el de las 20:00 (racha/mascota), recordatorios y fechas. Las notificaciones
-  normales ya se confirmaron en los dos teléfonos (v34).
+- Avisos programados (v35): los recordatorios ya llegan a su hora (confirmado). Falta ver el de las 20:00
+  (racha/mascota) y los de fechas especiales. Las notificaciones normales se confirmaron en los dos teléfonos (v34).
+  Ojo: un cambio en el Cron de Cloudflare puede tardar hasta 15 minutos en activarse.
 
 ## Ideas conversadas, no hechas
 
