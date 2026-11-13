@@ -46,6 +46,8 @@ for e in ana beto; do curl -s -X POST "http://127.0.0.1:9099/identitytoolkit.goo
 - Consola del navegador sin errores.
 - Para gestos (deslizar pestañas, arrastrar hojas) se pueden disparar `TouchEvent` desde la consola.
 - `history.back()` simula el botón atrás de Android.
+- Cámara propia: lanza Chromium con `--use-fake-device-for-media-stream --use-fake-ui-for-media-stream` y permiso
+  `camera` (da un video de prueba verde); con agente de usuario de Android o iPhone sale la elección cámara/galería.
 
 ## 5. Solo se puede comprobar en el teléfono
 

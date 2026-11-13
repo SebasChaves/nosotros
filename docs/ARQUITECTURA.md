@@ -83,8 +83,10 @@ o vuelve a Inicio. Si agregas otro tipo de ventana superpuesta, inclúyela en `o
 
 **Fotos:** ver docs/DATOS.md. Helpers: `compressImage(file, lado)`, `makeThumb`, `loadPhotos(contenedor)` (carga
 perezosa de `<img data-photo="id">` / `<img data-thumb="id">`), `viewPhoto(img)`, `photoError(e)`.
-En Android, al tocar cualquier `<input type=file accept="image/*">` se pregunta "Tomar foto / Elegir de la galería"
-(el selector nuevo de Android no ofrece cámara). No hace falta hacer nada extra.
+En Android y iPhone, al tocar cualquier `<input type=file accept="image/*">` se pregunta "Tomar foto / Elegir de la galería".
+"Tomar foto" abre la **cámara propia** (`openCamera` en `core.js`: `getUserMedia`, dispara al instante, botón ⇋ Espejo
+y 🔄 Girar; si no hay permiso ofrece la cámara del teléfono). El archivo resultante llega al `<input>` original con su
+evento `change`, así que no hace falta hacer nada extra.
 
 **Fechas:** siempre como texto `'AAAA-MM-DD'` (`todayKey()`, `dayKey(d)`, `parseDate(s)`), en hora local.
 

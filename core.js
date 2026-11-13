@@ -171,9 +171,24 @@ document.addEventListener('touchend', e => {
   if (cur >= 0 && next) go('s-' + next);
 }, { passive: true });
 
-/* ================= Android: elegir entre cámara y galería =================
-   El selector nuevo de Android no ofrece la cámara, así que se pregunta antes de abrirlo. */
+/* ================= Teléfonos: elegir entre cámara y galería =================
+   El selector nuevo de Android no ofrece la cámara, así que se pregunta antes de abrirlo.
+   "Tomar foto" abre la cámara propia de Futari (abajo); si no se puede, la del teléfono. */
 export const ANDROID = /Android/i.test(navigator.userAgent);
+export const IOS = /iPhone|iPad|iPod/i.test(navigator.userAgent) || (navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1);
+// Pasa el archivo elegido al <input> original como si el usuario lo hubiera escogido ahí.
+function deliverFile(input, f) {
+  const dt = new DataTransfer(); dt.items.add(f); input.files = dt.files;
+  input.dispatchEvent(new Event('change', { bubbles: true }));
+}
+// Abre el selector del sistema (galería, o la cámara del teléfono con capture). Debe llamarse dentro de un toque.
+function nativePick(accept, capture, onFile) {
+  const tmp = document.createElement('input');
+  tmp.type = 'file'; tmp.accept = accept || 'image/*'; tmp.hidden = true; tmp.dataset.direct = '1';
+  if (capture) tmp.setAttribute('capture', capture);
+  tmp.onchange = () => { const f = tmp.files[0]; tmp.remove(); if (f) onFile(f); };
+  document.body.appendChild(tmp); tmp.click();
+}
 function chooseImageSource(input) {
   const el = document.createElement('div');
   el.className = 'dialog';
@@ -184,25 +199,122 @@ function chooseImageSource(input) {
   el.querySelector('[data-v="0"]').onclick = close;
   el.addEventListener('click', e => { if (e.target === el) close(); });
   el.querySelectorAll('[data-src]').forEach(b => b.onclick = () => {
-    const tmp = document.createElement('input');
-    tmp.type = 'file'; tmp.accept = input.accept || 'image/*'; tmp.hidden = true; tmp.dataset.direct = '1';
-    if (b.dataset.src === 'camera') tmp.setAttribute('capture', 'environment');
-    tmp.onchange = () => {
-      const f = tmp.files[0]; tmp.remove(); if (!f) return;
-      const dt = new DataTransfer(); dt.items.add(f); input.files = dt.files;
-      input.dispatchEvent(new Event('change', { bubbles: true }));
-    };
-    document.body.appendChild(tmp); tmp.click(); close();
+    close();
+    if (b.dataset.src === 'gallery') return nativePick(input.accept, null, f => deliverFile(input, f));
+    if (navigator.mediaDevices?.getUserMedia) openCamera(input.accept, f => deliverFile(input, f));
+    else nativePick(input.accept, 'environment', f => deliverFile(input, f));
   });
   document.body.appendChild(el); syncBack();
 }
-if (ANDROID) document.addEventListener('click', e => {
+if (ANDROID || IOS) document.addEventListener('click', e => {
   const t = e.target;
   const input = t.matches?.('input[type=file]') ? t : t.closest?.('label')?.querySelector('input[type=file]');
   if (!input || !/image/.test(input.accept || '') || input.hasAttribute('capture') || input.dataset.direct) return;
   e.preventDefault(); e.stopPropagation();
   chooseImageSource(input);
 }, true);
+
+/* ================= Cámara propia =================
+   La cámara del teléfono tarda en disparar y guarda las selfies en espejo. Esta toma el cuadro del video
+   al instante y guarda la foto tal como se ve en pantalla; "⇋ Espejo" la voltea. Recuerda la última
+   cámara (adelante/atrás) y, para cada una, si el espejo estaba puesto (localStorage "futari-cam"). */
+const camPref = () => { try { return JSON.parse(localStorage.getItem('futari-cam')) || {}; } catch { return {}; } };
+const saveCamPref = p => { try { localStorage.setItem('futari-cam', JSON.stringify({ ...camPref(), ...p })); } catch {} };
+function openCamera(accept, onFile) {
+  let facing = camPref().facing || 'environment', mirror = !!camPref()['mirror_' + facing], stream = null, review = false, closed = false, multi = true;
+  const el = document.createElement('div');
+  el.className = 'dialog cam';
+  el.setAttribute('role', 'dialog'); el.setAttribute('aria-modal', 'true'); el.setAttribute('aria-label', 'Cámara');
+  el.innerHTML = `<div class="cam-view"><video playsinline autoplay muted></video><canvas hidden></canvas>
+      <div class="cam-msg" hidden><p></p><button class="btn" data-a="native">📷 Usar la cámara del teléfono</button></div></div>
+    <button class="cam-x" data-v="0" aria-label="Cerrar cámara">${icon('x')}</button>
+    <div class="cam-bar">
+      <button class="cam-btn" data-a="mirror" aria-label="Espejo" aria-pressed="false"><span>⇋</span><small>Espejo</small></button>
+      <button class="cam-shoot" data-a="shoot" aria-label="Tomar foto"></button>
+      <button class="cam-btn" data-a="flip" aria-label="Cambiar de cámara"><span>🔄</span><small>Girar</small></button>
+    </div>
+    <div class="cam-bar" data-review hidden>
+      <button class="cam-btn" data-a="mirror" aria-label="Espejo" aria-pressed="false"><span>⇋</span><small>Espejo</small></button>
+      <button class="btn ghost" data-a="retake">Repetir</button><button class="btn" data-a="use">Usar foto</button>
+    </div>`;
+  const video = el.querySelector('video'), canvas = el.querySelector('canvas'), msg = el.querySelector('.cam-msg');
+  const [liveBar, reviewBar] = el.querySelectorAll('.cam-bar');
+  const stop = () => { stream?.getTracks().forEach(t => t.stop()); stream = null; };
+  const paintMirror = () => {
+    el.classList.toggle('mirror', mirror);
+    el.querySelectorAll('[data-a="mirror"]').forEach(b => b.setAttribute('aria-pressed', mirror));
+  };
+  const showFail = text => {
+    stop(); msg.hidden = false; msg.querySelector('p').textContent = text;
+    video.hidden = true; liveBar.hidden = true; reviewBar.hidden = true;
+  };
+  async function start() {
+    stop();
+    try {
+      const s = await navigator.mediaDevices.getUserMedia({ audio: false,
+        video: { facingMode: { ideal: facing }, width: { ideal: 1920 }, height: { ideal: 1080 } } });
+      if (closed || review) { s.getTracks().forEach(t => t.stop()); return; }
+      stream = s; video.srcObject = s; video.hidden = false; msg.hidden = true;
+      await video.play().catch(() => {});
+      // Una sola cámara (por ejemplo en computadora): no tiene sentido el botón de girar
+      const cams = (await navigator.mediaDevices.enumerateDevices?.().catch(() => [])) || [];
+      multi = cams.filter(d => d.kind === 'videoinput').length !== 1;
+      el.querySelector('[data-a="flip"]').style.visibility = multi ? '' : 'hidden';
+    } catch (e) {
+      if (closed) return;
+      showFail(e?.name === 'NotAllowedError'
+        ? 'Futari no tiene permiso para usar la cámara. Puedes darle permiso en los ajustes del navegador, o usar la cámara del teléfono.'
+        : 'No se pudo abrir la cámara. Puedes usar la del teléfono.');
+    }
+  }
+  function close() {
+    if (closed) return; closed = true; stop();
+    document.removeEventListener('visibilitychange', onVis);
+    el.classList.add('out'); setTimeout(() => { el.remove(); syncBack(); }, 160);
+  }
+  // Al salir de la app se apaga la cámara; al volver, se prende otra vez.
+  const onVis = () => { if (document.hidden) stop(); else if (!review && msg.hidden) start(); };
+  document.addEventListener('visibilitychange', onVis);
+  function shoot() {
+    const w = video.videoWidth, h = video.videoHeight;
+    if (!w || !h) return;
+    canvas.width = w; canvas.height = h;
+    const g = canvas.getContext('2d');
+    // La foto se guarda como se ve: con espejo solo si está puesto
+    if (mirror) { g.translate(w, 0); g.scale(-1, 1); }
+    g.drawImage(video, 0, 0, w, h);
+    g.setTransform(1, 0, 0, 1, 0, 0);
+    review = true; stop();
+    canvas.hidden = false; video.hidden = true; liveBar.hidden = true; reviewBar.hidden = false;
+    el.classList.add('flash'); setTimeout(() => el.classList.remove('flash'), 220);
+    navigator.vibrate?.(15);
+  }
+  function retake() {
+    review = false; canvas.hidden = true; liveBar.hidden = false; reviewBar.hidden = true; start();
+  }
+  function flipShot() {
+    // Ya tomada: voltea la foto misma
+    const c = document.createElement('canvas'); c.width = canvas.width; c.height = canvas.height;
+    const g = c.getContext('2d'); g.translate(c.width, 0); g.scale(-1, 1); g.drawImage(canvas, 0, 0);
+    canvas.getContext('2d').drawImage(c, 0, 0);
+  }
+  el.querySelector('[data-v="0"]').onclick = close;
+  el.querySelectorAll('[data-a]').forEach(b => b.onclick = () => {
+    const a = b.dataset.a;
+    if (a === 'shoot') shoot();
+    else if (a === 'retake') retake();
+    else if (a === 'flip') { facing = facing === 'user' ? 'environment' : 'user'; mirror = !!camPref()['mirror_' + facing]; saveCamPref({ facing }); paintMirror(); start(); }
+    else if (a === 'mirror') { mirror = !mirror; saveCamPref({ ['mirror_' + facing]: mirror }); paintMirror(); if (review) flipShot(); }
+    else if (a === 'native') { close(); nativePick(accept, facing, onFile); }
+    else if (a === 'use') {
+      b.disabled = true;
+      canvas.toBlob(blob => { close(); if (blob) onFile(new File([blob], `foto-${Date.now()}.jpg`, { type: 'image/jpeg' })); }, 'image/jpeg', 0.92);
+    }
+  });
+  paintMirror();
+  document.body.appendChild(el); syncBack();
+  start();
+}
 
 sheetDrag(); viewerDrag(); // los módulos corren cuando el HTML ya está listo
 

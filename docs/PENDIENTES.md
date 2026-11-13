@@ -15,6 +15,8 @@
 - Ventanas de confirmación en iPhone (eliminar canción, reiniciar votos): se rehicieron porque no respondían; falta
   que lo confirmen en el iPhone.
 - Calendario de Samsung (compartir .ics), cámara y fotos pesadas en el Android de la pareja.
+- Cámara propia (v31) en los dos teléfonos: permiso de cámara en la app instalada (iPhone puede volver a pedirlo),
+  cambiar adelante/atrás, espejo, y que la foto salga derecha (no de lado).
 
 ## Ideas conversadas, no hechas
 
@@ -48,6 +50,7 @@
 
 **Android (Samsung):**
 - El selector de fotos nuevo no ofrece cámara → `core.js` pregunta cámara/galería (no pongas `capture` a mano).
+- La cámara del teléfono tardaba en disparar y guardaba las selfies en espejo → Futari usa su cámara propia (v31).
 - Fotos de 50–200 MP: decodificar reducidas con `createImageBitmap(file, { resizeWidth })`. HEIF no se puede abrir.
 - Samsung cierra apps en segundo plano: al volver en <30 min se salta la animación y vuelve a la misma pantalla.
 - La conexión de Firestore queda dormida al volver: se hace `disableNetwork` + `enableNetwork`.

@@ -1,13 +1,16 @@
 {
-  "version": "30",
+  "version": "31",
   "notes": [
-    "Fechas especiales desde el Calendario: toca «Agregar» y elige entre un plan o una fecha especial",
-    "Toca una fecha especial para editarla o borrarla (también desde Inicio → Fechas)",
-    "Nuevos tipos: 💕 Fecha nuestra, 🎄 Festivo, 🎓 Logro y 🕊️ En memoria",
-    "En el calendario se ve el emoji de cada fecha especial (🎂, 💍…)",
-    "Pasen una fecha especial al calendario del teléfono, cada año y con aviso el día antes"
+    "Cámara propia de Futari: toma la foto al instante y ya no sale en modo espejo",
+    "En la cámara: ⇋ Espejo para voltearla si la quieren así, y 🔄 para cambiar entre la de adelante y la de atrás",
+    "En iPhone también se puede elegir entre tomar foto o elegir de la galería"
   ],
   "history": [
+    { "version": "31", "notes": [
+      "Cámara propia de Futari: toma la foto al instante y ya no sale en modo espejo",
+      "En la cámara: ⇋ Espejo para voltearla si la quieren así, y 🔄 para cambiar entre la de adelante y la de atrás",
+      "En iPhone también se puede elegir entre tomar foto o elegir de la galería"
+    ] },
     { "version": "30", "notes": [
       "Fechas especiales desde el Calendario: toca «Agregar» y elige entre un plan o una fecha especial",
       "Toca una fecha especial para editarla o borrarla (también desde Inicio → Fechas)",
