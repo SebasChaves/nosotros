@@ -251,37 +251,71 @@ function renderHome() {
       <h2>${S.settings.start ? '¡Hola!' : '¡Bienvenido!'}</h2>
       <p class="muted" style="margin:0">${S.settings.start ? 'Solo falta que pongas tu nombre.' : 'Pon tu nombre y el día en que empezaron para activar el contador.'}</p>
       <button class="btn" onclick="go('s-settings')">Configurar</button></div>`;
-  } else {
-    const start = parseDate(S.settings.start), now = today(), days = daysBetween(start, now);
-    let months = (now.getFullYear() - start.getFullYear()) * 12 + now.getMonth() - start.getMonth();
-    if (addMonths(start, months) > now) months--;
-    months = Math.max(0, months);
-    const bg = profile(uid()).prefs?.bg;
-    hero = `<div class="glass hero">${bg ? `<img class="bgimg" data-photo="bg-${uid()}" alt=""><div class="bgshade"></div>` : ''}
-      <div class="in"><div class="big grad-text">${days.toLocaleString('es')}</div>
-      <div class="muted">días juntos · desde el ${fmtDate(start)}</div>
-      <div class="parts"><span><b>${Math.floor(months / 12)}</b>años</span><span><b>${months % 12}</b>meses</span><span><b>${Math.max(0, daysBetween(addMonths(start, months), now))}</b>días</span></div></div></div>`;
-  }
+  } else hero = counterCard();
   const up = upcoming().slice(0, 5);
+  const cards = {
+    urgent: urgentCard, counter: () => hero, today: todayCard, memory: memoryCard, mood: moodCard, question: questionCard, challenge: challengeCard,
+    upcoming: () => `<div class="glass"><div class="row"><span class="label">${icon('cal')} Próximos momentos</span>
+      <div class="row" style="gap:0"><button class="link" onclick="go('s-cal')">Calendario</button><button class="link" onclick="openFechas()">Fechas</button></div></div>
+      <div style="margin-top:6px">${up.length ? up.map(m => `<div class="event"><div>${esc(m.label)}<div class="tiny muted">${fmtDate(m.date)}</div></div>
+        <span class="when">${whenText(daysBetween(today(), m.date))}</span></div>`).join('') : '<p class="empty">Agreguen cumpleaños, viajes o eventos</p>'}</div></div>`,
+  };
+  // Orden y tarjetas visibles que eligió cada uno en Ajustes (si aún no configuran, sale la tarjeta de bienvenida igual).
+  const layout = homeLayout().filter(c => c.on || (c.id === 'counter' && !ready));
   paint('s-home', `
-    <div class="topbar"><div class="title"><span class="hi">Hola${myName() ? ', ' + esc(myName()) : ''}</span><h1 class="brand grad-text" style="font-size:30px">Futari</h1></div>
+    <div class="topbar"><div class="title"><span class="hi">Hola${greetName() ? ', ' + esc(greetName()) : ''}</span><h1 class="brand grad-text" style="font-size:30px">Futari</h1></div>
       <div class="row" style="gap:10px"><div class="avatars">${names.map(([id]) => avatar(id, 36)).join('')}</div>
       <button class="icon-btn" onclick="openSearch()" aria-label="Buscar">${icon('search')}</button>
       <button class="icon-btn" onclick="go('s-settings')" aria-label="Ajustes">${icon('gear')}</button></div></div>
-    ${urgentCard()}
-    ${hero}
-    ${todayCard()}
-    ${memoryCard()}
-    ${moodCard()}
-    ${questionCard()}
-    ${challengeCard()}
-    <div class="glass"><div class="row"><span class="label">${icon('cal')} Próximos momentos</span>
-      <div class="row" style="gap:0"><button class="link" onclick="go('s-cal')">Calendario</button><button class="link" onclick="openFechas()">Fechas</button></div></div>
-      <div style="margin-top:6px">${up.length ? up.map(m => `<div class="event"><div>${esc(m.label)}<div class="tiny muted">${fmtDate(m.date)}</div></div>
-        <span class="when">${whenText(daysBetween(today(), m.date))}</span></div>`).join('') : '<p class="empty">Agreguen cumpleaños, viajes o eventos</p>'}</div></div>
+    ${layout.map(c => cards[c.id]?.() || '').join('\n')}
+    ${layout.length < 3 ? '<p class="tiny muted center" style="margin:0">Puedes mostrar más tarjetas en Ajustes → Tu Inicio</p>' : ''}
   `);
   loadPhotos($('s-home'));
 }
+
+/* ---------- Personalización de Inicio ---------- */
+export const HOME_CARDS = [['urgent', '🔴 Recordatorios urgentes'], ['counter', '💞 Contador'], ['today', '📌 Hoy'], ['memory', '📸 Un día como hoy'],
+  ['mood', '🙂 ¿Cómo te sientes?'], ['question', '💬 Pregunta del día'], ['challenge', '🏆 Reto de la semana'], ['upcoming', '🗓️ Próximos momentos']];
+// [{ id, on }] en el orden elegido; las tarjetas nuevas que no estén guardadas se agregan al final, visibles.
+export function homeLayout() {
+  const saved = (profile(uid()).prefs?.home || []).filter(c => HOME_CARDS.some(([id]) => id === c.id));
+  return [...saved, ...HOME_CARDS.filter(([id]) => !saved.some(c => c.id === id)).map(([id]) => ({ id, on: true }))];
+}
+const greetName = () => profile(uid()).prefs?.myNick || myName();
+
+// Contador: cada uno elige desde qué fecha cuenta y en qué unidad (días, semanas, meses u horas).
+export const COUNTER_UNITS = [['days', 'Días'], ['weeks', 'Semanas'], ['months', 'Meses'], ['hours', 'Horas']];
+function counterFrom() {
+  const c = profile(uid()).prefs?.counter || {};
+  return c.from === 'custom' && c.date ? { date: c.date, label: c.label || 'desde nuestra fecha', unit: c.unit || 'days' }
+    : { date: S.settings.start, label: 'juntos', unit: c.unit || 'days' };
+}
+function counterCard() {
+  const { date, label, unit } = counterFrom();
+  const start = parseDate(date), now = today(), days = Math.max(0, daysBetween(start, now));
+  let months = (now.getFullYear() - start.getFullYear()) * 12 + now.getMonth() - start.getMonth();
+  if (addMonths(start, months) > now) months--;
+  months = Math.max(0, months);
+  const restDays = Math.max(0, daysBetween(addMonths(start, months), now));
+  const ymd = `<span><b>${Math.floor(months / 12)}</b>años</span><span><b>${months % 12}</b>meses</span><span><b>${restDays}</b>días</span>`;
+  const mins = Math.max(0, Math.floor((Date.now() - start.getTime()) / 60000));
+  const [big, word, parts] = unit === 'weeks' ? [Math.floor(days / 7), Math.floor(days / 7) === 1 ? 'semana' : 'semanas', `<span><b>${Math.floor(days / 7)}</b>semanas</span><span><b>${days % 7}</b>días</span><span><b>${days.toLocaleString('es')}</b>días en total</span>`]
+    : unit === 'months' ? [months, months === 1 ? 'mes' : 'meses', ymd]
+    : unit === 'hours' ? [Math.floor(mins / 60), 'horas', `<span><b>${days.toLocaleString('es')}</b>días</span><span><b>${Math.floor(mins / 60) % 24}</b>horas</span><span id="heroMin"><b>${mins % 60}</b>minutos</span>`]
+    : [days, days === 1 ? 'día' : 'días', ymd];
+  const bg = profile(uid()).prefs?.bg;
+  return `<div class="glass hero">${bg ? `<img class="bgimg" data-photo="bg-${uid()}" alt=""><div class="bgshade"></div>` : ''}
+    <div class="in"><div class="big grad-text" id="heroBig">${big.toLocaleString('es')}</div>
+    <div class="muted">${word} ${esc(label)} · ${label === 'juntos' ? 'desde el ' : ''}${fmtDate(start)}</div>
+    <div class="parts">${parts}</div></div></div>`;
+}
+// En modo "horas" el contador avanza solo mientras Inicio está abierto.
+setInterval(() => {
+  if (document.hidden || !S.me || counterFrom().unit !== 'hours' || !$('heroBig') || !$('s-home').classList.contains('active')) return;
+  const mins = Math.max(0, Math.floor((Date.now() - parseDate(counterFrom().date).getTime()) / 60000));
+  $('heroBig').textContent = Math.floor(mins / 60).toLocaleString('es');
+  const m = $('heroMin'); if (m) m.innerHTML = `<b>${mins % 60}</b>minutos`;
+}, 20000);
 
 on('dates moments moods answers challenges trips profiles events thinks notes coupons lists quiz daily reminders songs', renderHome);
 on('thinks', checkIncomingThink);

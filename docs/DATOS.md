@@ -43,7 +43,7 @@ Casi todos los docs llevan `by: uid` (quién lo creó) y `createdAt: ms`. Fechas
 | `pins` | lugares del mapa: `title, kind (emoji), lat, lng, place, country, date, note` |
 | `recipes`, `recipefav`, `menu` | recetas propias; favoritas (id = id de receta); menú: id = lunes de la semana, `{ days: { fecha: { almuerzo|cena: {id}|{text} } } }` |
 | `quiz`, `games`, `cards` | rondas del quiz; partidas del juego; cartas propias del juego |
-| `profiles` | id = uid: `avatar` (id en photos), `prefs { accent, theme, bg }` |
+| `profiles` | id = uid: `avatar` (id en photos), `prefs { accent, theme, bg, myNick, partnerNick, counter{unit days|weeks|months|hours, from start|custom, date, label}, home[{id,on}] }` — todo es personal de quien lo configura; `partnerNick` cambia `nameOf()` de la pareja solo en su teléfono |
 
 ## Fotos (colección `photos`)
 

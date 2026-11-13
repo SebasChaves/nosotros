@@ -1,9 +1,16 @@
 {
-  "version": "27",
+  "version": "28",
   "notes": [
-    "Administración: se ve el modelo de teléfono, el navegador y la versión de la app de cada uno, con avisos si algo puede dar problemas"
+    "Ajustes → Tu Inicio: elige qué tarjetas ves en Inicio y en qué orden",
+      "Apodos: cómo te saluda la app y cómo aparece tu pareja en tu teléfono",
+      "Contador a tu manera: en días, semanas, meses u horas, y desde la fecha que quieras (por ejemplo, cuando se conocieron)"
   ],
   "history": [
+    { "version": "28", "notes": [
+      "Ajustes → Tu Inicio: elige qué tarjetas ves en Inicio y en qué orden",
+      "Apodos: cómo te saluda la app y cómo aparece tu pareja en tu teléfono",
+      "Contador a tu manera: en días, semanas, meses u horas, y desde la fecha que quieras (por ejemplo, cuando se conocieron)"
+    ] },
     { "version": "27", "notes": [
       "Administración: se ve el modelo de teléfono, el navegador y la versión de la app de cada uno, con avisos si algo puede dar problemas"
     ] },

@@ -10,6 +10,7 @@ import { balance } from './money.js';
 import { badgeCount } from './badges.js';
 import { pinEnabled } from './lock.js';
 import { quizWaiting } from './quiz.js';
+import { homeLayout, HOME_CARDS, COUNTER_UNITS } from './home.js';
 import { isTester } from './testing.js';
 
 /* ---------- Más ---------- */
@@ -69,6 +70,8 @@ function renderSettings() {
       <div class="grid2"><label class="btn ghost small" style="width:100%">${icon('photo')} ${prefs.bg ? 'Cambiar' : 'Elegir foto'}<input type="file" accept="image/*" hidden onchange="pickBg(this)"></label>
         ${prefs.bg ? `<button class="btn ghost small" style="width:100%" onclick="removeBg()">Quitar</button>` : ''}</div></div>
 
+    ${homePrefsCard(prefs, p)}
+
     <div class="glass stack"><span class="label">${icon('lock')} Bloqueo con PIN</span>
       <p class="small muted" style="margin:0">Opcional. Pide un código de 4 números al abrir la app en este teléfono (y si estuvo cerrada más de un minuto).</p>
       ${pinEnabled() ? `<div class="grid2"><button class="btn ghost small" style="width:100%" onclick="setupPin()">Cambiar PIN</button><button class="btn ghost small" style="width:100%" onclick="disablePin()">Desactivar</button></div>` : `<button class="btn ghost" onclick="setupPin()">Activar bloqueo con PIN</button>`}</div>
@@ -89,6 +92,52 @@ function renderSettings() {
     ${isTester() ? `<button class="btn ghost" onclick="go('s-admin')">${icon('gear')} Abrir administración</button>` : ''}`);
   loadPhotos($('s-settings'));
 }
+/* ---------- Tu Inicio: apodos, contador y tarjetas (solo para quien lo configura) ---------- */
+const savePrefs = patch => write(setDoc(ref('profiles', uid()), { prefs: patch }, { merge: true }));
+function homePrefsCard(prefs, p) {
+  const c = prefs.counter || {}, custom = c.from === 'custom', layout = homeLayout();
+  return `<div class="glass stack"><span class="label">${icon('heart')} Tu Inicio</span>
+    <p class="small muted" style="margin:0">Solo cambia lo que ves tú.</p>
+    <span class="label" style="margin-top:4px">Apodos</span>
+    <div><label class="f" for="nickMe">¿Cómo te saluda la app?</label><input id="nickMe" maxlength="24" placeholder="${esc(myName() || 'Tu nombre')}" value="${esc(prefs.myNick || '')}"></div>
+    ${p ? `<div><label class="f" for="nickPartner">¿Cómo aparece ${esc(S.settings.members?.[p]?.name || 'tu pareja')} en tu app?</label><input id="nickPartner" maxlength="24" placeholder="Ej: Mi amor, Bebé, Gordo…" value="${esc(prefs.partnerNick || '')}"></div>` : ''}
+    <button class="btn ghost small" onclick="saveNicks()">Guardar apodos</button>
+
+    <span class="label" style="margin-top:8px">Contador</span>
+    <div class="seg">${COUNTER_UNITS.map(([k, l]) => `<button class="${(c.unit || 'days') === k ? 'on' : ''}" onclick="setCounterUnit('${k}')">${l}</button>`).join('')}</div>
+    <div><label class="f" for="cntFrom">Contar desde</label><select id="cntFrom" onchange="document.getElementById('cntCustom').hidden=this.value!=='custom'">
+      <option value="start" ${!custom ? 'selected' : ''}>El día que empezaron${S.settings.start ? ` (${fmtShortYear(S.settings.start)})` : ''}</option>
+      <option value="custom" ${custom ? 'selected' : ''}>Otra fecha</option></select></div>
+    <div id="cntCustom" class="stack" style="gap:10px" ${custom ? '' : 'hidden'}>
+      <div class="grid2"><div><label class="f" for="cntDate">Fecha</label><input type="date" id="cntDate" value="${esc(c.date || '')}"></div>
+        <div><label class="f" for="cntLabel">Texto</label><input id="cntLabel" maxlength="40" placeholder="desde que nos conocimos" value="${esc(c.label || '')}"></div></div>
+      <p class="tiny muted" style="margin:0">Se lee así: "120 días <i>desde que nos conocimos</i>".</p></div>
+    <button class="btn ghost small" onclick="saveCounter()">Guardar contador</button>
+
+    <span class="label" style="margin-top:8px">Tarjetas de Inicio</span>
+    <p class="tiny muted" style="margin:0">Elige cuáles ves y en qué orden.</p>
+    <ul class="list home-cards">${layout.map((x, i) => `<li><input type="checkbox" ${x.on ? 'checked' : ''} aria-label="Mostrar ${esc(cardName(x.id))}" onchange="toggleHomeCard('${x.id}', this.checked)">
+      <span class="txt ${x.on ? '' : 'muted'}">${esc(cardName(x.id))}</span>
+      <button class="del" aria-label="Subir" ${i === 0 ? 'disabled' : ''} onclick="moveHomeCard(${i},-1)">▲</button><button class="del" aria-label="Bajar" ${i === layout.length - 1 ? 'disabled' : ''} onclick="moveHomeCard(${i},1)">▼</button></li>`).join('')}</ul>
+    <button class="link" onclick="resetHome()">Volver al orden original</button></div>`;
+}
+const cardName = id => HOME_CARDS.find(([k]) => k === id)?.[1] || id;
+const fmtShortYear = d => parseDate(d).toLocaleDateString('es', { day: 'numeric', month: 'short', year: 'numeric' });
+function saveNicks() { savePrefs({ myNick: $('nickMe').value.trim(), partnerNick: $('nickPartner')?.value.trim() || '' }); toast('Apodos guardados'); }
+function setCounterUnit(u) { savePrefs({ counter: { ...(profile(uid()).prefs?.counter || {}), unit: u } }); }
+function saveCounter() {
+  const from = $('cntFrom').value, date = $('cntDate')?.value || '';
+  if (from === 'custom' && !date) return toast('Elige la fecha');
+  if (from === 'custom' && parseDate(date) > today()) return toast('La fecha no puede ser futura');
+  savePrefs({ counter: { ...(profile(uid()).prefs?.counter || {}), from, date, label: $('cntLabel')?.value.trim() || '' } }); toast('Contador guardado');
+}
+function toggleHomeCard(id, on) { savePrefs({ home: homeLayout().map(c => c.id === id ? { ...c, on } : c) }); }
+function moveHomeCard(i, d) {
+  const l = homeLayout(), j = i + d; if (j < 0 || j >= l.length) return;
+  [l[i], l[j]] = [l[j], l[i]]; savePrefs({ home: l });
+}
+function resetHome() { savePrefs({ home: HOME_CARDS.map(([id]) => ({ id, on: true })) }); toast('Inicio como al principio'); }
+
 function saveSettings() {
   const name = $('setName').value.trim(), start = $('setStart').value;
   if (!name || !start) return toast('Completa tu nombre y la fecha');
@@ -219,4 +268,4 @@ on('ideas profiles', () => { if ($('s-settings').classList.contains('active')) r
 onShow('s-settings', renderSettings);
 window.rerenderSettings = () => { if ($('s-settings').classList.contains('active')) renderSettings(); };
 onShow('s-more', renderMore);
-expose({ saveSettings, setTheme, setAccent, pickAvatar, removeAvatar, pickBg, removeBg, delIdea, logout, exportData, importData });
+expose({ saveNicks, setCounterUnit, saveCounter, toggleHomeCard, moveHomeCard, resetHome, saveSettings, setTheme, setAccent, pickAvatar, removeAvatar, pickBg, removeBg, delIdea, logout, exportData, importData });

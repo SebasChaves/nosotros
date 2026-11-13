@@ -524,3 +524,6 @@ body:not([data-theme="light"]) .map-box .leaflet-tile-pane { filter: invert(1) h
 .adm-dev div { display: flex; flex-direction: column; min-width: 0; }
 .adm-dev .small { overflow-wrap: anywhere; }
 .adm-warn { font-size: 12.5px; line-height: 1.45; padding: 8px 10px; border-radius: 12px; background: rgba(255, 181, 71, .13); border: 1px solid rgba(255, 181, 71, .35); }
+.home-cards li { padding: 8px 0; gap: 10px; }
+.home-cards .del { font-size: 12px; width: 34px; height: 34px; border-radius: 10px; background: var(--soft); color: var(--text); }
+.home-cards .del:disabled { opacity: .3; }

@@ -353,7 +353,8 @@ export const S = {
   priv: Object.fromEntries(PRIVATE.map(c => [c, []])),
 };
 export const uid = () => S.me?.uid;
-export const nameOf = id => S.settings.members?.[id]?.name || (id === S.me?.uid ? 'Tú' : 'Tu pareja');
+// Si en Ajustes pusiste un apodo para tu pareja, en tu teléfono aparece con ese apodo en toda la app.
+export const nameOf = id => (id && id !== S.me?.uid && profile(S.me?.uid).prefs?.partnerNick) || S.settings.members?.[id]?.name || (id === S.me?.uid ? 'Tú' : 'Tu pareja');
 export const partnerUid = () => Object.keys(S.settings.members || {}).find(u => u !== S.me.uid);
 export const partnerName = () => { const p = partnerUid(); return p ? nameOf(p) : 'tu pareja'; };
 export const myName = () => S.settings.members?.[S.me.uid]?.name || '';
