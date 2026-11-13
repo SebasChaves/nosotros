@@ -36,7 +36,9 @@ Teléfono de Ana                      Cloudflare Worker                 Servicio
 2. Después de guardar en Firestore: `notify('tipo', { title: \`… ${meForPartner()} …\`, body, url: './?open=<sección>', tag })`.
    `meForPartner()` usa el apodo que tu pareja te puso, si tiene uno.
 3. Si la sección no existe en `OPEN` (`push.js`), agrégala.
-4. No pongas textos privados en el aviso (se ven en la pantalla bloqueada): por ejemplo, las notas solo dicen que hay una nueva.
+4. **Aviso llamativo:** si el `tag` empieza con `urgente-` (antojo 🔥), `sw.js` lo muestra con `requireInteraction` (en
+   Android se queda en pantalla hasta tocarlo) y vibración larga. En iPhone se ve como cualquier aviso (iOS no permite más).
+5. No pongas textos privados en el aviso (se ven en la pantalla bloqueada): por ejemplo, las notas solo dicen que hay una nueva.
 
 ## Configurar el servicio (una sola vez, lo hace el dueño)
 

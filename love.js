@@ -1,7 +1,7 @@
 // Detalles: frasco de notas y cupones canjeables.
 import { setDoc, updateDoc, deleteDoc } from 'https://www.gstatic.com/firebasejs/11.0.2/firebase-firestore.js';
 import { $, S, esc, icon, paint, on, onShow, expose, toast, openSheet, closeSheet, write, ref, newRef, pick,
-         fmtDate, fmtShort, nameOf, partnerName, myName, plural, uid, avatar, loadPhotos, ask, celebrate, markActive } from './core.js';
+         fmtDate, fmtShort, nameOf, partnerName, myName, plural, uid, avatar, loadPhotos, ask, celebrate, markActive, mainTop } from './core.js';
 import { COUPON_TEMPLATES } from './data.js';
 import { notify, meForPartner } from './push.js';
 
@@ -12,7 +12,8 @@ export const couponAlerts = () =>
   S.data.coupons.filter(c => c.fromUid !== uid() && !c.seenAt).length;
 
 function render() {
-  if (!$('loveBody')) $('s-love').innerHTML = `<div class="topbar"><h1>Detalles</h1></div><div id="loveHead"></div><div id="loveBody" class="stack" style="gap:14px"></div>`;
+  if (!$('loveBody')) $('s-love').innerHTML = `<div id="loveTop"></div><div id="loveHead"></div><div id="loveBody" class="stack" style="gap:14px"></div>`;
+  paint('loveTop', mainTop('s-love', 'Detalles'));
   const n = unreadNotes(), c = couponAlerts();
   paint('loveHead', `<div class="seg"><button class="${tab === 'notes' ? 'on' : ''}" onclick="loveTab('notes')">Notas${n ? `<b class="dot">${n}</b>` : ''}</button>
     <button class="${tab === 'coupons' ? 'on' : ''}" onclick="loveTab('coupons')">Cupones${c ? `<b class="dot">${c}</b>` : ''}</button></div>`);

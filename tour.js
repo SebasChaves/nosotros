@@ -6,7 +6,7 @@ const standalone = () => matchMedia('(display-mode: standalone)').matches || nav
 const isIOS = () => /iphone|ipad|ipod/i.test(navigator.userAgent);
 
 // Versión de la guía: si alguien ya vio una anterior, le sale una vez «Lo nuevo» (NEW_STEPS) en vez de la completa.
-const TOUR_VERSION = 2;
+const TOUR_VERSION = 3;
 const PET = { screen: 's-home', tab: 'home', emoji: '🐣', title: 'Su mascota',
   text: 'Adopten un huevo en Inicio. Come cada día que <b>los dos</b> hacen algo en Futari:', list: ['Nace a los 3 días y crece hasta leyenda 👑', 'Si un día no come se pone triste, pero no pierde lo que creció', 'Ganan monedas 🪙 para comprarle ropa y detalles', '4 juegos para competir por el récord'] };
 const SNAPS = { screen: 's-home', tab: 'home', emoji: '📸', title: 'Instantáneas',
@@ -17,6 +17,11 @@ const WEEK = { emoji: '📊', title: 'Su semana', text: 'Los domingos en la noch
 const NOTIFS = { emoji: '🔔', title: 'Notificaciones',
   text: 'Actívalas en <b>Ajustes → Notificaciones</b> y Futari te avisa aunque esté cerrada:', list: ['Cuando tu pareja te manda algo', 'Tus recordatorios, a su hora', 'En la noche, si la racha o la mascota están en peligro', 'Tú eliges qué avisos recibir'] };
 const GESTURES = { emoji: '👆', title: 'Atajos', text: 'Para moverte más rápido:', list: ['Desliza a los lados para cambiar de pestaña', 'Arrastra hacia abajo las ventanas para cerrarlas', 'En Android, el botón atrás cierra ventanas y regresa', 'Mantén presionado el ícono de Futari para mandar una instantánea (Android)'] };
+
+const CRAVINGS = { screen: 's-cravings', emoji: '🍓', title: 'Antojos',
+  text: '¿Se te antojó algo? Pídeselo a tu pareja en dos toques:', list: ['😌 Cuando se pueda o 🔥 ¡Ya! (le llega un aviso llamativo)', 'Quien lo cumple puede mandar una foto de prueba 📸 y gana monedas para la mascota', '«Algún día»: antojos sin prisa que pasan al calendario', 'Ruleta para cuando no saben qué comer'] };
+const MENU = { screen: 's-more', tab: 'more', emoji: '🧩', title: 'Tu menú',
+  text: 'Arma tu barra de abajo con lo que más usas: en <b>Ajustes → Tu menú</b> eliges hasta 4 secciones para la barra, el orden de todo y qué esconder de Más. Cada uno tiene el suyo.' };
 
 const STEPS = () => [
   { emoji: '💞', title: `¡Bienvenido${myName() ? ', ' + myName() : ''}!`,
@@ -30,8 +35,8 @@ const STEPS = () => [
   { tab: 'love', screen: 's-love', emoji: '💌', title: 'Detalles',
     text: 'Para consentirse:', list: ['Frasco de notas: escribes para tu pareja y ella saca una cuando quiera', 'Cupones canjeables: "vale por un masaje"…'] },
   { tab: 'more', screen: 's-more', emoji: '✨', title: 'Más',
-    text: 'Todo lo demás:', list: ['Súper, gastos y viajes con búsqueda de hospedaje', 'Calendario con fechas especiales y recordatorios con aviso', 'Recetas, nuestro mapa, su playlist y pelis por ver', 'Juego de retos, quiz, gustos y regalos', 'Logros y el resumen del año'] },
-  PET, SNAPS, GUESS, WEEK, NOTIFS, GESTURES,
+    text: 'Todo lo demás (y puedes ordenarlo o pasar lo que más usas a la barra de abajo):', list: ['Antojos, súper, gastos y viajes con búsqueda de hospedaje', 'Calendario con fechas especiales y recordatorios con aviso', 'Recetas, nuestro mapa, su playlist y pelis por ver', 'Juego de retos, quiz, gustos y regalos', 'Logros y el resumen del año'] },
+  PET, SNAPS, GUESS, CRAVINGS, MENU, WEEK, NOTIFS, GESTURES,
   { emoji: '🔴', title: 'Los puntitos',
     text: `Cuando hay algo pendiente para ti (una nota nueva, una instantánea, un voto) aparece un puntito en la barra de abajo. Y con la lupa ${icon('search')} de arriba encuentras cualquier cosa.` },
   standalone()
@@ -41,16 +46,18 @@ const STEPS = () => [
                       : 'En Chrome toca el menú ⋮ y luego "Instalar app" o "Agregar a pantalla principal". Así se abre como una app, funciona sin internet y puede mandarte notificaciones.' },
 ];
 // Solo lo nuevo, para quien ya conocía la app
-const NEW_STEPS = () => [
-  { emoji: '✨', title: 'Lo nuevo en Futari', text: `${myName() ? esc(myName()) + ', a' : 'A'}gregamos varias cosas. Te las muestro en un minuto.` },
-  PET, SNAPS, GUESS, WEEK, NOTIFS, GESTURES,
+// Lo nuevo de cada versión de la guía; a quien se saltó varias le salen todas las que no vio
+const NEW_BY_VERSION = { 2: [PET, SNAPS, GUESS, WEEK, NOTIFS, GESTURES], 3: [CRAVINGS, MENU] };
+const NEW_STEPS = seenV => [
+  { emoji: '✨', title: 'Lo nuevo en Futari', text: `${myName() ? esc(myName()) + ', a' : 'A'}gregamos ${seenV >= TOUR_VERSION - 1 ? 'algo' : 'varias cosas'}. Te ${seenV >= TOUR_VERSION - 1 ? 'lo' : 'las'} muestro en un minuto.` },
+  ...Object.entries(NEW_BY_VERSION).filter(([v]) => Number(v) > seenV).flatMap(([, s]) => s),
   { emoji: '💞', title: '¡Eso es todo!', text: 'La guía completa siempre está en Ajustes → «Ver la guía otra vez».', final: true },
 ];
 
 let i = 0, steps = [];
 function show() {
   const s = steps[i];
-  document.querySelectorAll('.tabbar button').forEach(b => b.classList.toggle('spot', !!s.tab && b.dataset.tab === s.tab));
+  document.querySelectorAll('.tabbar button').forEach(b => b.classList.toggle('spot', !!s.screen && b.dataset.tab === s.screen));
   if (s.screen) go(s.screen);
   let el = $('tour');
   if (!el) { el = document.createElement('div'); el.id = 'tour'; el.className = 'tour'; document.body.appendChild(el); }
@@ -62,7 +69,7 @@ function show() {
       <button class="btn" onclick="${s.final ? 'tourEnd(true)' : 'tourGo(1)'}">${s.final ? (myName() ? '¡A usarla!' : 'Ir a Ajustes') : 'Siguiente'}</button></div></div>`;
   el.querySelector('.card .btn:not(.ghost)').focus({ preventScroll: true });
 }
-export function startTour(onlyNew = false) { steps = onlyNew === true ? NEW_STEPS() : STEPS(); i = 0; show(); }
+export function startTour(onlyNew = false, seenV = 1) { steps = onlyNew === true ? NEW_STEPS(seenV) : STEPS(); i = 0; show(); }
 function tourGo(d) { i = Math.max(0, Math.min(steps.length - 1, i + d)); show(); }
 function tourEnd(finished) {
   $('tour')?.remove();
@@ -80,9 +87,10 @@ export function maybeStartTour() {
   const prefs = profile(uid()).prefs || {};
   if (!seen && !prefs.tour) return setTimeout(startTour, 400);
   // Ya conocía la app: mostrar una vez lo nuevo, cuando no haya otra ventana abierta (por ejemplo las Novedades)
-  if (Math.max(seenV, prefs.tourV || 1) < TOUR_VERSION) {
+  const v = Math.max(seenV, prefs.tourV || 1);
+  if (v < TOUR_VERSION) {
     let tries = 0;
-    const later = () => { if ($('sheet')?.classList.contains('show') || $('lockScreen') || document.querySelector('.dialog')) { if (++tries < 120) setTimeout(later, 1000); return; } startTour(true); };
+    const later = () => { if ($('sheet')?.classList.contains('show') || $('lockScreen') || document.querySelector('.dialog')) { if (++tries < 120) setTimeout(later, 1000); return; } startTour(true, v); };
     setTimeout(later, 1500);
   }
 }

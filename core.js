@@ -63,8 +63,9 @@ function backTarget() {
   const s = document.querySelector('.screen.active');
   if (!s || s.id === 's-home') return null;
   const b = s.querySelector('.topbar [aria-label="Volver"]');
+  if (inBar(s.id)) return 's-home';
   if (b) return b;
-  return MAIN_SCREENS.has(s.id) ? 's-home' : null;
+  return null;
 }
 const canGoBack = () => document.body.classList.contains('in') && !$('lockScreen') && (overlayOpen() || !!backTarget());
 export function goBack() {
@@ -157,7 +158,7 @@ document.addEventListener('touchstart', e => {
   sw = null;
   if (e.touches.length !== 1 || !document.body.classList.contains('in') || overlayOpen()) return;
   const s = document.querySelector('.screen.active');
-  if (!s || !MAIN_SCREENS.has(s.id) || !e.target.closest?.('main') || e.target.closest(NO_SWIPE) || hasHScroll(e.target)) return;
+  if (!s || !inBar(s.id) || !e.target.closest?.('main') || e.target.closest(NO_SWIPE) || hasHScroll(e.target)) return;
   const t = e.touches[0];
   if (t.clientX < 22 || t.clientX > innerWidth - 22) return; // los bordes son del gesto "atrás" del teléfono
   sw = { x: t.clientX, y: t.clientY, t: Date.now() };
@@ -166,9 +167,9 @@ document.addEventListener('touchend', e => {
   if (!sw) return;
   const t = e.changedTouches[0], dx = t.clientX - sw.x, dy = t.clientY - sw.y, dt = Date.now() - sw.t; sw = null;
   if (Math.abs(dx) < 70 || Math.abs(dx) < Math.abs(dy) * 1.8 || dt > 800 || overlayOpen()) return;
-  const cur = TAB_ORDER.indexOf(document.querySelector('.screen.active')?.dataset.tab);
-  const next = TAB_ORDER[cur + (dx < 0 ? 1 : -1)];
-  if (cur >= 0 && next) go('s-' + next);
+  const ids = barIds(), cur = ids.indexOf(document.querySelector('.screen.active')?.id);
+  const next = ids[cur + (dx < 0 ? 1 : -1)];
+  if (cur >= 0 && next) go(next);
 }, { passive: true });
 
 /* ================= Teléfonos: elegir entre cámara y galería =================
@@ -348,19 +349,67 @@ export const expose = fns => Object.assign(window, fns);
 /* ================= Navegación ================= */
 const showHooks = {};
 export const onShow = (id, fn) => { showHooks[id] = fn; };
-// Orden de las pestañas, para saber hacia qué lado deslizar.
-const TAB_ORDER = ['home', 'decide', 'moments', 'love', 'more'];
-const MAIN_SCREENS = new Set(['s-home', 's-decide', 's-moments', 's-love', 's-more']);
+/* ---------- Barra de abajo (cada uno la arma en Ajustes → Tu menú; menu.js) ----------
+   Inicio y Más siempre están; en medio van de 1 a 4 secciones (prefs.menu en el perfil, copia en localStorage
+   para pintarla antes de que cargue la base). Una pantalla "pertenece" a la pestaña de la barra a la que vuelve su
+   botón Volver (tabOf); si no está en la barra, a Más. */
+// [pantalla, ícono del sprite, nombre]: todas las secciones que pueden ir en la barra o en Más
+export const SECTIONS = [['s-decide', 'dice', '¿Qué hacemos?'], ['s-moments', 'photo', 'Momentos'], ['s-love', 'gift', 'Detalles'],
+  ['s-cravings', 'crave', 'Antojos'], ['s-grocery', 'cart', 'Súper'], ['s-money', 'wallet', 'Gastos'], ['s-trips', 'plane', 'Viajes'],
+  ['s-places', 'fork', 'Restaurantes'], ['s-shows', 'film', 'Pelis y series'], ['s-cal', 'cal', 'Calendario'],
+  ['s-reminders', 'bell', 'Recordatorios'], ['s-recipes', 'pot', 'Recetas'], ['s-map', 'map', 'Nuestro mapa'],
+  ['s-music', 'music', 'Su playlist'], ['s-pet', 'paw', 'Su mascota'], ['s-badges', 'medal', 'Logros'], ['s-game', 'flame', 'Juego de retos'],
+  ['s-us', 'heart', 'Gustos y regalos'], ['s-quiz', 'brain', '¿Cuánto me conoces?'], ['s-bucket', 'list', 'Bucket list'],
+  ['s-summary', 'spark', 'Resumen del año']];
+export const BAR_DEFAULT = ['s-decide', 's-moments', 's-love'], BAR_MAX = 4;
+// Las que eran pestañas fijas: si alguien las saca de la barra, muestran su propio botón Volver (a Más)
+const OLD_TABS = new Set(BAR_DEFAULT);
+const validBar = v => Array.isArray(v) ? [...new Set(v)].filter(id => SECTIONS.some(([k]) => k === id)).slice(0, BAR_MAX) : [];
+let barMid = (() => { try { const v = validBar(JSON.parse(localStorage.getItem('futari-bar') || 'null')); return v.length ? v : BAR_DEFAULT; } catch { return BAR_DEFAULT; } })();
+export const barIds = () => ['s-home', ...barMid, 's-more'];
+export const inBar = id => barIds().includes(id);
+export function setBar(mid) {
+  const v = validBar(mid), next = v.length ? v : BAR_DEFAULT;
+  try { localStorage.setItem('futari-bar', JSON.stringify(next)); } catch {}
+  const nav = document.querySelector('.tabbar');
+  const same = next.join() === barMid.join() && nav?.querySelectorAll('button').length === next.length + 2;
+  barMid = next;
+  document.querySelectorAll('main > .screen').forEach(x => x.classList.toggle('in-bar', inBar(x.id) && x.id !== 's-home' && x.id !== 's-more'));
+  if (!nav || same) return false;
+  const btn = (id, ic, label) => `<button data-tab="${id}" onclick="go('${id}')" aria-label="${label}"><svg><use href="#i-${ic}"/></svg><b class="dot" id="dot-${id.slice(2)}" hidden></b></button>`;
+  nav.innerHTML = '<span class="pill" aria-hidden="true"></span>' + btn('s-home', 'heart', 'Inicio')
+    + barMid.map(id => { const [, ic, label] = SECTIONS.find(([k]) => k === id); return btn(id, ic, label); }).join('') + btn('s-more', 'grid', 'Más');
+  nav.style.setProperty('--n', barMid.length + 2);
+  markTab(); return true;
+}
+// Barra superior de las pantallas que pueden ser pestaña o no (Decidir, Momentos, Detalles)
+export const mainTop = (id, title, extra = '') => inBar(id) || !OLD_TABS.has(id)
+  ? `<div class="topbar"><h1>${title}</h1>${extra}</div>`
+  : `<div class="topbar"><div class="row start"><button class="icon-btn" aria-label="Volver" onclick="go('s-more')">${icon('back')}</button><h1>${title}</h1></div>${extra}</div>`;
+// Pestaña de la barra a la que pertenece una pantalla
+function tabOf(s, depth = 0) {
+  if (!s || s.id === 's-search') return null;
+  if (inBar(s.id)) return s.id;
+  const m = s.querySelector('.topbar [aria-label="Volver"]')?.getAttribute('onclick')?.match(/go\('([^']+)'\)/);
+  if (m && m[1] !== s.id && depth < 4 && $(m[1])) return tabOf($(m[1]), depth + 1);
+  return s.dataset.tab === 'home' ? 's-home' : 's-more';
+}
+function markTab() {
+  const t = tabOf(document.querySelector('.screen.active'));
+  document.querySelectorAll('.tabbar button').forEach(b => b.classList.toggle('on', b.dataset.tab === t));
+  placeTabPill();
+}
 const SLIDE_EASE = 'cubic-bezier(.22,.8,.24,1)';
 let leaving = null;
 // Dirección: 1 = la nueva entra desde la derecha; -1 = desde la izquierda.
 function slideDir(from, to) {
-  const a = TAB_ORDER.indexOf(from.dataset.tab), b = TAB_ORDER.indexOf(to.dataset.tab);
-  if (from.dataset.tab !== to.dataset.tab && a >= 0 && b >= 0) return b > a ? 1 : -1;
+  const ids = barIds(), tf = tabOf(from), tt = tabOf(to), a = ids.indexOf(tf), b = ids.indexOf(tt);
+  if (tf !== tt && a >= 0 && b >= 0 && (inBar(to.id) || inBar(from.id))) return b > a ? 1 : -1;
   // Dentro de la misma pestaña (o la búsqueda): entrar a una sub-pantalla avanza, volver a la principal retrocede.
   if (to.id === 's-search') return 1;
   if (from.id === 's-search') return -1;
-  return MAIN_SCREENS.has(to.id) || (from.id === 's-trip' && to.id === 's-trips') || (from.id === 's-gallery' && to.id === 's-moments') ? -1 : 1;
+  const back = from.querySelector('.topbar [aria-label="Volver"]')?.getAttribute('onclick')?.includes(`'${to.id}'`);
+  return inBar(to.id) || back ? -1 : 1;
 }
 export function placeTabPill() {
   const pill = document.querySelector('.tabbar .pill'), on = document.querySelector('.tabbar button.on');
@@ -388,10 +437,9 @@ export function go(id) {
   } else {
     document.querySelectorAll('.screen').forEach(x => x.classList.toggle('active', x === s));
   }
-  document.querySelectorAll('.tabbar button').forEach(b => b.classList.toggle('on', b.dataset.tab === s.dataset.tab));
-  placeTabPill();
   window.scrollTo(0, 0);
   showHooks[id]?.();
+  markTab(); // después de pintar: la pestaña se deduce del botón Volver de la pantalla
   syncBack();
 }
 addEventListener('resize', () => placeTabPill());
@@ -456,7 +504,7 @@ export const write = p => p.catch(err => {
 
 /* ================= Estado ================= */
 export const COLLECTIONS = ['bucket', 'ideas', 'notes', 'coupons', 'dates', 'moments', 'lists', 'answers',
-  'moods', 'challenges', 'groceries', 'expenses', 'places', 'trips', 'quiz', 'profiles', 'shows', 'events', 'cards', 'games', 'thinks', 'daily', 'pins', 'recipes', 'recipefav', 'menu', 'songs', 'reminders', 'snaps', 'push', 'activity', 'pet', 'guess'];
+  'moods', 'challenges', 'groceries', 'expenses', 'places', 'trips', 'quiz', 'profiles', 'shows', 'events', 'cards', 'games', 'thinks', 'daily', 'pins', 'recipes', 'recipefav', 'menu', 'songs', 'reminders', 'snaps', 'push', 'activity', 'pet', 'guess', 'cravings'];
 export const PRIVATE = ['gifts'];
 export const S = {
   me: null,

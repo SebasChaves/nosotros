@@ -5,6 +5,7 @@ import { S, esc, openSheet, loadPhotos, today, dayKey, parseDate, nameOf, partne
 import { bothDid } from './home.js';
 import { guessScore } from './guess.js';
 import { dailyPhotoId } from './daily.js';
+import { cravingsDoneBetween } from './cravings.js';
 
 const addDays = (d, n) => new Date(d.getFullYear(), d.getMonth(), d.getDate() + n);
 // Lunes de la semana de esa fecha
@@ -29,6 +30,7 @@ export function weekStats(start = shownWeek()) {
     notes: D.notes.filter(n => msIn(n.createdAt)).length,
     dailies: D.daily.filter(d => inWeek(d.id)).reduce((s, d) => s + ids.filter(id => d[id]).length, 0),
     moments: D.moments.filter(m => msIn(m.createdAt)).length,
+    cravings: cravingsDoneBetween(from, to),
     moods,
     photos: D.daily.filter(d => inWeek(d.id)).flatMap(d => ids.filter(id => d[id]).map(id => dailyPhotoId(d.id, id))).slice(0, 9),
   };
@@ -56,6 +58,7 @@ export function openWeek() {
       ${row('📷', 'Fotos del día', w.dailies, prev.dailies)}
       ${row('💌', 'Notas', w.notes, prev.notes)}
       ${row('📚', 'Momentos guardados', w.moments, prev.moments)}
+      ${row('🍓', 'Antojos cumplidos', w.cravings, prev.cravings)}
     </div>
     <p class="small" style="margin:0">❤️ Corazones: tú ${w.hearts[uid()] || 0} · ${pn} ${w.hearts[p] || 0}${w.moods[uid()] || w.moods[p] ? ` · Ánimo más común: tú ${w.moods[uid()] || '—'} · ${pn} ${w.moods[p] || '—'}` : ''}</p>
     <p class="small center" style="margin:0">${w.together >= 6 ? '¡Semana increíble! 🏆' : w.together >= 4 ? '¡Buena semana! Sigan así 💪' : 'La próxima semana le ponemos más ganas 💕'}</p></div>`);

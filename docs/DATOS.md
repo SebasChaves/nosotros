@@ -41,6 +41,7 @@ Casi todos los docs llevan `by: uid` (quién lo creó) y `createdAt: ms`. Fechas
 | `pet` | doc `main`: `start (día de adopción), createdAt, by, species? (emoji), name?, hatchedAt?, hatchedBy?, namedBy?, bonus, spent, owned{prenda:true}, wear{head,face,neck,body,room}, best{juego:{uid:récord}}, gameDay{uid:{day,n}}, lastBuy?` — el crecimiento se calcula con los días de racha desde `start`; monedas = 10 × días comidos + `bonus` − `spent` (`pet.js`) |
 | `usage` | id = `<día>_<uid>`: `uid, day, total, secs{pantalla: segundos}` — tiempo con la app a la vista por sección (`tracking.js`). Solo para Administración |
 | `stats` | id = día: `day, sent{uid:{tipo:n}}, opened{uid:{tipo:n}}, acts{uid:{snap,react}}` — avisos mandados/abiertos y acciones que no quedan guardadas (`countStat` en `core.js`). Solo para Administración |
+| `cravings` | antojos: `text, emoji, note, kind now|someday, urgent, photo, by, at, seen{uid:at}, done, doneBy, doneAt, donePhoto, doneSeen?, thanks?, savedMoment?, plan?{date,time,eventId}`. Favoritos de la ruleta en la misma colección: `{ fav: true, emoji, text, by, at }`. Fotos: `photos/crave-<id>` (pedido) y `photos/craved-<id>` (cumplido), con miniatura `t-…`. Cumplir el de tu pareja da 10 🪙 a la mascota (`cravings.js`) |
 | `guess` | id = día: `q` (índice en `GUESS_QS`), `<uid>: { me, guess, at }`, `paid?` — «¿Qué respondería tu pareja?»; cada acierto da 5 🪙 a la mascota (`guess.js`) |
 | `push` | id = uid: `subs { <llave>: { endpoint, keys{p256dh,auth}, device, at } }` — un teléfono por elemento (docs/NOTIFICACIONES.md) |
 | `dates` | fechas especiales: `title, date, emoji, yearly, by, createdAt, editedBy?, editedAt?` — tipos en `DATE_KINDS` (`data.js`); se crean/editan con `openFecha` (`calendar.js`), desde el Calendario o Inicio → Fechas |
@@ -50,7 +51,7 @@ Casi todos los docs llevan `by: uid` (quién lo creó) y `createdAt: ms`. Fechas
 | `pins` | lugares del mapa: `title, kind (emoji), lat, lng, place, country, date, note` |
 | `recipes`, `recipefav`, `menu` | recetas propias; favoritas (id = id de receta); menú: id = lunes de la semana, `{ days: { fecha: { almuerzo|cena: {id}|{text} } } }` |
 | `quiz`, `games`, `cards` | rondas del quiz; partidas del juego; cartas propias del juego |
-| `profiles` | id = uid: `avatar` (id en photos), `prefs { accent, theme, bg, myNick, partnerNick, counter{unit days|weeks|months|hours, from start|custom, date, label}, home[{id,on}] }` — todo es personal de quien lo configura; `partnerNick` cambia `nameOf()` de la pareja solo en su teléfono |
+| `profiles` | id = uid: `avatar` (id en photos), `prefs { accent, theme, bg, myNick, partnerNick, counter{unit days|weeks|months|hours, from start|custom, date, label}, home[{id,on}], menu{order[pantallas], bar[hasta 4], hidden[]} }` — todo es personal de quien lo configura; `partnerNick` cambia `nameOf()` de la pareja solo en su teléfono |
 
 ## Fotos (colección `photos`)
 

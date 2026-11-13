@@ -1,12 +1,18 @@
 {
-  "version": "40",
+  "version": "41",
   "notes": [
-    "🔮 Nuevo: «¿Qué respondería tu pareja?». Cada día una pregunta en Inicio: respondes por ti y adivinas qué eligió tu pareja. Cada acierto da 5 🪙 a su mascota",
-    "📊 Resumen de la semana: los domingos les llega un aviso con su semana, y en Inicio ven sus números, fotos y cómo les fue comparado con la semana anterior",
-    "🐾 Avisos de la mascota: cuando tu pareja le compra algo, le pone nombre o te supera un récord en los juegos",
-    "👋 La guía ahora incluye todo lo nuevo (mascota, instantáneas, notificaciones y atajos). Te sale una vez; después está en Ajustes"
+    "🍓 Nuevo: Antojos. Pide lo que se te antoje (😌 cuando se pueda o 🔥 ¡ya!, con aviso llamativo). Tu pareja lo cumple, puede mandar foto y la mascota gana 10 🪙",
+    "🌙 Antojos «para algún día» que se pasan al calendario, historial de cumplidos y una ruleta para cuando no saben qué comer",
+    "🧩 Tu menú: en Ajustes → Tu menú eliges qué secciones van en la barra de abajo (hasta 4), el orden de Más y qué esconder. Cada uno tiene el suyo",
+    "🔎 El buscador ahora también encuentra recetas, canciones, lugares del mapa, antojos y secciones"
   ],
   "history": [
+    { "version": "41", "notes": [
+      "🍓 Nuevo: Antojos. Pide lo que se te antoje (😌 cuando se pueda o 🔥 ¡ya!, con aviso llamativo). Tu pareja lo cumple, puede mandar foto y la mascota gana 10 🪙",
+      "🌙 Antojos «para algún día» que se pasan al calendario, historial de cumplidos y una ruleta para cuando no saben qué comer",
+      "🧩 Tu menú: en Ajustes → Tu menú eliges qué secciones van en la barra de abajo (hasta 4), el orden de Más y qué esconder. Cada uno tiene el suyo",
+      "🔎 El buscador ahora también encuentra recetas, canciones, lugares del mapa, antojos y secciones"
+    ] },
     { "version": "40", "notes": [
       "🔮 Nuevo: «¿Qué respondería tu pareja?». Cada día una pregunta en Inicio: respondes por ti y adivinas qué eligió tu pareja. Cada acierto da 5 🪙 a su mascota",
       "📊 Resumen de la semana: los domingos les llega un aviso con su semana, y en Inicio ven sus números, fotos y cómo les fue comparado con la semana anterior",

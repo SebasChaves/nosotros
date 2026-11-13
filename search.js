@@ -1,5 +1,5 @@
 // Búsqueda en toda la app. Las notas sin leer para ti y la respuesta de tu pareja a preguntas que no respondiste no aparecen.
-import { $, S, esc, icon, paint, onShow, expose, go, parseDate, fmtShort, fmtMoney, uid } from './core.js';
+import { $, S, esc, icon, paint, onShow, expose, go, parseDate, fmtShort, fmtMoney, uid, SECTIONS } from './core.js';
 
 const norm = s => String(s ?? '').normalize('NFD').replace(/\p{Diacritic}/gu, '').toLowerCase();
 let lastQ = '', searchFrom = 's-home';
@@ -12,6 +12,7 @@ function sources() {
   const me = uid(), D = S.data;
   const out = [];
   const add = (group, e, items) => out.push([group, e, items]);
+  add('Secciones', '🧭', SECTIONS.map(([id, , name]) => ({ text: name, sub: 'Abrir sección', open: () => go(id) })));
   add('Notas', '💌', D.notes.filter(n => n.fromUid === me || n.readAt).map(n => ({ text: n.text, sub: fmtShort(new Date(n.createdAt)), open: () => { go('s-love'); window.loveTab('notes'); } })));
   add('Cupones', '🎟️', D.coupons.map(c => ({ text: c.text, sub: c.doneAt ? 'Cumplido' : c.redeemedAt ? 'Canjeado' : 'Disponible', open: () => { go('s-love'); window.loveTab('coupons'); } })));
   add('Momentos', '📸', D.moments.map(m => ({ text: `${m.title} ${m.note || ''}`, label: m.title, sub: fmtShort(parseDate(m.date)), open: () => go('s-moments') })));
@@ -30,9 +31,10 @@ function sources() {
   add('Gastos', '💸', D.expenses.filter(e => e.type !== 'settle').map(e => ({ text: e.desc, sub: `${fmtMoney(e.amount)} · ${fmtShort(parseDate(e.date))}`, open: () => go('s-money') })));
   add('Listas de Decidir', '🎲', D.lists.map(l => ({ text: `${l.name} ${(l.options || []).join(' ')}`, label: l.name, sub: `${(l.options || []).length} opciones`, open: () => { go('s-decide'); window.decideTab('lists'); window.selectList(l.id); } })));
   add('Preguntas del día', '💬', D.answers.filter(a => a.answers?.[me]).map(a => ({ text: `${a.q} ${Object.values(a.answers).map(x => x.text).join(' ')}`, label: a.q, sub: fmtShort(parseDate(a.id)), open: () => { go('s-home'); window.openAnswers(); } })));
-  add('Recetas', '👩‍🍳', window.__allRecipes?.().map(r => ({ text: ` `, label: r.name, sub: r.min ? ` min` : '', open: () => { go('s-recipes'); window.openRecipe(r.id); } })) || []);
-  add('Playlist', '🎵', D.songs.map(s => ({ text: `  `, label: s.title, sub: s.artist || '', open: () => go('s-music') })));
-  add('Mapa', '📍', D.pins.map(p => ({ text: `   `, label: p.title, sub: [p.place, p.country].filter(Boolean).join(', '), open: () => { go('s-map'); setTimeout(() => window.flyPin(p.id), 400); } })));
+  add('Recetas', '👩‍🍳', window.__allRecipes?.().map(r => ({ text: `${r.name} ${(r.ingredients || []).join(' ')}`, label: r.name, sub: r.min ? `${r.min} min` : '', open: () => { go('s-recipes'); window.openRecipe(r.id); } })) || []);
+  add('Playlist', '🎵', D.songs.map(s => ({ text: `${s.title} ${s.artist || ''} ${s.why || ''}`, label: s.title, sub: s.artist || '', open: () => go('s-music') })));
+  add('Mapa', '📍', D.pins.map(p => ({ text: `${p.title} ${p.place || ''} ${p.country || ''} ${p.note || ''}`, label: p.title, sub: [p.place, p.country].filter(Boolean).join(', '), open: () => { go('s-map'); setTimeout(() => window.flyPin(p.id), 400); } })));
+  add('Antojos', '🍓', D.cravings.map(c => ({ text: `${c.text} ${c.note || ''}`, label: `${c.emoji || '🍓'} ${c.text}`, sub: c.fav ? 'Favorito de la ruleta' : c.done ? 'Cumplido' : c.kind === 'someday' ? 'Algún día' : 'Pendiente', open: () => window.openCravings(c.fav ? 'spin' : c.done ? 'done' : c.kind === 'someday' ? 'someday' : 'now') })));
   add('Ideas de regalo', '🎁', S.priv.gifts.map(g => ({ text: g.text, sub: 'Solo tú la ves', open: () => { go('s-us'); window.usTab('gifts'); } })));
   return out;
 }

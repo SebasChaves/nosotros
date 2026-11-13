@@ -24,6 +24,10 @@
   Ojo: un cambio en el Cron de Cloudflare puede tardar hasta 15 minutos en activarse.
 - Mascota (v38): probar en los teléfonos los juegos con el dedo (Atrapa y Salta) y que se vea fluido.
 - v40: que la guía «Lo nuevo» salga una sola vez en cada teléfono; aviso del resumen el domingo 19:00 (Worker v5).
+- v41 Antojos: el aviso urgente 🔥 en el Samsung debe quedarse en pantalla hasta tocarlo y vibrar más (en iPhone se ve
+  normal: iOS no lo permite); el diálogo «antojo urgente» al abrir la app; fotos de cumplido. «Tu menú»: barra con 4
+  secciones en la pantalla más angosta, deslizar entre pestañas personalizadas y el gesto atrás de Android.
+  El resumen semanal del Worker (domingo) todavía no cuenta antojos; solo la hoja de la app.
 
 ## Ideas conversadas, no hechas
 

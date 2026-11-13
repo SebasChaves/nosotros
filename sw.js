@@ -1,9 +1,9 @@
 // Guarda la app en caché para que funcione sin internet.
 // Sube el número de versión cada vez que cambies archivos.
-const CACHE = 'nosotros-v40';
+const CACHE = 'nosotros-v41';
 const FILES = ['./', './index.html', './styles.css', './app.js', './core.js', './data.js', './home.js', './decide.js',
   './love.js', './moments.js', './lists.js', './money.js', './places.js', './trips.js', './us.js', './quiz.js',
-  './summary.js', './settings.js', './calendar.js', './shows.js', './tmdb-config.js', './games.js', './games-data.js', './booking.js', './search.js', './tour.js', './testing.js', './tracking.js', './admin.js', './recipes.js', './recipes-data.js', './daily.js', './map.js', './music.js', './badges.js', './lock.js', './location.js', './reminders.js', './snaps.js', './push.js', './push-config.js', './pet.js', './pet-art.js', './pet-games.js', './guess.js', './week.js', './firebase-config.js', './manifest.json', './icon-180.png', './icon-192.png', './icon-512.png', './icon-badge.png'];
+  './summary.js', './settings.js', './calendar.js', './shows.js', './tmdb-config.js', './games.js', './games-data.js', './booking.js', './search.js', './tour.js', './testing.js', './tracking.js', './admin.js', './recipes.js', './recipes-data.js', './daily.js', './map.js', './music.js', './badges.js', './lock.js', './location.js', './reminders.js', './snaps.js', './push.js', './push-config.js', './pet.js', './pet-art.js', './pet-games.js', './guess.js', './week.js', './cravings.js', './menu.js', './firebase-config.js', './manifest.json', './icon-180.png', './icon-192.png', './icon-512.png', './icon-badge.png'];
 // Además de la app: la librería de Firebase, la tipografía y los pósters de películas.
 const HOSTS = ['www.gstatic.com', 'fonts.googleapis.com', 'fonts.gstatic.com', 'image.tmdb.org'];
 
@@ -39,8 +39,11 @@ self.addEventListener('fetch', e => {
 self.addEventListener('push', e => {
   let d = {};
   try { d = e.data ? e.data.json() : {}; } catch { d = { body: e.data ? e.data.text() : '' }; }
+  // Urgentes (antojo 🔥): la etiqueta empieza con «urgente-». En Android se quedan en pantalla hasta tocarlas y vibran más.
+  const loud = String(d.tag || '').startsWith('urgente-');
   e.waitUntil(self.registration.showNotification(d.title || 'Futari', {
     body: d.body || '', icon: 'icon-192.png', badge: 'icon-badge.png', tag: d.tag || undefined, renotify: !!d.tag,
+    ...(loud ? { requireInteraction: true, vibrate: [400, 120, 400, 120, 800], silent: false } : {}),
     data: { url: d.url || './' } }));
 });
 // Al tocar el aviso: si Futari ya está abierta, la trae al frente y le dice qué abrir; si no, la abre ahí.

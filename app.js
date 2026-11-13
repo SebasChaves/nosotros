@@ -3,12 +3,12 @@ import { onAuthStateChanged, signInWithEmailAndPassword, sendPasswordResetEmail,
   from 'https://www.gstatic.com/firebasejs/11.0.2/firebase-auth.js';
 import { onSnapshot, disableNetwork, enableNetwork } from 'https://www.gstatic.com/firebasejs/11.0.2/firebase-firestore.js';
 import { $, S, auth, db, go, esc, openSheet, configured, placeTabPill, coupleRef, col, privCol, COLLECTIONS, PRIVATE, toast, expose, rerender, rerenderAll,
-         partnerUid, profile, uid, ask } from './core.js';
+         partnerUid, profile, uid, ask, inBar, setBar, barIds } from './core.js';
 import { todayAnswers } from './home.js';
-import { listNeedsMyVote } from './decide.js';
-import { unreadNotes, couponAlerts } from './love.js';
+import './decide.js';
+import './love.js';
 import './moments.js';
-import { unseenSnaps, snapShortcut } from './snaps.js';
+import { snapShortcut } from './snaps.js';
 import { handleOpenParam } from './push.js';
 import { guessWaiting } from './guess.js';
 import './lists.js';
@@ -16,7 +16,8 @@ import './money.js';
 import './places.js';
 import './trips.js';
 import './us.js';
-import { quizWaiting } from './quiz.js';
+import './cravings.js';
+import { sectionAlerts } from './menu.js';
 import { urgentReminders } from './reminders.js';
 import './summary.js';
 import './calendar.js';
@@ -35,7 +36,7 @@ import { logVisit } from './tracking.js';
 import { maybeStartTour, resetTourCheck } from './tour.js';
 
 // Versión de esta copia de la app. Súbela junto con version.json y la caché de sw.js al publicar.
-export const APP_VERSION = '40';
+export const APP_VERSION = '41';
 window.FUTARI_VERSION = APP_VERSION; // lo guarda el registro de ingresos (panel de administración)
 
 // Si la app estuvo abierta hace poco (Android la cierra sola al salir), se vuelve rápido a la misma pantalla.
@@ -50,6 +51,7 @@ addEventListener('pagehide', () => { if (S.me) try { localStorage.setItem(RESUME
 // La pantalla de carga se muestra al menos ~2 s para que se vea la animación (salvo con "reducir movimiento" o al volver).
 const splashEnd = performance.now() + (matchMedia('(prefers-reduced-motion: reduce)').matches || resume ? 0 : 2200);
 let nextState = null, stateTimer = null;
+setBar(barIds().slice(1, -1)); // la barra que eligió este teléfono la última vez (menu.js la actualiza)
 const applyState = s => { document.body.classList.remove('loading', 'out', 'in', 'noconfig'); document.body.classList.add(s); if (s === 'in') { requestAnimationFrame(placeTabPill); lockNow(); afterIn(); } };
 const setState = s => {
   const wait = splashEnd - performance.now();
@@ -160,13 +162,13 @@ function listen() {
 
 function updateBadges() {
   if (!S.me) return;
-  const setDot = (id, n) => { const el = $(id); el.hidden = !n; el.textContent = n > 9 ? '9+' : n; };
+  const setDot = (id, n) => { const el = $(id); if (!el) return; el.hidden = !n; el.textContent = n > 9 ? '9+' : n; };
   const p = partnerUid(), ans = todayAnswers();
   setDot('dot-home', (p && ans?.answers?.[p] && !ans?.answers?.[uid()] ? 1 : 0) + (guessWaiting() ? 1 : 0) + urgentReminders().length);
-  setDot('dot-decide', S.data.lists.filter(listNeedsMyVote).length);
-  setDot('dot-love', unreadNotes() + couponAlerts());
-  setDot('dot-more', quizWaiting() ? 1 : 0);
-  setDot('dot-moments', unseenSnaps().length);
+  // Cada sección con avisos: su puntito en la barra si está ahí; si no, se suma al de Más (menu.js)
+  let more = 0;
+  for (const [id, n] of Object.entries(sectionAlerts())) { if (inBar(id)) setDot('dot-' + id.slice(2), n); else more += n; }
+  setDot('dot-more', more);
 }
 
 /* ---------- Datos de la primera versión (solo en el teléfono) ---------- */

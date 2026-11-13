@@ -1,7 +1,7 @@
 // Decidir: listas con tres modos (al azar, por turnos, match) y la ruleta de ideas de citas.
 import { setDoc, updateDoc, deleteDoc } from 'https://www.gstatic.com/firebasejs/11.0.2/firebase-firestore.js';
 import { $, S, esc, icon, paint, on, expose, toast, openSheet, closeSheet, write, ref, newRef, animatePick,
-         nameOf, partnerUid, partnerName, uid, ask, celebrate } from './core.js';
+         nameOf, partnerUid, partnerName, uid, ask, celebrate, mainTop } from './core.js';
 import { DEFAULT_IDEAS, LIST_TEMPLATES } from './data.js';
 
 let tab = 'lists', selList = null, pendingSel = null, mode = null, turns = null, randomResult = null, lastIdea = null;
@@ -20,7 +20,8 @@ export function listNeedsMyVote(l) {
 /* ---------- Pantalla ---------- */
 function render() {
   const waiting = S.data.lists.filter(listNeedsMyVote).length;
-  if (!$('decideBody')) $('s-decide').innerHTML = `<div class="topbar"><h1>¿Qué hacemos?</h1></div><div id="decideHead"></div><div id="decideBody" class="stack" style="gap:14px"></div>`;
+  if (!$('decideBody')) $('s-decide').innerHTML = `<div id="decideTop"></div><div id="decideHead"></div><div id="decideBody" class="stack" style="gap:14px"></div>`;
+  paint('decideTop', mainTop('s-decide', '¿Qué hacemos?'));
   paint('decideHead', `<div class="seg"><button class="${tab === 'lists' ? 'on' : ''}" onclick="decideTab('lists')">Decidir algo${waiting ? `<b class="dot">${waiting}</b>` : ''}</button>
       <button class="${tab === 'citas' ? 'on' : ''}" onclick="decideTab('citas')">Ideas de citas</button></div>`);
   tab === 'lists' ? renderLists() : renderCitas();

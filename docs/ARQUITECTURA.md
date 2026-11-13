@@ -25,6 +25,8 @@ manifest.json   PWA (nombre, íconos, colores)
 | `love.js` | Detalles: frasco de notas y cupones canjeables |
 | `snaps.js` | Instantáneas: fotos rápidas de 24 h con texto, reacciones, respuesta y «Guardar en Momentos»; tarjeta de Inicio y pestaña en Momentos |
 | `pet.js`, `pet-art.js`, `pet-games.js` | Mascota: huevo que nace a los 3 días comidos y crece por etapas con la racha; triste si ayer no comió (no pierde lo crecido). Pantalla `s-pet` con Vestir, Tienda (monedas de los dos) y Juegos. `pet-art.js` dibuja en SVG (estilo mochi, 10 animales, ropa, escenario por hora); `pet-games.js` tiene los 4 juegos (canvas) |
+| `cravings.js` | Antojos (`s-cravings`): pedir (😌 normal / 🔥 urgente con aviso llamativo y diálogo al abrir la app), «Algún día» → calendario, Cumplidos (foto, ❤️ gracias, Momentos) y Ruleta con favoritos; tarjeta de urgentes y filas en Hoy |
+| `menu.js` | Tu menú: secciones en la barra de abajo (1 a 4), orden y ocultas de Más (`prefs.menu`), editor de Ajustes y puntitos por sección (`sectionAlerts`) |
 | `guess.js` | «¿Qué respondería tu pareja?»: pregunta diaria de 4 opciones, tarjeta en Inicio, historial de aciertos |
 | `week.js` | Resumen de la semana (lunes a domingo): tarjeta en Inicio domingo y lunes, hoja con números, comparación y mosaico de fotos |
 | `tour.js` | Guía de bienvenida. `TOUR_VERSION`: si alguien ya vio una versión anterior le sale una vez «Lo nuevo» (`NEW_STEPS`). Al agregar algo grande, súmalo a los pasos y sube la versión |
@@ -79,9 +81,13 @@ Referencias: `ref('col', id)`, `newRef('col')`, `col('col')`, `privRef/privCol` 
 - `backBar(título, pantallaDestino, botonesExtra)` (en `lists.js`) para subpantallas: incluye el botón con
   `aria-label="Volver"`, que el botón atrás de Android usa para saber a dónde ir.
 
-**Navegación:** `go('s-xxx')` con animación de deslizar según la dirección. Pestañas principales:
-`s-home, s-decide, s-moments, s-love, s-more` (en ese orden; se puede deslizar el dedo entre ellas). Las demás
-pantallas tienen `data-tab` de la pestaña a la que pertenecen.
+**Navegación:** `go('s-xxx')` con animación de deslizar según la dirección. La barra de abajo la arma cada uno
+(Ajustes → Tu menú, `menu.js`): siempre `s-home` y `s-more`, y en medio de 1 a 4 secciones de `SECTIONS` (`core.js`;
+por defecto Decidir, Momentos y Detalles). `setBar()` la dibuja (copia en localStorage `futari-bar`), `barIds()`/`inBar(id)`
+dicen qué hay. Se puede deslizar el dedo entre las pestañas de la barra. La pestaña marcada de una pantalla se deduce de su
+botón Volver (`tabOf`): por eso toda subpantalla usa `backBar(título, pantallaPadre)`. Una sección puesta en la barra
+esconde su Volver (`.screen.in-bar`, CSS). Decidir/Momentos/Detalles usan `mainTop(id, título)`, que les pone Volver
+(a Más) solo cuando no están en la barra. Si agregas una sección nueva, súmala a `SECTIONS` y a `SUB` en `renderMore`.
 
 **Atrás (Android):** `syncBack()` deja una entrada en el historial mientras haya algo que cerrar o una pantalla a la
 que volver; el gesto atrás la consume y `goBack()` cierra diálogo → visor → hoja, o pulsa el "Volver" de la pantalla,
@@ -103,7 +109,8 @@ evento `change`, así que no hace falta hacer nada extra.
    `onShow('s-nueva', render)`, `on('coleccion', ...)` y `expose({...})`.
 3. Importarlo en `app.js` (`import './nueva.js';`).
 4. Si guarda datos nuevos: agregar la colección a `COLLECTIONS` en `core.js` (las reglas ya cubren `couples/nosotros/*`).
-5. Agregar el mosaico en `settings.js` (función `tile(...)` de la pantalla Más).
+5. Agregarla a `SECTIONS` en `core.js` ([pantalla, ícono, nombre]) y su subtítulo a `SUB` en `renderMore` (`settings.js`):
+   así sale en Más, en el buscador y se puede poner en la barra. Si tiene puntito, súmala a `sectionAlerts()` (`menu.js`).
 6. Agregar el archivo a `FILES` en `sw.js`.
 7. Opcional: avisos en la tarjeta Hoy (`todayCard()` en `home.js`, y sumar la colección a su `on(...)`), buscador
    (`search.js`), logros (`badges.js`), guía (`tour.js`), respaldo (lo hace solo por `COLLECTIONS`).
