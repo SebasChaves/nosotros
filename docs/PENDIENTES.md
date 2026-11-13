@@ -5,6 +5,11 @@
 - **Blindar los registros de administración.** Hoy `visits` y `errors` están en `couples/nosotros/` y ambas cuentas
   podrían leerlos. La idea: moverlos fuera de `couples/` y limitar la lectura al uid del dueño con reglas.
 
+## En curso
+
+- **Flechas: error al tocar en las figuras 3D** (Figuras y Mixto, beta). Causa, idea de arreglo y cómo probarlo en
+  docs/FLECHAS.md. El modo Plano funciona bien.
+
 ## Pendiente de confirmar
 
 - **Cambio de contraseña dentro de la app:** `app.js` maneja `?mode=resetPassword&oobCode=…`. Funciona solo si en
@@ -34,11 +39,7 @@
   Samsung, que la partida siga guardada al cerrar la app, y la animación del regalo.
   v44: obstáculos (mantener presionado para girar en iPhone y Samsung, que no salga el menú del sistema), niebla,
   y un duelo en vivo real entre los dos teléfonos (la cuenta regresiva y la barrita del otro).
-  **Pendiente (Figuras/Mixto, beta): tocar elige a veces la flecha vecina.** En las figuras 3D, al tocar cerca de una
-  flecha (±7 px) a veces sale otra flecha (prueba: 12 de 355 toques, en la escalera, la caja, etc.). El camino y los choques
-  están bien (comprobado aparte con 7.926 flechas): el problema es `cubeTap` (cómo se elige el elemento bajo el dedo con
-  `elementsFromPoint` en 3D, y el área ampliada `.ht`). Idea: calcular la casilla tocada con geometría (rayo desde la
-  cámara contra los paneles) en vez de depender de qué elemento SVG está debajo. Prueba automática: scratchpad rep2.cjs.
+  **Pendiente (Figuras/Mixto, beta): tocar elige a veces la flecha vecina** → ver docs/FLECHAS.md (primera sección).
   v47 🧊 Cubo: confirmado en iPhone que se ve bien. v48 Figuras: probar en los teléfonos las figuras con rincones (L,
   escalera, dona) y que tocar elija la flecha de adelante; fluidez en la figura 30 (~580 flechas) y en el Samsung. Cuando se regale, se puede anotar aquí y en novedades si quieren.
 
