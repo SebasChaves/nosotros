@@ -1,12 +1,8 @@
 {
-  "version": "41",
-  "notes": [
-    "🍓 Nuevo: Antojos. Pide lo que se te antoje (😌 cuando se pueda o 🔥 ¡ya!, con aviso llamativo). Tu pareja lo cumple, puede mandar foto y la mascota gana 10 🪙",
-    "🌙 Antojos «para algún día» que se pasan al calendario, historial de cumplidos y una ruleta para cuando no saben qué comer",
-    "🧩 Tu menú: en Ajustes → Tu menú eliges qué secciones van en la barra de abajo (hasta 4), el orden de Más y qué esconder. Cada uno tiene el suyo",
-    "🔎 El buscador ahora también encuentra recetas, canciones, lugares del mapa, antojos y secciones"
-  ],
+  "version": "42",
+  "notes": [],
   "history": [
+    { "version": "42", "notes": [] },
     { "version": "41", "notes": [
       "🍓 Nuevo: Antojos. Pide lo que se te antoje (😌 cuando se pueda o 🔥 ¡ya!, con aviso llamativo). Tu pareja lo cumple, puede mandar foto y la mascota gana 10 🪙",
       "🌙 Antojos «para algún día» que se pasan al calendario, historial de cumplidos y una ruleta para cuando no saben qué comer",

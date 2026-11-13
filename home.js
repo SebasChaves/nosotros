@@ -17,6 +17,7 @@ import { petCard } from './pet.js';
 import { guessCard, guessWaiting } from './guess.js';
 import { weekCard } from './week.js';
 import { cravingsCard, partnerCravings } from './cravings.js';
+import { giftCard } from './arrows.js';
 import { notify, meForPartner } from './push.js';
 
 /* ---------- Racha y "Pensando en ti" ---------- */
@@ -259,6 +260,7 @@ function renderHome() {
       <div class="row" style="gap:10px"><div class="avatars">${names.map(([id]) => avatar(id, 36)).join('')}</div>
       <button class="icon-btn" onclick="openSearch()" aria-label="Buscar">${icon('search')}</button>
       <button class="icon-btn" onclick="go('s-settings')" aria-label="Ajustes">${icon('gear')}</button></div></div>
+    ${giftCard()}
     ${layout.map(c => cards[c.id]?.() || '').join('\n')}
     ${layout.length < 3 ? '<p class="tiny muted center" style="margin:0">Puedes mostrar más tarjetas en Ajustes → Tu Inicio</p>' : ''}
   `);

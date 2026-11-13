@@ -360,11 +360,15 @@ export const SECTIONS = [['s-decide', 'dice', '¿Qué hacemos?'], ['s-moments', 
   ['s-reminders', 'bell', 'Recordatorios'], ['s-recipes', 'pot', 'Recetas'], ['s-map', 'map', 'Nuestro mapa'],
   ['s-music', 'music', 'Su playlist'], ['s-pet', 'paw', 'Su mascota'], ['s-badges', 'medal', 'Logros'], ['s-game', 'flame', 'Juego de retos'],
   ['s-us', 'heart', 'Gustos y regalos'], ['s-quiz', 'brain', '¿Cuánto me conoces?'], ['s-bucket', 'list', 'Bucket list'],
-  ['s-summary', 'spark', 'Resumen del año']];
+  ['s-summary', 'spark', 'Resumen del año'], ['s-arrows', 'arrow', 'Flechas']];
+// Secciones o avisos que no todos ven todavía (por ejemplo una sorpresa que el dueño pone desde Administración).
+// gates[clave] = () => true/false; claves: id de pantalla ('s-arrows') o 'notif:<tipo>'. Sin gate = siempre visible.
+export const gates = {};
+export const gateOn = key => !gates[key] || !!gates[key]();
 export const BAR_DEFAULT = ['s-decide', 's-moments', 's-love'], BAR_MAX = 4;
 // Las que eran pestañas fijas: si alguien las saca de la barra, muestran su propio botón Volver (a Más)
 const OLD_TABS = new Set(BAR_DEFAULT);
-const validBar = v => Array.isArray(v) ? [...new Set(v)].filter(id => SECTIONS.some(([k]) => k === id)).slice(0, BAR_MAX) : [];
+const validBar = v => Array.isArray(v) ? [...new Set(v)].filter(id => SECTIONS.some(([k]) => k === id) && gateOn(id)).slice(0, BAR_MAX) : [];
 let barMid = (() => { try { const v = validBar(JSON.parse(localStorage.getItem('futari-bar') || 'null')); return v.length ? v : BAR_DEFAULT; } catch { return BAR_DEFAULT; } })();
 export const barIds = () => ['s-home', ...barMid, 's-more'];
 export const inBar = id => barIds().includes(id);
@@ -504,7 +508,7 @@ export const write = p => p.catch(err => {
 
 /* ================= Estado ================= */
 export const COLLECTIONS = ['bucket', 'ideas', 'notes', 'coupons', 'dates', 'moments', 'lists', 'answers',
-  'moods', 'challenges', 'groceries', 'expenses', 'places', 'trips', 'quiz', 'profiles', 'shows', 'events', 'cards', 'games', 'thinks', 'daily', 'pins', 'recipes', 'recipefav', 'menu', 'songs', 'reminders', 'snaps', 'push', 'activity', 'pet', 'guess', 'cravings'];
+  'moods', 'challenges', 'groceries', 'expenses', 'places', 'trips', 'quiz', 'profiles', 'shows', 'events', 'cards', 'games', 'thinks', 'daily', 'pins', 'recipes', 'recipefav', 'menu', 'songs', 'reminders', 'snaps', 'push', 'activity', 'pet', 'guess', 'cravings', 'arrows'];
 export const PRIVATE = ['gifts'];
 export const S = {
   me: null,

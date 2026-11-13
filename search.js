@@ -1,5 +1,5 @@
 // Búsqueda en toda la app. Las notas sin leer para ti y la respuesta de tu pareja a preguntas que no respondiste no aparecen.
-import { $, S, esc, icon, paint, onShow, expose, go, parseDate, fmtShort, fmtMoney, uid, SECTIONS } from './core.js';
+import { $, S, esc, icon, paint, onShow, expose, go, parseDate, fmtShort, fmtMoney, uid, SECTIONS, gateOn } from './core.js';
 
 const norm = s => String(s ?? '').normalize('NFD').replace(/\p{Diacritic}/gu, '').toLowerCase();
 let lastQ = '', searchFrom = 's-home';
@@ -12,7 +12,7 @@ function sources() {
   const me = uid(), D = S.data;
   const out = [];
   const add = (group, e, items) => out.push([group, e, items]);
-  add('Secciones', '🧭', SECTIONS.map(([id, , name]) => ({ text: name, sub: 'Abrir sección', open: () => go(id) })));
+  add('Secciones', '🧭', SECTIONS.filter(([id]) => gateOn(id)).map(([id, , name]) => ({ text: name, sub: 'Abrir sección', open: () => go(id) })));
   add('Notas', '💌', D.notes.filter(n => n.fromUid === me || n.readAt).map(n => ({ text: n.text, sub: fmtShort(new Date(n.createdAt)), open: () => { go('s-love'); window.loveTab('notes'); } })));
   add('Cupones', '🎟️', D.coupons.map(c => ({ text: c.text, sub: c.doneAt ? 'Cumplido' : c.redeemedAt ? 'Canjeado' : 'Disponible', open: () => { go('s-love'); window.loveTab('coupons'); } })));
   add('Momentos', '📸', D.moments.map(m => ({ text: `${m.title} ${m.note || ''}`, label: m.title, sub: fmtShort(parseDate(m.date)), open: () => go('s-moments') })));

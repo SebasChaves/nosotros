@@ -26,6 +26,7 @@ manifest.json   PWA (nombre, íconos, colores)
 | `snaps.js` | Instantáneas: fotos rápidas de 24 h con texto, reacciones, respuesta y «Guardar en Momentos»; tarjeta de Inicio y pestaña en Momentos |
 | `pet.js`, `pet-art.js`, `pet-games.js` | Mascota: huevo que nace a los 3 días comidos y crece por etapas con la racha; triste si ayer no comió (no pierde lo crecido). Pantalla `s-pet` con Vestir, Tienda (monedas de los dos) y Juegos. `pet-art.js` dibuja en SVG (estilo mochi, 10 animales, ropa, escenario por hora); `pet-games.js` tiene los 4 juegos (canvas) |
 | `cravings.js` | Antojos (`s-cravings`): pedir (😌 normal / 🔥 urgente con aviso llamativo y diálogo al abrir la app), «Algún día» → calendario, Cumplidos (foto, ❤️ gracias, Momentos) y Ruleta con favoritos; tarjeta de urgentes y filas en Hoy |
+| `arrows.js` | Flechas (`s-arrows`): rompecabezas de sacar flechas (generador con solución garantizada y semilla por nivel/día), niveles con estrellas, reto del día entre los dos. Es una **sorpresa**: `gates` (core.js) lo esconde a la pareja hasta que el dueño lo regala desde Administración → Pruebas (`features.arrows` en el doc de la pareja); entonces le sale envuelto (Inicio, Más, juegos de la mascota) hasta que lo abre |
 | `menu.js` | Tu menú: secciones en la barra de abajo (1 a 4), orden y ocultas de Más (`prefs.menu`), editor de Ajustes y puntitos por sección (`sectionAlerts`) |
 | `guess.js` | «¿Qué respondería tu pareja?»: pregunta diaria de 4 opciones, tarjeta en Inicio, historial de aciertos |
 | `week.js` | Resumen de la semana (lunes a domingo): tarjeta en Inicio domingo y lunes, hoja con números, comparación y mosaico de fotos |
@@ -87,7 +88,8 @@ por defecto Decidir, Momentos y Detalles). `setBar()` la dibuja (copia en localS
 dicen qué hay. Se puede deslizar el dedo entre las pestañas de la barra. La pestaña marcada de una pantalla se deduce de su
 botón Volver (`tabOf`): por eso toda subpantalla usa `backBar(título, pantallaPadre)`. Una sección puesta en la barra
 esconde su Volver (`.screen.in-bar`, CSS). Decidir/Momentos/Detalles usan `mainTop(id, título)`, que les pone Volver
-(a Más) solo cuando no están en la barra. Si agregas una sección nueva, súmala a `SECTIONS` y a `SUB` en `renderMore`.
+(a Más) solo cuando no están en la barra. Si agregas una sección nueva, súmala a `SECTIONS` y a `SUB` en `renderMore`. Para esconder una sección o un tipo de aviso a
+alguien, registra `gates['s-xxx']` / `gates['notif:tipo']` (ver `arrows.js`): la barra, Más, el buscador y Ajustes lo respetan.
 
 **Atrás (Android):** `syncBack()` deja una entrada en el historial mientras haya algo que cerrar o una pantalla a la
 que volver; el gesto atrás la consume y `goBack()` cierra diálogo → visor → hoja, o pulsa el "Volver" de la pantalla,

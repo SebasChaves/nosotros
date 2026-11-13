@@ -4,6 +4,7 @@ import { query, where, orderBy, limit, getDocs, getCountFromServer, writeBatch }
 import { $, S, db, esc, icon, paint, onShow, expose, toast, ask, col, ref, avatar, loadPhotos, nameOf, openSheet, celebrate,
          today, dayKey, todayKey, parseDate, fmtShort, fmtDay, plural, COLLECTIONS, uid, EMU } from './core.js';
 import { isTester, testerCard } from './testing.js';
+import { giftAdminCard } from './arrows.js';
 import { NOTIF_TYPES, pushHere } from './push.js';
 import { SPECIES, STAGES } from './pet.js';
 import { sceneSVG, petSVG, ITEMS, SLOTS } from './pet-art.js';
@@ -190,7 +191,8 @@ function labGame(id) {
 }
 
 function testsHTML() {
-  return `${labHTML()}
+  return `${giftAdminCard()}
+    ${labHTML()}
     <div class="glass stack"><span class="label">🔔 Notificaciones</span>
       <p class="small muted" style="margin:0">${pushHere ? 'Activadas en este teléfono.' : 'No están activadas en este teléfono (Ajustes → Notificaciones).'}</p>
       <div class="grid2"><button class="btn ghost small" style="width:100%" onclick="testPush()">Probar aviso</button>
@@ -209,7 +211,7 @@ function testsHTML() {
 const SCREENS = { home: 'Inicio', decide: 'Decidir', moments: 'Momentos', love: 'Detalles', more: 'Más', settings: 'Ajustes', cal: 'Calendario',
   reminders: 'Recordatorios', music: 'Playlist', grocery: 'Súper', money: 'Gastos', trips: 'Viajes', trip: 'Viaje', places: 'Restaurantes',
   shows: 'Pelis y series', recipes: 'Recetas', map: 'Mapa', badges: 'Logros', game: 'Juego de retos', us: 'Gustos y regalos', quiz: 'Quiz',
-  bucket: 'Bucket list', summary: 'Resumen del año', gallery: 'Galería', search: 'Buscar', admin: 'Admin' };
+  bucket: 'Bucket list', cravings: 'Antojos', arrows: 'Flechas', pet: 'Mascota', summary: 'Resumen del año', gallery: 'Galería', search: 'Buscar', admin: 'Admin' };
 const dur = s => { const m = Math.round(s / 60); return m < 1 ? (s ? '<1 min' : '0') : m < 60 ? `${m} min` : `${Math.floor(m / 60)} h ${m % 60 ? (m % 60) + ' min' : ''}`.trim(); };
 // Barra comparando a los dos (izquierda uno, derecha el otro)
 const duel = (ids, vals, fmt = n => n) => {

@@ -28,6 +28,9 @@
   normal: iOS no lo permite); el diálogo «antojo urgente» al abrir la app; fotos de cumplido. «Tu menú»: barra con 4
   secciones en la pantalla más angosta, deslizar entre pestañas personalizadas y el gesto atrás de Android.
   El resumen semanal del Worker (domingo) todavía no cuenta antojos; solo la hoja de la app.
+- v42 **Sorpresa Flechas** (no mencionarla en novedades ni a la pareja): escondida hasta que el dueño la regale desde
+  Administración → Pruebas → 🎁 Sorpresa. Probar en el teléfono el tacto del tablero 9×9 (niveles altos) y la animación
+  del regalo. Cuando se regale, se puede anotar aquí y en novedades si quieren.
 
 ## Ideas conversadas, no hechas
 

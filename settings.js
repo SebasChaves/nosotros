@@ -3,7 +3,7 @@ import { setDoc, deleteDoc, writeBatch } from 'https://www.gstatic.com/firebasej
 import { signOut } from 'https://www.gstatic.com/firebasejs/11.0.2/firebase-auth.js';
 import { $, S, db, auth, esc, icon, paint, on, onShow, expose, toast, write, ref, privRef, coupleRef, go,
          COLLECTIONS, PRIVATE, cachePhoto, forgetPhoto, compressImage, photoError, loadPhotos, parseDate, today, dayKey,
-         fmtMoney, nameOf, partnerUid, partnerName, myName, profile, plural, uid, avatar, ask, inBar } from './core.js';
+         fmtMoney, nameOf, partnerUid, partnerName, myName, profile, plural, uid, avatar, ask, inBar, gateOn } from './core.js';
 import { ACCENTS, CURRENCIES, accentFromColor } from './data.js';
 import { backBar, groceryPending } from './lists.js';
 import { balance } from './money.js';
@@ -14,6 +14,7 @@ import { homeLayout, HOME_CARDS, COUNTER_UNITS } from './home.js';
 import { isTester } from './testing.js';
 import { menuOrder, hiddenInMore, sectionName, sectionIcon, sectionAlerts, menuPrefsCard } from './menu.js';
 import { partnerCravings } from './cravings.js';
+import { giftTile } from './arrows.js';
 import { NOTIF_TYPES, pushConfigured, pushSupported, iosNeedsInstall, pushPermission, pushHere, subsOf, enablePush, disablePush, testPush } from './push.js';
 
 /* ---------- Más ---------- */
@@ -39,11 +40,12 @@ function renderMore() {
     's-recipes': () => S.data.menu.length ? 'Recetas y menú semanal' : 'Más de 40 recetas', 's-map': () => plural(S.data.pins.length, 'lugar', 'lugares'),
     's-music': () => plural(S.data.songs.length, 'canción', 'canciones'), 's-pet': () => 'Vestir, tienda y juegos', 's-badges': () => `${bDone} de ${bTotal}`,
     's-game': () => 'Verdad o reto y más', 's-us': () => 'Tallas, gustos, ideas', 's-quiz': () => quizWaiting() ? `${esc(pn)} ya jugó` : 'Quiz de pareja',
-    's-bucket': () => `${bucketDone} de ${S.data.bucket.length} cumplidas`, 's-summary': () => `Su ${today().getFullYear()} en números`,
+    's-bucket': () => `${bucketDone} de ${S.data.bucket.length} cumplidas`, 's-arrows': () => { const L = S.data.arrows.find(d => d.id === 'p-' + uid())?.level || 1; return L > 1 ? `Vas en el nivel ${L}` : 'Saca las flechas del tablero'; }, 's-summary': () => `Su ${today().getFullYear()} en números`,
   };
   const shown = menuOrder().filter(id => !inBar(id) && !hiddenInMore(id)), hidden = menuOrder().filter(id => !inBar(id) && hiddenInMore(id)).length;
   paint('s-more', `<div class="topbar"><h1>Más</h1><div class="row" style="gap:8px"><button class="icon-btn" aria-label="Buscar" onclick="openSearch()">${icon('search')}</button><button class="icon-btn" aria-label="Ajustes" onclick="go('s-settings')">${icon('gear')}</button></div></div>
     <div class="tiles">
+      ${giftTile()}
       ${shown.map(id => tile(id, sectionIcon(id), esc(sectionName(id)), SUB[id]?.() || '', alerts[id] || 0)).join('')}
       ${isTester() ? tile('s-admin', 'gear', 'Administración', 'Solo tú la ves') : ''}
     </div>
@@ -122,7 +124,7 @@ function notifCard(prefs, p) {
     ${state}
     ${p ? `<p class="tiny muted" style="margin:0">${theirs.length ? `${esc(nameOf(p))} las tiene activadas (${plural(theirs.length, 'teléfono', 'teléfonos')}).` : `${esc(nameOf(p))} todavía no las activa: a su teléfono no le llegarán avisos.`}${mine.length && !pushHere ? ` Tú las tienes en ${plural(mine.length, 'otro teléfono', 'otros teléfonos')}.` : ''}</p>` : ''}
     <span class="label" style="margin-top:6px">Qué avisos quieres recibir</span>
-    ${NOTIF_TYPES.map(([k, l]) => `<label class="check"><input type="checkbox" ${n[k] === false ? '' : 'checked'} onchange="setNotif('${k}', this.checked)"> ${l}</label>`).join('')}</div>`;
+    ${NOTIF_TYPES.filter(([k]) => gateOn('notif:' + k)).map(([k, l]) => `<label class="check"><input type="checkbox" ${n[k] === false ? '' : 'checked'} onchange="setNotif('${k}', this.checked)"> ${l}</label>`).join('')}</div>`;
 }
 function setNotif(k, v) { savePrefs({ notif: { ...(profile(uid()).prefs?.notif || {}), [k]: v } }); }
 
@@ -306,7 +308,7 @@ function importData(input) {
   input.value = '';
 }
 
-on('groceries expenses trips places bucket quiz shows events pins songs menu notes moments thinks answers daily cravings lists coupons snaps profiles reminders', renderMore);
+on('groceries expenses trips places bucket quiz shows events pins songs menu notes moments thinks answers daily cravings lists coupons snaps profiles reminders arrows', renderMore);
 on('ideas profiles push', () => { if ($('s-settings').classList.contains('active')) renderSettings(); });
 onShow('s-settings', renderSettings);
 window.rerenderSettings = () => { if ($('s-settings').classList.contains('active')) renderSettings(); };

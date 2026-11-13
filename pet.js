@@ -12,6 +12,11 @@ import { bothDid, didSomething, streak } from './home.js';
 import { backBar } from './lists.js';
 import { sceneSVG, petSVG, ITEMS, SLOTS, timeOfDay } from './pet-art.js';
 import { GAMES, playGame } from './pet-games.js';
+import { arrowsVisible, arrowsWrapped } from './arrows.js';
+// Flechas (arrows.js) también sale aquí; envuelto como regalo si la pareja aún no lo abre
+const arrowsRow = () => !arrowsVisible() ? '' : arrowsWrapped()
+  ? `<div class="pet-game gift-row"><span class="pet-game-ic">🎁</span><div class="grow"><b>Un juego sorpresa</b><span class="tiny muted" style="display:block">Está envuelto para ti</span></div><button class="btn small" onclick="unwrapGift()">Abrir</button></div>`
+  : `<div class="pet-game"><span class="pet-game-ic">🏹</span><div class="grow"><b>Flechas</b><span class="tiny muted" style="display:block">Saca todas las flechas del tablero sin chocar. Niveles y reto del día</span></div><button class="btn small" onclick="go('s-arrows')">Jugar</button></div>`;
 import { notify, meForPartner } from './push.js';
 
 // [emoji, nombre, artículo]
@@ -137,7 +142,7 @@ function render() {
       <div class="stack" style="gap:10px">${GAMES.map(g => { const b = p.best?.[g.id] || {}; return `<div class="pet-game"><span class="pet-game-ic">${g.icon}</span>
         <div class="grow"><b>${esc(g.name)}</b><span class="tiny muted" style="display:block">${esc(g.desc)}</span>
           <span class="tiny">🏆 Tú: <b>${b[uid()] || 0}</b>${partner ? ` · ${esc(nameOf(partner))}: <b>${b[partner] || 0}</b>` : ''}</span></div>
-        <button class="btn small" onclick="startGame('${g.id}')">Jugar</button></div>`; }).join('')}</div>`;
+        <button class="btn small" onclick="startGame('${g.id}')">Jugar</button></div>`; }).join('')}${arrowsRow()}</div>`;
   }
   paint('s-pet', `${backBar(p.name || 'Su mascota', 's-home', `<span class="pill pet-coins" aria-label="Monedas">🪙 ${money}</span>`)}
     <div class="glass stack">

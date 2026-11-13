@@ -2,7 +2,7 @@
 // salen y cuáles esconde de Más. Se guarda en profiles/<uid>.prefs.menu = { order: [pantallas], bar: [...], hidden: [...] }
 // y solo cambia lo que ve esa persona. core.js (setBar) dibuja la barra; settings.js pinta Más y el editor.
 import { setDoc } from 'https://www.gstatic.com/firebasejs/11.0.2/firebase-firestore.js';
-import { S, esc, icon, on, expose, toast, write, ref, profile, uid, SECTIONS, BAR_DEFAULT, BAR_MAX, setBar, inBar, rerenderAll } from './core.js';
+import { S, esc, icon, on, expose, toast, write, ref, profile, uid, SECTIONS, BAR_DEFAULT, BAR_MAX, setBar, inBar, rerenderAll, gateOn } from './core.js';
 import { listNeedsMyVote } from './decide.js';
 import { unreadNotes, couponAlerts } from './love.js';
 import { unseenSnaps } from './snaps.js';
@@ -10,12 +10,12 @@ import { quizWaiting } from './quiz.js';
 import { cravingAlerts } from './cravings.js';
 
 const prefs = () => profile(uid()).prefs?.menu || {};
-const known = id => SECTIONS.some(([k]) => k === id);
+const known = id => SECTIONS.some(([k]) => k === id) && gateOn(id);
 // Orden elegido; las secciones nuevas que no estén guardadas entran detrás de la que tienen antes en SECTIONS
 export function menuOrder() {
   const out = (prefs().order || []).filter(known);
   SECTIONS.forEach(([id], k) => {
-    if (out.includes(id)) return;
+    if (out.includes(id) || !gateOn(id)) return;
     const prev = k > 0 ? out.indexOf(SECTIONS[k - 1][0]) : -1;
     out.splice(prev >= 0 ? prev + 1 : (k === 0 ? 0 : out.length), 0, id);
   });
