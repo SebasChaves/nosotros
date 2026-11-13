@@ -94,6 +94,15 @@ de solo lectura** y manda, según la hora de Costa Rica (`TIME_ZONE`):
 - Prueba local: `runSchedule(env, fecha, { dryRun: true })` con `env.TEST_FIRESTORE = 'http://127.0.0.1:8080'`
   (emulador) devuelve la lista de avisos sin mandarlos.
 
+### Si un aviso programado no llega
+
+En la app: **Ajustes → Notificaciones → ⏰ Revisar avisos programados**. Llama a `POST /diagnostico` del Worker (con la
+sesión de Firebase), que hace lo mismo que el Cron —leer la base con la cuenta de servicio, buscar los recordatorios de
+hoy— y manda una prueba «Futari ⏰» a tus teléfonos. La app explica cada paso (hora y zona que ve el Worker, clave de
+lectura, permiso 403, recordatorios encontrados, teléfonos). Si todo sale bien y aun así no llegan a su hora, el
+problema es el Cron en Cloudflare (*Settings → Triggers*, `* * * * *`) o sus *Logs*.
+`WORKER_VERSION` (al inicio del Worker) se muestra ahí: súbelo cada vez que cambies el Worker.
+
 ### Configurarlo (una sola vez)
 
 1. **Cuenta de servicio de solo lectura.** En https://console.cloud.google.com, elige el proyecto `nosotros-app-2e254` →

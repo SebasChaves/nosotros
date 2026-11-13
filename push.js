@@ -3,7 +3,7 @@
 // (push-config.js, docs/NOTIFICACIONES.md) que avise a los teléfonos de su pareja.
 // En el emulador (?emu) no se llama al Worker: el aviso se anota en la consola y en window.__pushLog.
 import { setDoc, updateDoc, deleteField } from 'https://www.gstatic.com/firebasejs/11.0.2/firebase-firestore.js';
-import { $, S, auth, EMU, ref, on, partnerUid, profile, uid, toast, go, ANDROID, IOS } from './core.js';
+import { $, S, auth, EMU, ref, on, partnerUid, profile, uid, toast, go, esc, openSheet, ANDROID, IOS } from './core.js';
 import { PUSH } from './push-config.js';
 
 // [tipo, nombre en Ajustes]. Cada uno elige cuáles recibe (prefs.notif[tipo] === false = apagado).
@@ -110,6 +110,45 @@ export async function testPush() {
   if (r === 'ok') toast('Listo: debería llegarte en unos segundos');
   else toast(r === 401 || r === 403 ? 'El servicio no reconoció esta cuenta' : 'No se pudo mandar la prueba');
 }
+
+/* ---------- Diagnóstico de los avisos programados (Worker → /diagnostico) ---------- */
+// El Worker lee la base como lo hace cada minuto y manda una prueba; aquí se explica el resultado en palabras.
+const DIAG_PAGE = s => `<div class="stack"><h2>⏰ Avisos programados</h2>${s}</div>`;
+async function diagnoseSchedule() {
+  if (EMU) return toast('En el emulador no se llama al servicio');
+  if (!pushConfigured()) return toast('Falta conectar el servicio de avisos');
+  openSheet(DIAG_PAGE('<p class="muted" style="margin:0">Revisando con el servicio de avisos…</p>'));
+  let d;
+  try {
+    const token = await auth.currentUser.getIdToken();
+    const r = await fetch(PUSH.url.replace(/\/$/, '') + '/diagnostico', { method: 'POST', headers: { Authorization: 'Bearer ' + token } });
+    if (r.status === 404) return openSheet(DIAG_PAGE('<p style="margin:0">❌ El servicio todavía tiene el código anterior. Hay que pegar la versión nueva de <code>notificaciones/worker.js</code> en Cloudflare.</p>'));
+    if (!r.ok) return openSheet(DIAG_PAGE(`<p style="margin:0">❌ El servicio respondió con un error (${r.status}).</p>`));
+    d = await r.json();
+  } catch (e) { return openSheet(DIAG_PAGE('<p style="margin:0">❌ No se pudo conectar con el servicio. Revisa el internet e intenta otra vez.</p>')); }
+  const ok = v => v === 'ok', row = (good, txt) => `<li>${good ? '✅' : '❌'} ${txt}</li>`;
+  const st = d.steps || {}, rows = [];
+  rows.push(row(true, `Hora del servicio: <b>${esc(d.now || '?')}</b> (${esc(d.zone || '?')}). Si no coincide con tu reloj, los recordatorios llegarán a otra hora.`));
+  if (!d.hasSA) rows.push(row(false, 'Falta la clave de lectura (<code>FIREBASE_SA</code>) en Cloudflare.'));
+  else if (!ok(st.token)) rows.push(row(false, `Google no aceptó la clave de lectura: <span class="tiny">${esc(st.token || '')}</span><br><span class="small muted">Revisa que <code>FIREBASE_SA</code> tenga el JSON completo, desde { hasta }.</span>`));
+  else if (!ok(st.read)) rows.push(row(false, `No pudo leer la base: <span class="tiny">${esc(st.read || '')}</span><br><span class="small muted">Si dice 403, a la cuenta de servicio le falta el rol «Lector de Cloud Datastore» (a veces tarda unos minutos en activarse).</span>`));
+  else {
+    rows.push(row(true, 'Puede leer la base de datos'));
+    const notAllowed = (d.members || []).filter(m => !m.allowed).length;
+    if (notAllowed) rows.push(row(false, `${notAllowed === 1 ? 'Una cuenta no está' : 'Las cuentas no están'} en <code>ALLOWED_UIDS</code>: no le llegarán avisos programados.`));
+    if (!ok(st.query)) rows.push(row(false, `No pudo buscar los recordatorios: <span class="tiny">${esc(st.query || '')}</span>`));
+    else {
+      const rem = d.remindersToday || [];
+      rows.push(row(true, rem.length ? `Recordatorios de hoy que ve: ${rem.map(x => `«${esc(x.text)}»${x.time ? ' a las ' + esc(x.time) : ' (sin hora: 8:00)'}${x.done ? ' (hecho)' : ''}${x.for === 'pareja' ? ' (para tu pareja)' : ''}`).join(', ')}` : 'No ve recordatorios para hoy'));
+    }
+    rows.push(row(d.devices > 0, d.devices ? `Tienes ${d.devices} ${d.devices === 1 ? 'teléfono' : 'teléfonos'} con avisos` : 'No tienes teléfonos con avisos activados'));
+    const codes = String(st.push || '').split(',').map(x => x.trim());
+    if (d.devices) rows.push(row(codes.every(c => /^20\d$/.test(c)), codes.every(c => /^20\d$/.test(c)) ? 'Mandó una prueba a tus teléfonos: debería llegarte «Futari ⏰» ahora' : `No pudo mandar la prueba (${esc(st.push || '')})`));
+  }
+  openSheet(DIAG_PAGE(`<ul class="small" style="margin:0;padding-left:4px;list-style:none;line-height:1.6">${rows.join('')}</ul>
+    <p class="tiny muted" style="margin:0">Servicio versión ${esc(String(d.version || '?'))}. Si todo sale ✅ pero aun así no llegan a su hora, revisa en Cloudflare que el Cron sea <code>* * * * *</code>.</p>`));
+}
+window.diagnoseSchedule = diagnoseSchedule;
 
 /* ---------- Abrir la sección correcta al tocar un aviso (?open=…) ---------- */
 const OPEN = {

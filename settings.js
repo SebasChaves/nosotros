@@ -108,7 +108,8 @@ function notifCard(prefs, p) {
   else if (!pushSupported()) state = `<p class="small muted" style="margin:0">Este navegador no permite notificaciones. En Android, abre Futari con Chrome.</p>`;
   else if (pushPermission() === 'denied') state = `<p class="small muted" style="margin:0">Las notificaciones están bloqueadas para Futari. Actívalas en los ajustes del teléfono (Notificaciones → Futari) y vuelve aquí.</p>`;
   else if (pushHere) state = `<p class="small" style="margin:0">✅ Activadas en este teléfono</p>
-      <div class="grid2"><button class="btn ghost small" style="width:100%" onclick="testPush()">Probar</button><button class="btn ghost small" style="width:100%" onclick="disablePush()">Desactivar</button></div>`;
+      <div class="grid2"><button class="btn ghost small" style="width:100%" onclick="testPush()">Probar</button><button class="btn ghost small" style="width:100%" onclick="disablePush()">Desactivar</button></div>
+      <button class="link" style="align-self:flex-start" onclick="diagnoseSchedule()">⏰ Revisar avisos programados</button>`;
   else state = `<button class="btn" onclick="enablePush()">🔔 Activar en este teléfono</button>`;
   return `<div class="glass stack"><span class="label">${icon('bell')} Notificaciones</span>
     <p class="small muted" style="margin:0">Te avisan cuando ${esc(p ? nameOf(p) : 'tu pareja')} te manda algo, aunque tengas Futari cerrada.</p>

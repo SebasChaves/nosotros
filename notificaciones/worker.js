@@ -16,6 +16,7 @@
 //   COUPLE_ID          (texto, opcional) por defecto nosotros
 // Ver docs/NOTIFICACIONES.md. Sin dependencias: se pega tal cual en el editor de Cloudflare.
 
+const WORKER_VERSION = 3; // súbelo al cambiar este archivo (la app lo muestra en el diagnóstico)
 const enc = new TextEncoder();
 const b64u = buf => btoa(String.fromCharCode(...new Uint8Array(buf))).replace(/\+/g, '-').replace(/\//g, '_').replace(/=+$/, '');
 const unb64u = s => Uint8Array.from(atob(s.replace(/-/g, '+').replace(/_/g, '/') + '==='.slice((s.length + 3) % 4)), c => c.charCodeAt(0));
@@ -30,8 +31,8 @@ export default {
     const json = (obj, status = 200) => new Response(JSON.stringify(obj), { status, headers: { ...cors, 'Content-Type': 'application/json' } });
     if (req.method === 'OPTIONS') return new Response(null, { status: 204, headers: cors });
     const url = new URL(req.url);
-    if (req.method === 'GET') return json({ ok: true, service: 'futari-push', ready: !!(env.VAPID_PUBLIC_KEY && env.VAPID_PRIVATE_KEY && env.FIREBASE_PROJECT_ID && env.ALLOWED_UIDS), scheduled: !!env.FIREBASE_SA });
-    if (req.method !== 'POST' || url.pathname !== '/notify') return json({ error: 'not-found' }, 404);
+    if (req.method === 'GET') return json({ ok: true, service: 'futari-push', version: WORKER_VERSION, ready: !!(env.VAPID_PUBLIC_KEY && env.VAPID_PRIVATE_KEY && env.FIREBASE_PROJECT_ID && env.ALLOWED_UIDS), scheduled: !!env.FIREBASE_SA });
+    if (req.method !== 'POST' || !['/notify', '/diagnostico'].includes(url.pathname)) return json({ error: 'not-found' }, 404);
 
     // 1. ¿Quién pide? Sesión de Firebase válida y de la pareja
     let who;
@@ -39,6 +40,7 @@ export default {
     catch (e) { return json({ error: 'auth', detail: String(e.message || e) }, 401); }
     const allowed = (env.ALLOWED_UIDS || '').split(',').map(s => s.trim()).filter(Boolean);
     if (!allowed.includes(who)) return json({ error: 'forbidden' }, 403);
+    if (url.pathname === '/diagnostico') return json(await diagnose(env, who));
 
     // 2. Qué avisar y a qué teléfonos
     let body;
@@ -232,6 +234,37 @@ export async function runSchedule(env, when = Date.now(), { dryRun = false } = {
     }));
   }
   return out;
+}
+
+// Diagnóstico (Ajustes → Notificaciones → «Revisar avisos programados»): hace lo mismo que el Cron —leer la base con la
+// cuenta de servicio y mandar un aviso a los teléfonos guardados— y cuenta qué vio, para encontrar qué falla.
+async function diagnose(env, who) {
+  const tz = env.TIME_ZONE || 'America/Costa_Rica';
+  const L = Object.fromEntries(new Intl.DateTimeFormat('en-CA', { timeZone: tz, year: 'numeric', month: '2-digit', day: '2-digit', hour: '2-digit', minute: '2-digit', hourCycle: 'h23' })
+    .formatToParts(new Date()).map(p => [p.type, p.value]));
+  const today = `${L.year}-${L.month}-${L.day}`;
+  const r = { version: WORKER_VERSION, zone: tz, now: `${today} ${L.hour}:${L.minute}`, hasSA: !!env.FIREBASE_SA, steps: {} };
+  if (!env.FIREBASE_SA) return r;
+  let db;
+  try { db = await firestoreReader(env); r.steps.token = 'ok'; } catch (e) { r.steps.token = String(e.message || e).slice(0, 300); return r; }
+  try {
+    const couple = await db.get('');
+    r.steps.read = couple ? 'ok' : 'sin datos de la pareja';
+    r.members = Object.keys(couple?.members || {}).map(u => ({ allowed: (env.ALLOWED_UIDS || '').split(',').map(x => x.trim()).includes(u), me: u === who }));
+  } catch (e) { r.steps.read = String(e.message || e).slice(0, 300); return r; }
+  try {
+    const rem = await db.query('reminders', 'date', today);
+    r.steps.query = 'ok';
+    r.remindersToday = rem.map(x => ({ text: String(x.text || '').slice(0, 40), time: x.time || '', for: !x.for || x.for === 'ambos' ? 'ambos' : x.for === who ? 'yo' : 'pareja', done: !!x.done }));
+  } catch (e) { r.steps.query = String(e.message || e).slice(0, 300); }
+  try {
+    const mine = Object.values((await db.get('push/' + who))?.subs || {});
+    r.devices = mine.length;
+    const payload = enc.encode(JSON.stringify({ title: 'Futari ⏰', body: 'Prueba de avisos programados: si ves esto, los recordatorios pueden llegarte.', url: './', tag: 'prueba-programados' }));
+    const sent = await Promise.all(mine.map(s => sendPush(s, payload, env, 'high').then(x => x.status).catch(e => String(e.message || e).slice(0, 80))));
+    r.steps.push = sent.length ? sent.join(', ') : 'sin teléfonos';
+  } catch (e) { r.steps.push = String(e.message || e).slice(0, 300); }
+  return r;
 }
 
 // Lector de Firestore con la cuenta de servicio (token OAuth de Google firmado con su llave privada)

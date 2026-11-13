@@ -1,12 +1,12 @@
 {
-  "version": "35",
+  "version": "36",
   "notes": [
-    "🥚 ¡Su mascota! Adopten un huevo en Inicio: nace y crece cada día que los dos hacen algo en Futari",
-    "Si un día se les olvida, se pone triste, pero nunca pierde lo que creció. Tóquenla para acariciarla",
-    "Avisos programados: en la noche si la mascota tiene hambre o la racha está en peligro, recordatorios del día y «mañana es el cumpleaños de…» (se eligen en Ajustes → Notificaciones)",
-    "Mandar una instantánea, una nota, un cupón o una canción ahora también cuenta para la racha"
+    "Ajustes → Notificaciones: nuevo botón «⏰ Revisar avisos programados» para comprobar que los recordatorios y avisos de la noche pueden llegarles"
   ],
   "history": [
+    { "version": "36", "notes": [
+      "Ajustes → Notificaciones: nuevo botón «⏰ Revisar avisos programados» para comprobar que los recordatorios y avisos de la noche pueden llegarles"
+    ] },
     { "version": "35", "notes": [
       "🥚 ¡Su mascota! Adopten un huevo en Inicio: nace y crece cada día que los dos hacen algo en Futari",
       "Si un día se les olvida, se pone triste, pero nunca pierde lo que creció. Tóquenla para acariciarla",
