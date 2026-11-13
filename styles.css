@@ -758,7 +758,7 @@ body:not([data-theme="light"]) .map-box .leaflet-tile-pane { filter: invert(1) h
 .ar-prog { width: 100%; max-width: 480px; height: 5px; border-radius: 9px; background: var(--soft); overflow: hidden; margin-top: -8px; }
 .ar-prog i { display: block; height: 100%; width: 0; background: var(--grad); transition: width .3s; }
 .ar-lives small { display: block; font-size: 10px; letter-spacing: 0; color: var(--muted); text-align: right; }
-.ar-vp { position: relative; flex: 1; width: 100%; min-height: 0; overflow: hidden; touch-action: none; border-radius: 18px; background: color-mix(in srgb, var(--soft) 50%, transparent); -webkit-user-select: none; user-select: none; }
+.ar-vp { position: relative; flex: 1; width: 100%; min-height: 0; overflow: hidden; touch-action: none; -webkit-touch-callout: none; border-radius: 18px; background: color-mix(in srgb, var(--soft) 50%, transparent); -webkit-user-select: none; user-select: none; }
 .ar-world { position: absolute; left: 0; top: 0; transform-origin: 0 0; will-change: transform;
   background-image: radial-gradient(circle, var(--line) 2.2px, transparent 2.8px); background-size: var(--c) var(--c); }
 #arSvg { display: block; overflow: visible; }
@@ -817,3 +817,31 @@ body:not([data-theme="light"]) .map-box .leaflet-tile-pane { filter: invert(1) h
 .gift-reveal .muted { color: rgba(255,255,255,.8); }
 .gift-msg { margin: 0; font-size: 17px; font-style: italic; background: rgba(255,255,255,.1); border-radius: 16px; padding: 12px 16px; }
 @media (prefers-reduced-motion: reduce) { .gift-card, .gift-big { animation: none; } }
+/* Flechas: obstáculos y modos */
+#arSvg .ib { fill: none; stroke: #BFEFFF; stroke-opacity: .55; stroke-linecap: round; stroke-linejoin: round; }
+#arSvg g.ice .ah { stroke: #BFEFFF; stroke-width: 3; }
+#arSvg .stone { fill: #5A5268; stroke: #3B3446; stroke-width: 2; }
+#arSvg .stone-hl { fill: rgba(255,255,255,.18); }
+#arSvg .portal circle { fill: none; stroke: currentColor; stroke-width: 3; }
+#arSvg .portal circle:first-child { fill: color-mix(in srgb, currentColor 18%, transparent); }
+#arSvg .portal.flash { animation: arPortal .5s; }
+@keyframes arPortal { 50% { opacity: .3; } }
+#arSvg .bd circle { stroke: rgba(0,0,0,.35); stroke-width: 1.5; }
+#arSvg .chain line { stroke: #E8E2F2; stroke-dasharray: 5 5; opacity: .8; }
+#arSvg g.fog { color: #3a3448 !important; opacity: .35; }
+#arSvg g.fog .bd, #arSvg g.fog .ib, #arSvg g.fog .ah { display: none; } /* en la niebla no se sabe hacia dónde apunta */
+#arSvg g.boom { animation: arBoom .7s; }
+@keyframes arBoom { 20% { opacity: .2; } 40% { opacity: 1; } 60% { opacity: .2; } }
+#arSvg g.spin .ah { animation: arSpin .25s; transform-box: fill-box; transform-origin: center; }
+@keyframes arSpin { from { opacity: .3; } }
+.ar-help { font-weight: 800; font-size: 17px; }
+.ar-xp { justify-content: flex-start; gap: 8px; text-align: left; }
+.ar-opp { width: 100%; max-width: 480px; display: flex; align-items: center; gap: 8px; font-size: 12px; margin-top: -8px; }
+.ar-opp div { flex: 1; height: 7px; border-radius: 9px; background: var(--soft); overflow: hidden; }
+.ar-opp i { display: block; height: 100%; width: 0; background: linear-gradient(90deg, #6AA8FF, #B78BFF); transition: width .4s; }
+.ar-opp .n { min-width: 64px; text-align: right; color: var(--muted); }
+.ar-duel { border-color: rgba(106,168,255,.45); }
+.grid3 { display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px; }
+.grid3 .btn { padding-left: 4px; padding-right: 4px; line-height: 1.2; }
+.dialog.ar-count { background: rgba(10,4,20,.85); }
+.dialog.ar-count b { font-size: 120px; color: #fff; animation: pop .25s; }

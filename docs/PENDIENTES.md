@@ -31,7 +31,9 @@
 - v42 **Sorpresa Flechas** (no mencionarla en novedades ni a la pareja): escondida hasta que el dueño la regale desde
   Administración → Pruebas → 🎁 Sorpresa. Probar en el teléfono (v43, tableros de hasta 700 flechas): pellizcar para acercar/alejar,
   arrastrar sin sacar flechas por error, que tocar con el dedo atine a la flecha, fluidez con 700 flechas en el
-  Samsung, que la partida siga guardada al cerrar la app, y la animación del regalo. Cuando se regale, se puede anotar aquí y en novedades si quieren.
+  Samsung, que la partida siga guardada al cerrar la app, y la animación del regalo.
+  v44: obstáculos (mantener presionado para girar en iPhone y Samsung, que no salga el menú del sistema), niebla,
+  y un duelo en vivo real entre los dos teléfonos (la cuenta regresiva y la barrita del otro). Cuando se regale, se puede anotar aquí y en novedades si quieren.
 
 ## Ideas conversadas, no hechas
 
@@ -61,6 +63,9 @@
 | Airbnb, Booking, Google Flights, etc. | solo enlaces con la búsqueda armada (`booking.js`) | no hay API |
 
 ## Trampas conocidas (aprendidas a la mala)
+
+- Un documento de Firestore **no puede tener un campo llamado `id`**: `app.js` arma `{ id: doc.id, ...datos }` y el campo
+  pisa el nombre del documento (le pasó al duelo de Flechas).
 
 **iPhone (app instalada, barra translúcida):**
 - Si la página es más corta que la pantalla, iOS calcula mal el alto y sube la barra de pestañas dejando una

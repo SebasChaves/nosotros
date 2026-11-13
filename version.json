@@ -1,7 +1,8 @@
 {
-  "version": "43",
+  "version": "44",
   "notes": [],
   "history": [
+    { "version": "44", "notes": [] },
     { "version": "43", "notes": [] },
     { "version": "42", "notes": [] },
     { "version": "41", "notes": [
