@@ -884,3 +884,5 @@ body:not([data-theme="light"]) .map-box .leaflet-tile-pane { filter: invert(1) h
 .ar-cubecard { border-color: rgba(79,214,224,.45); }
 .ar-cube.xray .ar-face { opacity: .5; }
 #arXray.on { background: var(--grad); color: var(--on-grad); }
+.ar-beta { display: inline-block; font-size: 9.5px; font-weight: 800; letter-spacing: .5px; padding: 2px 6px; border-radius: 6px; background: #FFB547; color: #2a1600; vertical-align: 1px; }
+.ar-mixcard { border-color: rgba(183,139,255,.45); }

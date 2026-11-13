@@ -323,7 +323,8 @@ export function levelMods(L) {
   return [...out, ...extra];
 }
 // 🧊 Cubos: escalera propia de 30 y, además, unos niveles de la escalera de 90 son cubos (sorpresa)
-export const CUBE_LEVELS = 30, CUBES_IN_LADDER = new Set([15, 35, 55, 75]);
+// La escalera de 90 es solo plana (las figuras quedaron en sus modos beta: Figuras y Mixto)
+export const CUBE_LEVELS = 30, CUBES_IN_LADDER = new Set();
 const CUBE_OK = ['stones', 'ice', 'locks', 'nums', 'bombs', 'chains']; // en el cubo no hay giratorias, portales ni niebla
 const CUBE_FROM = { stones: 4, ice: 7, locks: 11, nums: 15, bombs: 19, chains: 23 };
 // Escalera de Figuras (30): empieza con cubos y van apareciendo las demás formas. Jefes 👑 en 10, 20 y 30.
@@ -341,7 +342,24 @@ export function cubeSpec(L) {
   const sh = SHAPES[shape];
   return { key: 'c' + L, cubeL: L, num: L, cube: true, boss, shape, vox, title: `${sh.e} ${boss ? '👑 ' : ''}${sh.name} · figura ${L}`, n: N, minLen: 2, maxLen: N <= 4 ? 3 : 4, seed: hash('cubo-' + L), hard: L >= 6, mods: modsFor([...mods, ...extra], N, n0) };
 }
-// En la escalera de 90, los niveles 15, 35, 55 y 75 son figuras
+// 🔀 Mixto (beta): 30 niveles; uno de cada 3 es una figura, los demás planos. Jefes en 10, 20 y 30.
+export const MIX_LEVELS = 30;
+const MIX_SHAPES = ['caja', 'torre', 'ele', 'escalera', 'cruz', 'dona', 'cajon', 'rara', 'ele', 'dona'];
+export const mixTarget = L => Math.round((60 + (L - 1) * 15) * (L % 10 === 0 ? 1.2 : 1));
+export function mixSpec(L) {
+  const R = rng(hash('mixto-mods-' + L)), boss = L % 10 === 0, n0 = mixTarget(L), fig = L % 3 === 0;
+  const intro = Object.keys(MOD_FROM).filter(k => k !== 'stones'), mods = [];
+  if (L >= 4 && (R() < 0.4 || boss)) mods.push('stones');
+  for (const k of intro.sort(() => R() - 0.5)) if (mods.filter(x => x !== 'stones').length < (boss ? 2 : 1) && L >= 6 && R() < 0.35 && (!fig || CUBE_OK.includes(k))) mods.push(k);
+  const base = { key: 'm' + L, mixL: L, num: L, boss, seed: hash('mixto-' + L), hard: L >= 6, minLen: 2 };
+  if (fig) {
+    const shape = MIX_SHAPES[L / 3 - 1], vox = SHAPES[shape].v || randomShape(rng(hash('mixto-fig-' + L)), 7), N = panelSize(vox, n0);
+    return { ...base, cube: true, shape, vox, title: `🔀 ${SHAPES[shape].e} ${boss ? '👑 ' : ''}Mixto ${L}`, n: N, maxLen: N <= 4 ? 3 : 4, mods: modsFor(mods, N, n0) };
+  }
+  const N = sizeFor(n0);
+  return { ...base, title: `🔀 ${boss ? '👑 ' : ''}Mixto ${L}`, n: N, maxLen: 5, mods: modsFor(mods, N, n0) };
+}
+// (Antes: en la escalera de 90, los niveles 15, 35, 55 y 75 eran figuras)
 const LADDER_SHAPES = { 15: 'cajon', 35: 'ele', 55: 'cruz', 75: 'dona' };
 export const levelSpec = L => {
   if (CUBES_IN_LADDER.has(L)) { const shape = LADDER_SHAPES[L], vox = SHAPES[shape].v, n0 = levelTarget(L), N = panelSize(vox, n0); return { key: 'l' + L, num: L, cube: true, shape, vox, title: `${SHAPES[shape].e} Nivel ${L}`, n: N, minLen: 2, maxLen: 4, seed: hash('nivel-' + L), hard: true, mods: modsFor(levelMods(L).filter(k => CUBE_OK.includes(k)), N, n0) }; }
@@ -379,6 +397,7 @@ const progress = (id = uid()) => S.data.arrows.find(d => d.id === 'p-' + id) || 
 const myLevel = () => progress().lv || 1; // siguiente nivel por jugar (91 = terminó los 90)
 const myInf = () => progress().inf || 1;
 const myCube = () => progress().cv || 1;
+const myMix = () => progress().mv || 1;
 const daily = (day = todayKey()) => S.data.arrows.find(d => d.id === 'd-' + day) || {};
 const duelDoc = () => S.data.arrows.find(d => d.id === 'duel') || null;
 const fmtMs = ms => { const s = Math.max(0, Math.round(ms / 1000)), h = Math.floor(s / 3600), m = Math.floor(s / 60) % 60; return `${h ? h + ':' + String(m).padStart(2, '0') : m}:${String(s % 60).padStart(2, '0')}`; };
@@ -413,7 +432,7 @@ function render() {
     ${testCard()}
     ${duelCard()}
     <div class="glass stack ar-hero ${cur.boss ? 'boss' : 'hard'}"><div class="ar-hero-ic">${done ? '🏆' : cur.boss ? '👑' : L <= 5 ? '🌱' : '🔥'}</div>
-      <div class="stack" style="gap:2px;align-items:center"><span class="label">${done ? `¡Completaste los ${LEVELS} niveles!` : `Nivel ${L} de ${LEVELS}${cur.boss ? ' · jefe' : ''}`}</span>
+      <div class="stack" style="gap:2px;align-items:center"><span class="label">📄 Plano · ${done ? `¡completaste los ${LEVELS} niveles!` : `nivel ${L} de ${LEVELS}${cur.boss ? ' · jefe' : ''}`}</span>
       <span class="tiny muted">${done ? `♾️ Modo infinito · tablero ${myInf()} · ` : ''}Unas ${done ? 700 : levelTarget(L)} flechas${Object.keys(cur.mods).length ? ' · ' + modList(cur.mods) : ''}${cont(cur)}</span>
       ${nm ? `<span class="small">✨ Se estrena: ${MODS_INFO[nm][0]} ${MODS_INFO[nm][1]}</span>` : ''}</div>
       <button class="btn" onclick="playArrows('${done ? 'i' + myInf() : 'l' + L}')">${loadSave(cur.key) ? 'Continuar' : done ? 'Jugar infinito' : `Jugar nivel ${L}`}</button>
@@ -427,16 +446,27 @@ function render() {
     <div class="glass stack"><div class="row"><span class="label">⏱️ Contrarreloj</span><button class="btn small" onclick="playArrows('tt')">Jugar</button></div>
       <p class="tiny muted" style="margin:0">Saca todas las flechas que puedas en 5 minutos. Cada error resta 10 segundos.</p>
       <div class="row"><span class="small">Récord: tú <b>${pr.tt || 0}</b>${p ? ` · ${esc(nameOf(p))} <b>${pp.tt || 0}</b>` : ''}</span></div></div>
+    <p class="tiny muted center" style="margin:4px 8px 0">Modos en prueba: pueden cambiar y tener detalles todavía.</p>
     ${cubeCard()}
+    ${mixCard()}
     <div class="glass stack"><span class="label">🗺️ Niveles</span><div class="ar-levels">${Array.from({ length: LEVELS }, (_, i) => lvBtn(i + 1)).join('')}</div></div>
     <div class="glass stack"><span class="label">📖 Obstáculos</span>${Object.entries(MODS_INFO).map(([k, [e, t, txt]]) => `<p class="small" style="margin:0">${e} <b>${t}</b> <span class="tiny muted">(desde el nivel ${MOD_FROM[k]})</span><br><span class="muted">${txt}</span></p>`).join('')}</div>
     <p class="tiny muted center" style="margin:0 8px">Toca una flecha: avanza hacia donde apunta y sale si nada la bloquea. Si choca pierdes una vida ❤️; cada ${LIFE_EVERY} flechas recuperas una. Con dos dedos acercas o alejas el tablero. Si sales, la partida queda guardada.</p>`;
+}
+function mixCard() {
+  const V = myMix(), ms = progress().ms || {}, done = V > MIX_LEVELS, cur = mixSpec(Math.min(V, MIX_LEVELS));
+  const btn = n => n > V ? `<button disabled aria-label="Mixto ${n} bloqueado"><b>${n}</b><small>${n % 10 === 0 ? '👑' : n % 3 === 0 ? '🧊' : '🔒'}</small></button>`
+    : `<button class="${n === V ? 'cur' : ''}${n % 10 === 0 ? ' boss' : ''}" onclick="playArrows('m${n}')" aria-label="Mixto ${n}"><b>${n}</b><small>${ms[n] ? stars(ms[n]) : n === V ? 'nuevo' : n % 10 === 0 ? '👑' : n % 3 === 0 ? '🧊' : ''}</small></button>`;
+  return `<div class="glass stack ar-mixcard"><div class="row"><span class="label">🔀 Mixto <span class="ar-beta">BETA</span> · ${done ? '¡completo! 🏆' : `nivel ${V} de ${MIX_LEVELS}`}</span>
+      ${done ? '' : `<button class="btn small" onclick="playArrows('m${V}')">${loadSave(cur.key) ? 'Continuar' : 'Jugar'}</button>`}</div>
+    <p class="tiny muted" style="margin:0">Tableros planos y figuras 3D intercalados: uno de cada tres niveles es una figura.${done ? '' : ` Este: ${cur.cube ? `${SHAPES[cur.shape].e} ${SHAPES[cur.shape].name}` : 'plano'}, ~${mixTarget(Math.min(V, MIX_LEVELS))} flechas.`}</p>
+    <div class="ar-levels">${Array.from({ length: MIX_LEVELS }, (_, i) => btn(i + 1)).join('')}</div></div>`;
 }
 function cubeCard() {
   const V = myCube(), cs = progress().cs || {}, done = V > CUBE_LEVELS, cur = cubeSpec(Math.min(V, CUBE_LEVELS));
   const btn = n => n > V ? `<button disabled aria-label="Figura ${n} bloqueada"><b>${n}</b><small>${n % 10 === 0 ? '👑' : SHAPES[FIG_PLAN[n - 1]].e}</small></button>`
     : `<button class="${n === V ? 'cur' : ''}${n % 10 === 0 ? ' boss' : ''}" onclick="playArrows('c${n}')" aria-label="Figura ${n}"><b>${n}</b><small>${cs[n] ? stars(cs[n]) : n === V ? 'nuevo' : n % 10 === 0 ? '👑' : SHAPES[FIG_PLAN[n - 1]].e}</small></button>`;
-  return `<div class="glass stack ar-cubecard"><div class="row"><span class="label">🧊 Figuras · ${done ? `¡las ${CUBE_LEVELS} completas! 🏆` : `nivel ${V} de ${CUBE_LEVELS}`}</span>
+  return `<div class="glass stack ar-cubecard"><div class="row"><span class="label">🧊 Figuras <span class="ar-beta">BETA</span> · ${done ? `¡las ${CUBE_LEVELS} completas! 🏆` : `nivel ${V} de ${CUBE_LEVELS}`}</span>
       ${done ? '' : `<button class="btn small" onclick="playArrows('c${V}')">${loadSave(cur.key) ? 'Continuar' : 'Jugar'}</button>`}</div>
     <p class="tiny muted" style="margin:0">Figuras en 3D hechas de cubitos: arrastra para girarlas. Cada flecha sale por una arista; en los rincones choca con la pared. Algunas tienen el cuerpo doblado sobre otra cara y la estorban.${done ? '' : ` Esta: ${SHAPES[cur.shape].e} ${SHAPES[cur.shape].name}, ~${figTarget(Math.min(V, CUBE_LEVELS))} flechas${Object.keys(cur.mods).length ? ' · ' + Object.keys(cur.mods).map(k => MODS_INFO[k][0]).join(' ') : ''}.`}</p>
     <div class="ar-levels">${Array.from({ length: CUBE_LEVELS }, (_, i) => btn(i + 1)).join('')}</div></div>`;
@@ -551,6 +581,7 @@ function specOf(what) {
   if (what === 'duel') { const d = duelDoc(); return d ? duelSpec(d) : null; }
   if (String(what).startsWith('t:')) return isOwner() ? testSpec(what.slice(2)) : null;
   const c = /^c(\d+)$/.exec(String(what)); if (c) return cubeSpec(clamp(Number(c[1]), 1, CUBE_LEVELS));
+  const mx = /^m(\d+)$/.exec(String(what)); if (mx) return mixSpec(clamp(Number(mx[1]), 1, MIX_LEVELS));
   const m = /^([li])(\d+)$/.exec(String(what)); if (!m) return levelSpec(Math.min(LEVELS, myLevel()));
   return m[1] === 'i' ? infSpec(Number(m[2])) : levelSpec(clamp(Number(m[2]), 1, LEVELS));
 }
@@ -730,7 +761,7 @@ function cubeArrowSVG(a) {
   const ice = a.ice && !G.cracked.has(a.id), hp = headCell(a)[2], parts = cubePieces(a), out = {};
   for (const [p, lines] of Object.entries(parts)) {
     const d = multiD(lines), head = Number(p) === hp;
-    out[p] = `<g ${head ? `id="ag${a.id}"` : ''} data-a="${a.id}" data-p="${p}" class="${ice ? 'ice' : ''}" style="color:${a.c}">${ice ? `<path class="ib" d="${d}" stroke-width="${C * 0.66}"/>` : ''}<path class="ht" d="${d}" stroke-width="${C * 0.95}"/><path class="ab" d="${d}" stroke-width="${C * 0.3}"/>${head ? `<path class="ah" d="${headD(a)}"/>${badgesSVG(a)}` : ''}</g>`;
+    out[p] = `<g ${head ? `id="ag${a.id}"` : ''} data-a="${a.id}" data-p="${p}" class="${ice ? 'ice' : ''}" style="color:${a.c}">${ice ? `<path class="ib" d="${d}" stroke-width="${C * 0.66}"/>` : ''}<path class="ht" d="${d}" stroke-width="${C * 0.7}"/><path class="ab" d="${d}" stroke-width="${C * 0.3}"/>${head ? `<path class="ah" d="${headD(a)}"/>${badgesSVG(a)}` : ''}</g>`;
   }
   return out;
 }
@@ -813,15 +844,16 @@ function setupCube() {
 }
 // Ver a través: los paneles se vuelven medio transparentes para ver lo que hay detrás
 function arrowsXray() { const c = $('arCube'); if (!c) return; c.classList.toggle('xray'); $('arXray')?.classList.toggle('on', c.classList.contains('xray')); }
-// Toque en la figura: la flecha bajo el dedo (o muy cerca); si hay varias, la del panel más cercano a la vista
+// Toque en la figura: primero la flecha que de verdad está bajo el dedo (su trazo o su punta, en el orden de profundidad
+// que da el navegador); solo si no hay ninguna, el área ampliada (para dedos gordos). Antes se elegía por la cara «más
+// cercana» y en las uniones entre cubitos podía salir la flecha vecina en vez de la tocada.
 function cubeTap(x, y) {
   if (!G || G.over) return;
-  const at = (px, py) => {
-    const c = document.elementsFromPoint(px, py).map(el => el.closest?.('.ar-face:not(.back) [data-a]')).filter(Boolean);
-    return c.sort((a, b) => (G.panelZ[b.dataset.p] ?? 0) - (G.panelZ[a.dataset.p] ?? 0))[0];
-  };
-  let el = at(x, y);
-  for (const [ox, oy] of [[8, 0], [-8, 0], [0, 8], [0, -8], [12, 12], [-12, -12], [12, -12], [-12, 12]]) { if (el) break; el = at(x + ox, y + oy); }
+  const hits = (px, py) => document.elementsFromPoint(px, py).filter(el => el.closest?.('.ar-face:not(.back) [data-a]'));
+  const real = el => el.classList?.contains('ab') || el.classList?.contains('ah') || !!el.closest?.('.bd');
+  const pick = (px, py) => { const h = hits(px, py); return (h.find(real) || h[0])?.closest('[data-a]'); };
+  let el = (hits(x, y).find(real))?.closest('[data-a]') || pick(x, y);
+  for (const [ox, oy] of [[6, 0], [-6, 0], [0, 6], [0, -6], [10, 10], [-10, -10], [10, -10], [-10, 10]]) { if (el) break; el = pick(x + ox, y + oy); }
   if (el) tapArrow(Number(el.dataset.a));
 }
 function cubeMove(a, g, dist, back) {
@@ -1143,7 +1175,13 @@ function win() {
       body: them ? (score(r) < score(them) ? 'Te ganó hoy 😏' : 'Le ganaste hoy 🏆') : `${n} flechas, ${errTxt}. ¿Le ganas? El tablero es el mismo para los dos`, url: './?open=arrows', tag: 'arrows-' + day });
   } else {
     const pr = progress(), num = sp.num;
-    if (sp.cubeL) {
+    if (sp.mixL) {
+      const had = pr.ms?.[num] || 0, coinsWon = sp.boss ? 20 : 10;
+      b.set(ref('arrows', 'p-' + uid()), { mv: Math.max(pr.mv || 1, num + 1), ms: { [num]: Math.max(had, s) } }, { merge: true });
+      if (!had && pt?.hatchedAt) b.update(ref('pet', 'main'), { bonus: increment(coinsWon) });
+      msg = `<span class="ar-stars">${stars(s)}</span><br>${n} flechas en ${fmtMs(ms)} · ${errTxt}${!had && pt?.hatchedAt ? ` · +${coinsWon} 🪙` : ''}${num === MIX_LEVELS ? `<br><b>🏆 ¡Completaste el modo mixto!</b>` : ''}`;
+      next = num < MIX_LEVELS ? `<button class="btn" onclick="playArrows('m${num + 1}')">🔀 Mixto ${num + 1} →</button>` : '';
+    } else if (sp.cubeL) {
       const had = pr.cs?.[num] || 0, coinsWon = num <= 5 ? 5 : sp.boss ? 20 : 10;
       b.set(ref('arrows', 'p-' + uid()), { cv: Math.max(pr.cv || 1, num + 1), cs: { [num]: Math.max(had, s) } }, { merge: true });
       if (!had && pt?.hatchedAt) b.update(ref('pet', 'main'), { bonus: increment(coinsWon) });
@@ -1239,4 +1277,5 @@ async function giftRewrap() {
 on('arrows profiles', () => { if ($('s-arrows').classList.contains('active') && !view) render(); });
 on('arrows', duelWatch);
 onShow('s-arrows', render);
+if (EMU) window.__arrowsG = () => G; // solo emulador: para las pruebas automáticas
 expose({ playArrows, arrowHint, arrowFit, arrowsContinue, restartArrows, closeArrows, arrowsExpert, arrowsTestLevel, arrowsTestCube, arrowsXray, arrowsLegend, duelInvite, duelAccept, duelDecline, duelCancel, duelEnter, duelGiveUp, unwrapGift, giftGive, giftSave, giftHide, giftRewrap });
