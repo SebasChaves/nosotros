@@ -83,7 +83,7 @@ function renderSettings() {
         <button class="del" aria-label="Borrar" onclick="delIdea('${i.id}')">${icon('trash')}</button></li>`).join('') : '<li class="empty">Aún no agregan ideas propias</li>'}</ul></div>
 
     <div class="glass stack"><span class="label">Sesión</span><p class="small muted" style="margin:0">Entraste como ${esc(S.me.email)}</p>
-      <p class="tiny muted" style="margin:0">Futari guarda la hora y el tipo de teléfono cada vez que alguno de los dos abre la app, para estadísticas de uso.</p>
+      <p class="tiny muted" style="margin:0">Futari guarda la hora, el modelo de teléfono, el navegador y la versión de la app cada vez que alguno de los dos la abre, para estadísticas de uso y para encontrar errores.</p>
       <button class="btn ghost" onclick="startTour()">Ver la guía otra vez</button>
       <button class="btn danger" onclick="logout()">Cerrar sesión</button></div>
     ${isTester() ? `<button class="btn ghost" onclick="go('s-admin')">${icon('gear')} Abrir administración</button>` : ''}`);

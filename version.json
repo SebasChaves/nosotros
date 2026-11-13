@@ -1,9 +1,12 @@
 {
-  "version": "26",
+  "version": "27",
   "notes": [
-    "Playlist: íconos en los botones de Spotify, YouTube Music y Apple Music, y botones de dedicar y editar más grandes"
+    "Administración: se ve el modelo de teléfono, el navegador y la versión de la app de cada uno, con avisos si algo puede dar problemas"
   ],
   "history": [
+    { "version": "27", "notes": [
+      "Administración: se ve el modelo de teléfono, el navegador y la versión de la app de cada uno, con avisos si algo puede dar problemas"
+    ] },
     { "version": "26", "notes": [
       "Playlist: íconos en los botones de Spotify, YouTube Music y Apple Music, y botones de dedicar y editar más grandes"
     ] },

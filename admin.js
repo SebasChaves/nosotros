@@ -14,6 +14,24 @@ const people = () => {
 const hhmm = v => `${String(v.hour).padStart(2, '0')}:${String(v.min).padStart(2, '0')}`;
 const ago = ms => { const m = Math.round((Date.now() - ms) / 60000); return m < 1 ? 'ahora' : m < 60 ? `hace ${m} min` : m < 1440 ? `hace ${Math.round(m / 60)} h` : `hace ${Math.round(m / 1440)} d`; };
 const capital = s => s.charAt(0).toUpperCase() + s.slice(1);
+const shortBrowser = b => (b || '').replace('Samsung Internet', 'Samsung').replace(/ \d+$/, '');
+// Teléfono, sistema, navegador y versión del último ingreso, con avisos si algo puede dar problemas.
+function deviceInfo(v) {
+  if (!v) return '';
+  const latest = window.FUTARI_VERSION, rows = [
+    ['Teléfono', [v.model, v.os + (v.osVersion ? ' ' + v.osVersion : '')].filter(Boolean).join(' · ')],
+    ['Navegador', v.browser || 'sin dato (versión vieja)'],
+    ['Instalada', v.installed ? 'Sí, como app' : 'No, la abre desde el navegador'],
+    ['Versión', v.app ? (v.app === latest ? `v${v.app} (la última)` : `v${v.app}`) : 'sin dato'],
+  ];
+  const warn = [];
+  if (/Samsung/.test(v.browser || '')) warn.push('Usa Samsung Internet: los accesos directos y algunas funciones van mejor con Chrome. Conviene instalarla desde Chrome.');
+  if (/otra app/.test(v.browser || '')) warn.push('La abrió desde dentro de otra app (por ejemplo un enlace en WhatsApp o Instagram). Mejor abrirla desde el ícono instalado.');
+  if (!v.installed && (v.os === 'iPhone' || v.os === 'Android')) warn.push('No la tiene instalada: se pierden la pantalla completa y algunas funciones.');
+  if (v.app && latest && Number(v.app) < Number(latest)) warn.push(`Tiene una versión vieja (v${v.app}). Al abrir la app le sale el aviso para actualizar.`);
+  return `<div class="adm-dev">${rows.map(([k, x]) => `<div><span class="tiny muted">${k}</span><span class="small">${esc(x)}</span></div>`).join('')}</div>
+    ${warn.map(w => `<div class="adm-warn">⚠️ ${esc(w)}</div>`).join('')}`;
+}
 
 async function load() {
   if (loading) return; loading = true;
@@ -46,7 +64,7 @@ function render() {
     return `<div class="glass stack" style="gap:6px"><div class="row start" style="gap:8px">${avatar(id, 30)}<b>${esc(nameOf(id))}</b></div>
       <div class="small">${last ? `Último ingreso: <b>${ago(last.at)}</b> (${hhmm(last)})` : 'Sin ingresos en el periodo'}</div>
       <div class="small muted">Hoy: ${mine.filter(v => v.day === tk).length} · ${range} días: ${mine.length}</div>
-      ${last ? `<div class="tiny muted">${esc(last.os)}${last.installed ? ' · app instalada' : ' · desde el navegador'}</div>` : ''}</div>`;
+      ${deviceInfo(last)}</div>`;
   }).join('');
 
   // 2. Gráfico por día (más antiguo a la izquierda)
@@ -62,7 +80,7 @@ function render() {
   const detail = ids.map((id, i) => {
     const list = byDay[selDay]?.[id] || [];
     return `<div style="margin-top:8px"><div class="row"><span class="small"><i class="adm-dot" style="background:${COLORS[i % 2]}"></i>${esc(nameOf(id))}</span><span class="pill">${plural(list.length, 'ingreso', 'ingresos')}</span></div>
-      <div class="chips" style="margin-top:6px">${list.map(v => `<span class="chip" style="padding:5px 10px;font-size:12.5px" title="${esc(v.os)}">${hhmm(v)} <span class="tiny muted">${v.os === 'iPhone' ? 'iOS' : v.os === 'Android' ? 'Android' : 'PC'}</span></span>`).join('') || '<span class="small muted">—</span>'}</div></div>`;
+      <div class="chips" style="margin-top:6px">${list.map(v => `<span class="chip" style="padding:5px 10px;font-size:12.5px" title="${esc([v.model, v.os, v.browser, v.app && 'v' + v.app].filter(Boolean).join(' · '))}">${hhmm(v)} <span class="tiny muted">${v.os === 'iPhone' ? 'iOS' : v.os === 'Android' ? 'Android' : 'PC'}${v.browser ? ' · ' + esc(shortBrowser(v.browser)) : ''}</span></span>`).join('') || '<span class="small muted">—</span>'}</div></div>`;
   }).join('');
 
   // 4. Tabla de todos los días con las horas de cada uno
@@ -91,13 +109,13 @@ function render() {
 
   // 7. Errores
   const errs = errors.length ? `<ul class="list">${errors.map(e => `<li><div class="txt"><span class="small">${esc(e.message)}</span>
-    <span class="sub">${esc(nameOf(e.uid))} · ${ago(e.at)} · ${esc(e.screen || '')} · ${esc(e.os || '')}${e.where ? ' · ' + esc(e.where) : ''}</span></div></li>`).join('')}</ul>
+    <span class="sub">${esc(nameOf(e.uid))} · ${ago(e.at)} · ${esc(e.screen || '')} · ${esc([e.os, e.browser, e.app && 'v' + e.app].filter(Boolean).join(' · '))}${e.where ? ' · ' + esc(e.where) : ''}</span></div></li>`).join('')}</ul>
     <button class="btn ghost small" onclick="admClearErrors()">Borrar errores</button>` : '<p class="small muted" style="margin:0">Sin errores registrados 🎉</p>';
 
   paint('s-admin', `<div class="topbar"><div class="row start"><button class="icon-btn" aria-label="Volver" onclick="go('s-more')">${icon('back')}</button><h1>Admin</h1></div>
       <button class="btn ghost small" onclick="admReload()">${loading ? 'Cargando…' : 'Actualizar'}</button></div>
     <div class="chips">${[7, 14, 30].map(n => `<button class="chip ${range === n ? 'on' : ''}" onclick="admRange(${n})">${n} días</button>`).join('')}</div>
-    <div class="grid2">${summary}</div>
+    <div class="stack" style="gap:14px">${summary}</div>
     <div class="glass stack"><div class="row"><span class="label">Ingresos por día</span><span class="small muted">${visits.length} en ${range} días</span></div>${chart}${legend}</div>
     <div class="glass"><div class="row"><span class="label">${capital(fmtDay(parseDate(selDay)))}</span></div>${detail}</div>
     <div class="glass stack"><span class="label">Todos los días · horas de cada uno</span>${table}</div>
@@ -122,7 +140,7 @@ function admRange(n) { range = n; load(); }
 function admDay(d) { selDay = d; render(); }
 function admReload() { load(); }
 function admCsv() {
-  const rows = [['fecha', 'hora', 'usuario', 'dispositivo', 'instalada']].concat([...visits].sort((a, b) => a.at - b.at).map(v => [v.day, hhmm(v), nameOf(v.uid), v.os, v.installed ? 'sí' : 'no']));
+  const rows = [['fecha', 'hora', 'usuario', 'dispositivo', 'sistema', 'modelo', 'navegador', 'instalada', 'versión']].concat([...visits].sort((a, b) => a.at - b.at).map(v => [v.day, hhmm(v), nameOf(v.uid), v.os, v.osVersion || '', v.model || '', v.browser || '', v.installed ? 'sí' : 'no', v.app || '']));
   const csv = rows.map(r => r.map(x => `"${String(x).replace(/"/g, '""')}"`).join(',')).join('\n');
   const a = document.createElement('a');
   a.href = URL.createObjectURL(new Blob(['﻿' + csv], { type: 'text/csv' }));

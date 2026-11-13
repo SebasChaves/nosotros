@@ -1,0 +1,141 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Futari · Accesos directos</title>
+<link href="https://fonts.googleapis.com/css2?family=Sora:wght@400;600;700;800&family=Pacifico&display=swap" rel="stylesheet">
+<style>
+  :root { --bg:#140C1C; --panel:#1D1326; --line:rgba(255,255,255,.13); --text:#FBF4FA; --muted:#B9A9BE; --g1:#FF5C8A; --g2:#FFB547; --g3:#7B5CFF; }
+  * { box-sizing: border-box; }
+  body { margin:0; font-family:Sora, system-ui, sans-serif; color:var(--text); background:var(--bg);
+    background-image: radial-gradient(60vmax 60vmax at -10% -5%, rgba(255,92,138,.28), transparent 60%), radial-gradient(60vmax 60vmax at 110% 100%, rgba(123,92,255,.25), transparent 60%); min-height:100vh; }
+  main { max-width: 1040px; margin:0 auto; padding: 36px 20px 60px; }
+  h1 { font-size: 30px; margin: 0 0 6px; letter-spacing:-.6px; }
+  h1 .brand { font-family: Pacifico, cursive; font-weight: 400; background: linear-gradient(100deg,var(--g1),var(--g2)); -webkit-background-clip:text; background-clip:text; color:transparent; }
+  .lead { color: var(--muted); margin: 0 0 28px; max-width: 640px; line-height: 1.55; }
+  .grid { display:grid; grid-template-columns: repeat(auto-fit, minmax(300px, 1fr)); gap: 28px; align-items:start; }
+  .card { background: rgba(255,255,255,.06); border:1px solid var(--line); border-radius: 26px; padding: 20px; }
+  .card h2 { font-size: 17px; margin: 0 0 4px; }
+  .tag { display:inline-block; font-size:11px; font-weight:700; letter-spacing:.4px; text-transform:uppercase; padding:3px 8px; border-radius:7px; margin-bottom:8px; }
+  .yes { background: rgba(94,224,160,.18); color:#5EE0A0; } .no { background: rgba(255,92,138,.18); color:#FF8FB0; }
+  .card p { color: var(--muted); font-size: 14px; line-height: 1.5; margin: 6px 0 14px; }
+
+  /* Teléfono */
+  .phone { position:relative; width: 290px; height: 560px; margin: 0 auto; border-radius: 40px; padding: 12px; background:#0b0b0f; box-shadow: 0 30px 60px -25px rgba(0,0,0,.8), inset 0 0 0 2px #2a2a33; }
+  .screen { position:relative; height:100%; border-radius: 30px; overflow:hidden;
+    background: linear-gradient(160deg, #2b5876 0%, #4e4376 55%, #1f1c2c 100%); }
+  .status { display:flex; justify-content:space-between; font-size:11px; padding: 10px 18px 0; color:#fff; opacity:.9; }
+  .clock { text-align:center; color:#fff; margin-top: 26px; }
+  .clock b { display:block; font-size: 44px; font-weight: 300; letter-spacing:-1px; }
+  .clock span { font-size: 12px; opacity:.85; }
+  .apps { position:absolute; left:0; right:0; bottom: 30px; display:grid; grid-template-columns: repeat(4, 1fr); gap: 18px 0; padding: 0 14px; }
+  .app { display:flex; flex-direction:column; align-items:center; gap:5px; font-size:10.5px; color:#fff; }
+  .ic { width: 48px; height: 48px; border-radius: 50%; display:grid; place-items:center; font-size: 22px; background: rgba(255,255,255,.18); }
+  .futari { background: #140C1C; box-shadow: 0 0 0 2px rgba(255,255,255,.25); cursor:pointer; position:relative; }
+  .futari svg { width: 34px; height: 30px; }
+  .dim { position:absolute; inset:0; background: rgba(0,0,0,.45); backdrop-filter: blur(3px); -webkit-backdrop-filter: blur(3px); opacity:0; pointer-events:none; transition: opacity .2s; }
+  .menu { position:absolute; left: 14px; right: 14px; bottom: 112px; background: #2a2433; border-radius: 22px; padding: 6px; box-shadow: 0 20px 40px -10px rgba(0,0,0,.6);
+    transform: translateY(10px) scale(.96); opacity:0; pointer-events:none; transition: all .2s; }
+  .open .dim { opacity: 1; pointer-events:auto; }
+  .open .menu { transform:none; opacity:1; pointer-events:auto; }
+  .open .futari { z-index: 3; transform: scale(1.08); }
+  .row { display:flex; align-items:center; gap:12px; padding: 11px 12px; border-radius: 16px; color:#fff; font-size: 14px; cursor:pointer; border:0; background:none; width:100%; text-align:left; font-family:inherit; }
+  .row:hover { background: rgba(255,255,255,.08); }
+  .row .e { width: 34px; height: 34px; border-radius: 50%; background: #140C1C; display:grid; place-items:center; font-size: 17px; flex-shrink:0; }
+  .row small { display:block; color: #c9bdd0; font-size: 11.5px; }
+  .hint { position:absolute; left:0; right:0; bottom: 6px; text-align:center; font-size: 10.5px; color: rgba(255,255,255,.7); }
+  .result { position:absolute; inset:0; background: var(--bg); display:flex; flex-direction:column; align-items:center; justify-content:center; gap:10px; padding: 20px; text-align:center; opacity:0; pointer-events:none; transition: opacity .2s; }
+  .result.show { opacity:1; pointer-events:auto; }
+  .result .big { font-size: 46px; }
+  .result h3 { margin:0; font-size: 18px; }
+  .result p { color: var(--muted); font-size: 13px; margin: 0; }
+  .btn { margin-top: 8px; border:0; border-radius: 14px; padding: 11px 18px; font: 700 14px Sora, sans-serif; color:#26101A; background: linear-gradient(100deg,var(--g1),var(--g2)); cursor:pointer; }
+
+  /* iPhone */
+  .ios .screen { background: linear-gradient(170deg, #ffb199 0%, #ff0844 40%, #2b0b3a 100%); }
+  .ios .ic { border-radius: 13px; }
+  .ios .futari { border-radius: 13px; }
+  .ios-msg { position:absolute; left: 16px; right: 16px; bottom: 120px; background: rgba(30,30,35,.85); color:#fff; border-radius: 18px; padding: 14px; font-size: 12.5px; line-height: 1.45; backdrop-filter: blur(10px); -webkit-backdrop-filter: blur(10px); }
+  .ios-msg b { display:block; margin-bottom: 4px; font-size: 13px; }
+
+  .notes { margin-top: 30px; }
+  .notes li { color: var(--muted); line-height: 1.6; font-size: 14.5px; margin-bottom: 6px; }
+  .notes b { color: var(--text); }
+</style>
+</head>
+<body>
+<main>
+  <h1>Accesos directos de <span class="brand">Futari</span></h1>
+  <p class="lead">Las apps web no pueden tener widgets en la pantalla de inicio. Lo más parecido que sí se puede son <b style="color:var(--text)">accesos directos</b>: al mantener presionado el ícono de Futari aparece un menú para ir directo a algo. Toca el ícono del teléfono de la izquierda para verlo, y luego toca una opción.</p>
+
+  <div class="grid">
+    <div class="card">
+      <span class="tag yes">Android · sí funciona</span>
+      <h2>Mantener presionado el ícono</h2>
+      <p>Aparece un menú con 4 accesos. También se puede arrastrar uno a la pantalla de inicio y queda como un ícono más.</p>
+      <div class="phone" id="android">
+        <div class="screen">
+          <div class="status"><span>10:02</span><span>●●● 82%</span></div>
+          <div class="clock"><b>10:02</b><span>jueves, 12 de noviembre</span></div>
+          <div class="dim" onclick="closeMenu()"></div>
+          <div class="menu" role="menu" aria-label="Accesos directos de Futari">
+            <button class="row" onclick="openShortcut('📷','Foto del día','Se abre directo la cámara o la galería para subir la foto de hoy.')"><span class="e">📷</span><span>Foto del día<small>Subir la de hoy</small></span></button>
+            <button class="row" onclick="openShortcut('💸','Nuevo gasto','Se abre la ventana de Nuevo gasto, lista para escribir el monto.')"><span class="e">💸</span><span>Nuevo gasto<small>Anotar lo que pagaron</small></span></button>
+            <button class="row" onclick="openShortcut('🔔','Nuevo recordatorio','Se abre la ventana para anotar un recordatorio (y marcarlo urgente).')"><span class="e">🔔</span><span>Recordatorio<small>Anotar algo para no olvidar</small></span></button>
+            <button class="row" onclick="openShortcut('🎲','¿Qué hacemos?','Se abre Decidir para sortear dónde comer o qué hacer.')"><span class="e">🎲</span><span>¿Qué hacemos?<small>Decidir al azar</small></span></button>
+          </div>
+          <div class="apps">
+            <div class="app"><div class="ic">📞</div>Teléfono</div>
+            <div class="app"><div class="ic">💬</div>Mensajes</div>
+            <div class="app"><div class="ic">📸</div>Cámara</div>
+            <div class="app" onclick="toggleMenu()"><div class="ic futari" title="Mantener presionado"><svg viewBox="12 18 76 64"><path d="M47.5 36 C47.5 28 41 22 33 22 C23 22 17 30 17 39 C17 56 35.5 66 47.5 78Z" fill="#FF5C8A"/><path d="M52.5 36 C52.5 28 59 22 67 22 C77 22 83 30 83 39 C83 56 64.5 66 52.5 78Z" fill="#FFB547"/></svg></div>Futari</div>
+          </div>
+          <div class="hint" id="hint">👆 Toca el ícono de Futari</div>
+          <div class="result" id="result"><div class="big" id="rE"></div><h3 id="rT"></h3><p id="rP"></p><button class="btn" onclick="backHome()">Volver al inicio</button></div>
+        </div>
+      </div>
+    </div>
+
+    <div class="card">
+      <span class="tag no">iPhone · no lo permite</span>
+      <h2>En el iPhone no hay accesos</h2>
+      <p>Apple no deja que las apps web agreguen opciones a ese menú. En tu iPhone, al mantener presionado el ícono solo sale "Eliminar" y "Editar pantalla de inicio".</p>
+      <div class="phone ios">
+        <div class="screen">
+          <div class="status"><span>10:02</span><span>●●● 19%</span></div>
+          <div class="clock"><b>10:02</b><span>jueves, 12 de noviembre</span></div>
+          <div class="ios-msg"><b>Lo que sí tendrías en el iPhone</b>Abrir Futari y ver arriba en Inicio los recordatorios urgentes y la tarjeta Hoy, que ya funcionan como un "resumen" al entrar.</div>
+          <div class="apps">
+            <div class="app"><div class="ic">📞</div>Teléfono</div>
+            <div class="app"><div class="ic">💬</div>Mensajes</div>
+            <div class="app"><div class="ic">🎵</div>Música</div>
+            <div class="app"><div class="ic futari"><svg viewBox="12 18 76 64"><path d="M47.5 36 C47.5 28 41 22 33 22 C23 22 17 30 17 39 C17 56 35.5 66 47.5 78Z" fill="#FF5C8A"/><path d="M52.5 36 C52.5 28 59 22 67 22 C77 22 83 30 83 39 C83 56 64.5 66 52.5 78Z" fill="#FFB547"/></svg></div>Futari</div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div class="card notes">
+    <h2>Cómo sería</h2>
+    <ul>
+      <li><b>4 accesos:</b> Foto del día, Nuevo gasto, Recordatorio y ¿Qué hacemos? Se pueden cambiar por otros (Nota de amor, Pensando en ti, Lista del súper…).</li>
+      <li><b>Arrastrables:</b> en Android, cada acceso se puede arrastrar a la pantalla de inicio y queda como un ícono propio.</li>
+      <li><b>Para que aparezcan:</b> después de publicarlo, Chrome actualiza la app instalada solo y los accesos pueden tardar hasta un día en aparecer. Si no aparecen, basta con quitar Futari de la pantalla de inicio e instalarla de nuevo; los datos no se pierden.</li>
+      <li><b>Lo que no se puede:</b> un widget que muestre información sin abrir la app (por ejemplo, los días juntos o la foto del día en la pantalla de inicio). Eso solo lo pueden hacer apps de la tienda.</li>
+    </ul>
+  </div>
+</main>
+<script>
+  const ph = document.getElementById('android');
+  function toggleMenu() { ph.classList.toggle('open'); document.getElementById('hint').textContent = ph.classList.contains('open') ? 'Toca una opción' : '👆 Toca el ícono de Futari'; }
+  function closeMenu() { ph.classList.remove('open'); document.getElementById('hint').textContent = '👆 Toca el ícono de Futari'; }
+  function openShortcut(e, t, p) {
+    document.getElementById('rE').textContent = e; document.getElementById('rT').textContent = t; document.getElementById('rP').textContent = p;
+    closeMenu(); document.getElementById('result').classList.add('show');
+  }
+  function backHome() { document.getElementById('result').classList.remove('show'); }
+</script>
+</body>
+</html>

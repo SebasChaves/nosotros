@@ -520,3 +520,7 @@ body:not([data-theme="light"]) .map-box .leaflet-tile-pane { filter: invert(1) h
 .svc a span { overflow: hidden; text-overflow: ellipsis; }
 .song-act { width: 42px; height: 42px; border-radius: 13px; border: 1px solid var(--line); background: var(--soft); color: var(--text); display: grid; place-items: center; cursor: pointer; padding: 0; }
 .song-act .ic { width: 21px; height: 21px; }
+.adm-dev { display: grid; grid-template-columns: 1fr 1fr; gap: 8px 12px; margin-top: 4px; }
+.adm-dev div { display: flex; flex-direction: column; min-width: 0; }
+.adm-dev .small { overflow-wrap: anywhere; }
+.adm-warn { font-size: 12.5px; line-height: 1.45; padding: 8px 10px; border-radius: 12px; background: rgba(255, 181, 71, .13); border: 1px solid rgba(255, 181, 71, .35); }
