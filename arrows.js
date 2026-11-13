@@ -747,7 +747,13 @@ function cubeHTML() {
   const css = v => [v[0], -v[1], v[2]];
   return `<div class="ar-vp ar-vp3" id="arVp"><div class="ar-cube" id="arCube">${S.panels.map((P, p) => {
     const u = css(P.u), v = css(P.vv), n = css(P.n), t = [(P.o[0] - box.c[0]) * W, -(P.o[1] - box.c[1]) * W, (P.o[2] - box.c[2]) * W];
-    return `<div class="ar-face" id="arF${p}" style="width:${W}px;height:${W}px;transform:matrix3d(${[...u, 0, ...v, 0, ...n, 0, ...t, 1].map(x => Math.round(x * 1000) / 1000).join(',')})"><svg width="${W}" height="${W}" viewBox="0 0 ${W} ${W}">${panels[p]}</svg></div>`;
+    // Borde solo en las aristas y rincones de verdad; donde sigue la misma cara (otro cubito pegado) no se marca nada
+    const side = d => { const w = d === 0 ? P.vv.map(x => -x) : d === 1 ? P.u : d === 2 ? P.vv : P.u.map(x => -x), c = d === 0 ? [0, 0, p] : d === 1 ? [N - 1, 0, p] : d === 2 ? [0, N - 1, p] : [0, 0, p];
+      return shapeStep(S, N, c, w).kind === 'flat'; };
+    const flat = [0, 1, 2, 3].map(side);
+    const edges = [[0, 0, W, 0], [W, 0, W, W], [0, W, W, W], [0, 0, 0, W]].map((l, d) => flat[d] ? '' : `<line class="edge" x1="${l[0]}" y1="${l[1]}" x2="${l[2]}" y2="${l[3]}"/>`).join('');
+    const ext = `--t:${flat[0] ? -1 : 0}px;--r:${flat[1] ? -1 : 0}px;--b:${flat[2] ? -1 : 0}px;--l:${flat[3] ? -1 : 0}px`;
+    return `<div class="ar-face" id="arF${p}" style="width:${W}px;height:${W}px;${ext};transform:matrix3d(${[...u, 0, ...v, 0, ...n, 0, ...t, 1].map(x => Math.round(x * 1000) / 1000).join(',')})"><svg width="${W}" height="${W}" viewBox="0 0 ${W} ${W}">${edges}${panels[p]}</svg></div>`;
   }).join('')}</div></div>`;
 }
 function setupCube() {
