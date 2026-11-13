@@ -1,11 +1,12 @@
 {
-  "version": "25",
+  "version": "26",
   "notes": [
-    "Arreglo: volvió el ícono de Momentos en la barra de abajo",
-      "Recordatorios urgentes 🔴: se muestran arriba en Inicio hasta que estén hechos, y se marcan ahí mismo",
-      "Playlist: cada canción tiene botones para abrirla en Spotify, YouTube Music o Apple Music"
+    "Playlist: íconos en los botones de Spotify, YouTube Music y Apple Music, y botones de dedicar y editar más grandes"
   ],
   "history": [
+    { "version": "26", "notes": [
+      "Playlist: íconos en los botones de Spotify, YouTube Music y Apple Music, y botones de dedicar y editar más grandes"
+    ] },
     { "version": "25", "notes": [
       "Arreglo: volvió el ícono de Momentos en la barra de abajo",
       "Recordatorios urgentes 🔴: se muestran arriba en Inicio hasta que estén hechos, y se marcan ahí mismo",

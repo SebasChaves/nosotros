@@ -9,6 +9,12 @@ let who = 'all', editing = null, results = [], newCover = null, audio = null, pl
 const service = url => /spotify/.test(url) ? ['Spotify', '#1DB954'] : /youtu/.test(url) ? ['YouTube', '#FF0033'] : /apple/.test(url) ? ['Apple Music', '#FA2D48'] : /deezer/.test(url) ? ['Deezer', '#A238FF'] : url ? ['Escuchar', 'var(--g1)'] : null;
 const safe = u => /^https?:\/\//i.test(u || '') ? u : '';
 // Botones para abrir la canción en cada app. Si guardaron un enlace de ese servicio se usa; si no, se abre la búsqueda (abre la app si está instalada).
+// Íconos simples (blancos) para cada servicio.
+const SVC_ICON = {
+  'Spotify': '<svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="10" fill="currentColor"/><g fill="none" stroke="#1DB954" stroke-width="1.9" stroke-linecap="round"><path d="M6.6 9.2c3.6-1.1 7.6-.8 10.9 1"/><path d="M7.2 12.4c2.9-.8 6.1-.5 8.7.9"/><path d="M7.8 15.4c2.2-.6 4.5-.4 6.5.7"/></g></svg>',
+  'YouTube Music': '<svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="10" fill="currentColor"/><circle cx="12" cy="12" r="5.6" fill="none" stroke="#FF0033" stroke-width="1.5"/><path d="M10.4 9.4v5.2l4.3-2.6z" fill="#FF0033"/></svg>',
+  'Apple Music': '<svg viewBox="0 0 24 24" aria-hidden="true"><path fill="currentColor" d="M18 3.5v11.6a2.9 2.9 0 1 1-1.8-2.7V7.6l-7 1.5v8a2.9 2.9 0 1 1-1.8-2.7V5.6z"/></svg>',
+};
 const services = s => {
   const q = encodeURIComponent(`${s.title} ${s.artist || ''}`.trim()), u = safe(s.url);
   return [
@@ -49,11 +55,11 @@ const songCard = (s, big = false) => {
     ${s.preview ? `<button class="icon-btn play-btn" aria-label="Escuchar adelanto" onclick="playSong('${s.id}')">${playing === s.id ? '❚❚' : '▶'}</button>` : ''}</div>
     ${s.why ? `<p style="margin:0;font-style:italic;line-height:1.45">“${esc(s.why)}”</p>` : ''}
     ${d ? `<div class="dedic">💌 <b>${esc(nameOf(d.by))}</b> se la dedicó a ${d.to === uid() ? 'ti' : esc(nameOf(d.to))}${d.msg ? `: “${esc(d.msg)}”` : ''}</div>` : ''}
-    <div class="svc">${services(s).map(([n, col, url]) => `<a href="${esc(url)}" target="_blank" rel="noopener" style="background:${col}">${n}</a>`).join('')}</div>
+    <div class="svc">${services(s).map(([n, col, url]) => `<a href="${esc(url)}" target="_blank" rel="noopener" style="background:${col}" aria-label="Abrir en ${n}">${SVC_ICON[n]}<span>${{ 'YouTube Music': 'YT Music', 'Apple Music': 'Apple' }[n] || n}</span></a>`).join('')}</div>
     <div class="row"><span class="tiny muted">${esc(nameOf(s.by))}${s.date ? ' · ' + fmtShort(parseDate(s.date)) : ''}</span>
       <div class="row" style="gap:4px">${sv && safe(s.url) && !/spotify\.|youtu|apple\.com/.test(s.url) ? `<a class="btn small" style="text-decoration:none;background:${sv[1]};color:#fff" href="${esc(s.url)}" target="_blank" rel="noopener">${sv[0]}</a>` : ''}
-      ${partnerUid() ? `<button class="del" aria-label="Dedicar" onclick="dedicateSong('${s.id}')">💌</button>` : ''}
-      <button class="del" aria-label="Editar canción" onclick="addSong('${s.id}')">✎</button></div></div></div>`;
+      ${partnerUid() ? `<button class="song-act" aria-label="Dedicar canción" onclick="dedicateSong('${s.id}')">${icon('send')}</button>` : ''}
+      <button class="song-act" aria-label="Editar canción" onclick="addSong('${s.id}')">${icon('edit')}</button></div></div></div>`;
 };
 function songWho(w) { who = w; render(); }
 function randomSong() { const s = pick(S.data.songs); openSheet(`<div class="stack"><span class="label">Hoy suena…</span>${songCard(s)}</div>`); loadPhotos($('sheetBody')); }
