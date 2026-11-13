@@ -2,6 +2,7 @@
 // avanza hacia donde apunta y sale si nada la bloquea; si choca, regresa y se pierde una vida (3, y cada 50 flechas sacadas
 // se recupera una; sin vidas se puede seguir pagando monedas de la mascota). Tableros de 16 a 700 flechas con zoom.
 // - 90 niveles (1–5 para aprender, después de 300 a 700 flechas, jefes cada 10, obstáculos: MODS_INFO) y modo infinito,
+//   🧊 Cubo: 30 niveles en 3D (y los niveles 15, 35, 55 y 75 de la escalera son cubos),
 //   Reto del día (el mismo para los dos; crece en la semana), Contrarreloj (5 min) y Duelo en vivo (arrows/duel).
 //   💀 Modo experto (por teléfono): sin pistas, sin recuperar vidas ni pagar para seguir.
 //   Todo sale de una semilla: el mismo nivel es igual en los dos teléfonos. La partida a medias se guarda en el teléfono.
@@ -108,26 +109,102 @@ export function generate(spec) {
       }
     }
   }
-  // Orden de solución
+  const headOf = a => a.cells[a.cells.length - 1], dist = (a, b) => { const [ax, ay] = headOf(a), [bx, by] = headOf(b); return Math.abs(ax - bx) + Math.abs(ay - by); };
+  const rayArrows = a => { const s = new Set(); const [hx, hy] = headOf(a); walk(N, base, portalTo, hx, hy, a.d, k => { if (occ[k] >= 0) s.add(occ[k]); }); return s; };
+  decorate(list, R, mods, rayArrows, dist, N);
+  return { list, base, portalTo, portals, stones, N };
+}
+
+/* ---------- Cubo ----------
+   6 caras de N×N. Cada flecha avanza solo dentro de la cara de su punta y sale por la arista (el camino es hasta el borde
+   de esa cara). Los cuerpos sí pueden doblar aristas: la cola queda en otra cara y estorba a las flechas de esa cara.
+   Casilla global k = cara·N² + y·N + x; una flecha guarda cells [[x, y, cara]…] de la cola a la punta y d (dirección en su cara). */
+// Caras del cubo [0,1]³ (y hacia arriba): normal n, esquina o (arriba-izquierda vista desde afuera), u = derecha, v = abajo
+export const FACES = [
+  { n: [0, 0, 1], o: [0, 1, 1], u: [1, 0, 0], v: [0, -1, 0] },   // 0 frente
+  { n: [1, 0, 0], o: [1, 1, 1], u: [0, 0, -1], v: [0, -1, 0] },  // 1 derecha
+  { n: [0, 0, -1], o: [1, 1, 0], u: [-1, 0, 0], v: [0, -1, 0] }, // 2 atrás
+  { n: [-1, 0, 0], o: [0, 1, 0], u: [0, 0, 1], v: [0, -1, 0] },  // 3 izquierda
+  { n: [0, 1, 0], o: [0, 1, 0], u: [1, 0, 0], v: [0, 0, 1] },    // 4 arriba
+  { n: [0, -1, 0], o: [0, 0, 1], u: [1, 0, 0], v: [0, 0, -1] },  // 5 abajo
+];
+const dot = (a, b) => a[0] * b[0] + a[1] * b[1] + a[2] * b[2];
+const add = (a, b, s = 1) => [a[0] + b[0] * s, a[1] + b[1] * s, a[2] + b[2] * s];
+const cross = (a, b) => [a[1] * b[2] - a[2] * b[1], a[2] * b[0] - a[0] * b[2], a[0] * b[1] - a[1] * b[0]];
+const eq = (a, b) => a[0] === b[0] && a[1] === b[1] && a[2] === b[2];
+export const cubeCenter = (N, [x, y, f]) => { const F = FACES[f]; return add(add(F.o, F.u, (x + 0.5) / N), F.v, (y + 0.5) / N); };
+const dirVec = (f, d) => { const F = FACES[f]; return d === 0 ? F.v.map(c => -c) : d === 1 ? F.u : d === 2 ? F.v : F.u.map(c => -c); };
+// Un paso desde una casilla en la dirección w (vector 3D): dentro de la cara o doblando la arista
+export function cubeStep(N, [x, y, f], w) {
+  const F = FACES[f], nx = x + dot(w, F.u), ny = y + dot(w, F.v);
+  if (nx >= 0 && ny >= 0 && nx < N && ny < N) return { c: [nx, ny, f], w };
+  const f2 = FACES.findIndex(G => eq(G.n, w)), G = FACES[f2];
+  const p = add(add(cubeCenter(N, [x, y, f]), w, 0.5 / N), F.n, -0.5 / N), q = add(p, G.o, -1);
+  return { c: [Math.floor(dot(q, G.u) * N + 1e-9), Math.floor(dot(q, G.v) * N + 1e-9), f2], w: F.n.map(c => -c) };
+}
+export function generateCube(spec) {
+  const { seed, n: N, minLen = 2, maxLen = 4, mods = {} } = spec, M = N * N;
+  const R = rng(seed), base = new Int8Array(6 * M), occ = new Int32Array(6 * M).fill(-1), cover = new Float64Array(6 * M).fill(-Infinity), list = [], stones = [];
+  const K = ([x, y, f]) => f * M + y * N + x;
+  for (let i = 0; i < (mods.stones || 0); i++) for (let t = 0; t < 200; t++) { const k = Math.floor(R() * 6 * M); if (!base[k]) { base[k] = STONE; stones.push(k); break; } }
+  // Camino de una punta: dentro de su cara hasta el borde; null si hay una piedra
+  const rayOf = ([x, y, f], d) => { const [dx, dy] = DIRS[d], out = []; for (x += dx, y += dy; x >= 0 && y >= 0 && x < N && y < N; x += dx, y += dy) { const k = f * M + y * N + x; if (base[k] === STONE) return null; out.push(k); } return out; };
+  const idx = [...Array(6 * M).keys()];
+  for (let pass = 0; pass < 6; pass++) {
+    for (let i = idx.length - 1; i > 0; i--) { const j = Math.floor(R() * (i + 1)); [idx[i], idx[j]] = [idx[j], idx[i]]; }
+    for (const k of idx) {
+      if (occ[k] >= 0 || base[k]) continue;
+      const f = Math.floor(k / M), y = Math.floor((k % M) / N), x = k % N;
+      for (const d of [0, 1, 2, 3].sort(() => R() - 0.5)) {
+        const rc = rayOf([x, y, f], d); if (!rc) continue;
+        const ray = new Set(rc); let hi = Infinity;
+        for (const rk of rc) if (occ[rk] >= 0) hi = Math.min(hi, list[occ[rk]].o);
+        let lo = cover[k];
+        if (!(lo < hi)) continue;
+        const want = minLen + Math.floor(Math.pow(R(), 1.2) * (maxLen - minLen + 1));
+        const cells = [[x, y, f]], used = new Set([k]);
+        let cur = [x, y, f], w = dirVec(f, d).map(c => -c); // el cuerpo crece hacia atrás
+        while (cells.length < want) {
+          const n = FACES[cur[2]].n, side = cross(n, w), s = R() < 0.5 ? 1 : -1;
+          const opts = cells.length === 1 ? [w] : R() < 0.4 ? [side.map(c => c * s), w, side.map(c => -c * s)] : [w, side.map(c => c * s), side.map(c => -c * s)];
+          let moved = false;
+          for (const o of opts) {
+            const st = cubeStep(N, cur, o), nk = K(st.c);
+            if (base[nk] || occ[nk] >= 0 || used.has(nk) || ray.has(nk) || !(Math.max(lo, cover[nk]) < hi)) continue;
+            lo = Math.max(lo, cover[nk]); cells.push(st.c); used.add(nk); cur = st.c; w = st.w; moved = true; break;
+          }
+          if (!moved) break;
+        }
+        if (cells.length < minLen) continue;
+        const o = hi === Infinity ? (lo === -Infinity ? 0 : lo + 1) : lo === -Infinity ? hi - 1 : lo + (hi - lo) * (0.25 + R() * 0.5);
+        const id = list.length; cells.reverse();
+        for (const c of cells) occ[K(c)] = id;
+        for (const rk of ray) cover[rk] = Math.max(cover[rk], o);
+        list.push({ id, cells, d, o, f, c: COLORS[Math.floor(R() * COLORS.length)] });
+        break;
+      }
+    }
+  }
+  const rayArrows = a => { const s = new Set(); for (const k of rayOf(a.cells[a.cells.length - 1], a.d) || []) if (occ[k] >= 0) s.add(occ[k]); return s; };
+  const dist = (a, b) => { const p = cubeCenter(N, a.cells[a.cells.length - 1]), q = cubeCenter(N, b.cells[b.cells.length - 1]); return Math.hypot(p[0] - q[0], p[1] - q[1], p[2] - q[2]) * N; };
+  decorate(list, R, mods, rayArrows, dist, N);
+  return { cube: true, list, base, stones, portals: [], portalTo: {}, N, M };
+}
+// Obstáculos que dependen del orden de solución (igual para el tablero plano y el cubo)
+export function decorate(list, R, mods, rayArrows, dist, N) {
   const byRank = [...list].sort((a, b) => b.o - a.o); byRank.forEach((a, r) => { a.rank = r; });
   const n = list.length, taken = new Set();
   const pickRank = (from, to, ok = () => true) => { for (let t = 0; t < 400; t++) { const r = Math.floor(from + R() * Math.max(1, to - from)); const a = byRank[Math.min(n - 1, r)]; if (a && !taken.has(a.id) && ok(a)) { taken.add(a.id); return a; } } return null; };
-  const headOf = a => a.cells[a.cells.length - 1], dist = (a, b) => { const [ax, ay] = headOf(a), [bx, by] = headOf(b); return Math.abs(ax - bx) + Math.abs(ay - by); };
-  const rayArrows = a => { const s = new Set(); const [hx, hy] = headOf(a); walk(N, base, portalTo, hx, hy, a.d, k => { if (occ[k] >= 0) s.add(occ[k]); }); return s; };
-  // 🔒 candados y 🔑 llaves: la llave sale antes que el candado (y lejos)
   for (let i = 0; i < (mods.locks || 0); i++) {
     const L = pickRank(n * 0.25, n * 0.95); if (!L) break;
     const K = pickRank(Math.max(0, L.rank * 0.3), L.rank, k => dist(k, L) > N / 3) || pickRank(0, L.rank);
     if (!K) { taken.delete(L.id); break; }
     const color = PAIR_COLORS[i % PAIR_COLORS.length]; L.lock = K.id; L.pc = color; K.key = L.id; K.pc = color;
   }
-  // 🔢 numeradas: en el orden de solución
   const nums = []; for (let i = 0; i < (mods.nums || 0); i++) { const a = pickRank(n * 0.05, n * 0.9); if (a) nums.push(a); }
   nums.sort((a, b) => a.rank - b.rank).forEach((a, i) => { a.num = i + 1; });
-  // 💣 bombas: hay que sacarlas antes de X flechas sacadas
   const slack = Math.max(8, Math.round(n * 0.06));
   for (let i = 0; i < (mods.bombs || 0); i++) { const a = pickRank(5, n * 0.45); if (a) a.bomb = a.rank + 1 + slack; }
-  // 🔗 encadenadas: B sale junto con A si su camino solo depende de flechas que salen antes que A
   for (let i = 0, tries = 0; i < (mods.chains || 0) && tries < 300; tries++) {
     const A = pickRank(n * 0.1, n * 0.85); if (!A) break;
     const raA = rayArrows(A);
@@ -135,10 +212,8 @@ export function generate(spec) {
     if (!B) { taken.delete(A.id); continue; }
     taken.add(B.id); A.chain = B.id; B.chain = A.id; i++;
   }
-  // 🧊 hielo y 🔄 giratorias (no cambian la solución)
   for (let i = 0; i < (mods.ice || 0); i++) { const a = pickRank(0, n, x => !x.chain); if (a) { a.ice = true; taken.delete(a.id); } }
   for (let i = 0; i < (mods.rot || 0); i++) { const a = pickRank(0, n); if (a) { a.rot = true; a.d0 = (a.d + 1 + Math.floor(R() * 3)) % 4; } }
-  return { list, base, portalTo, portals, stones, N };
 }
 
 /* ---------- Obstáculos y niveles ---------- */
@@ -195,7 +270,21 @@ export function levelMods(L) {
   if (boss) for (const k of known) if (extra.length < 2 && !extra.includes(k)) extra.push(k);
   return [...out, ...extra];
 }
+// 🧊 Cubos: escalera propia de 30 y, además, unos niveles de la escalera de 90 son cubos (sorpresa)
+export const CUBE_LEVELS = 30, CUBES_IN_LADDER = new Set([15, 35, 55, 75]);
+const CUBE_OK = ['stones', 'ice', 'locks', 'nums', 'bombs', 'chains']; // en el cubo no hay giratorias, portales ni niebla
+const CUBE_FROM = { stones: 4, ice: 7, locks: 11, nums: 15, bombs: 19, chains: 23 };
+const cubeSize = arrows => Math.max(4, Math.min(18, Math.ceil(Math.sqrt(arrows / 1.8)))); // ~0,3 flechas por casilla × 6 caras
+export const cubeLevelSize = L => 4 + Math.round((L - 1) * 10 / (CUBE_LEVELS - 1)); // 4×4 por cara → 14×14
+export function cubeSpec(L) {
+  const N = cubeLevelSize(L), R = rng(hash('cubo-mods-' + L)), boss = L % 10 === 0, mods = [];
+  if (L >= CUBE_FROM.stones && (R() < 0.5 || boss)) mods.push('stones');
+  const fresh = Object.entries(CUBE_FROM).find(([k, f]) => f === L && k !== 'stones')?.[0], extra = fresh ? [fresh] : [];
+  for (const k of Object.keys(CUBE_FROM).filter(k => k !== 'stones' && CUBE_FROM[k] < L).sort(() => R() - 0.5)) if (extra.length < (boss ? 3 : 2) && R() < (boss ? 0.7 : 0.3)) extra.push(k);
+  return { key: 'c' + L, cubeL: L, num: L, cube: true, boss, title: `🧊 ${boss ? '👑 ' : ''}Cubo ${L}`, n: N, minLen: 2, maxLen: N <= 5 ? 3 : 4, seed: hash('cubo-' + L), hard: L >= 6, mods: modsFor([...mods, ...extra], N, 6 * N * N * 0.3) };
+}
 export const levelSpec = L => {
+  if (CUBES_IN_LADDER.has(L)) { const n0 = levelTarget(L), N = cubeSize(n0); return { key: 'l' + L, num: L, cube: true, title: `🧊 Nivel ${L}`, n: N, minLen: 2, maxLen: 4, seed: hash('nivel-' + L), hard: true, mods: modsFor(levelMods(L).filter(k => CUBE_OK.includes(k)), N, n0) }; }
   if (L <= 5) { const N = L <= 3 ? 9 : 10; return { key: 'l' + L, num: L, title: 'Nivel ' + L, n: N, minLen: 2, maxLen: L <= 3 ? 3 : 4, seed: hash('nivel-' + L), mods: {} }; }
   const n0 = levelTarget(L), N = sizeFor(n0);
   return { key: 'l' + L, num: L, title: `${isBoss(L) ? '👑 ' : ''}Nivel ${L}`, n: N, minLen: 2, maxLen: 5, seed: hash('nivel-' + L), hard: true, boss: isBoss(L), mods: modsFor(levelMods(L), N, n0) };
@@ -214,18 +303,21 @@ const duelSpec = d => { const n0 = DUEL_SIZES[d.size]?.[0] || 250, N = sizeFor(n
 // Zona de pruebas (solo el dueño): tableros chicos con un obstáculo, todos juntos, y los modos en versión corta.
 // No guardan nada (ni récords, ni monedas, ni partida a medias) ni mandan avisos.
 const testSpec = kind => {
+  if (kind === 'cube') return { key: 'test', title: '🧪 Prueba: cubo', n: 6, minLen: 2, maxLen: 4, seed: Math.floor(Math.random() * 2 ** 31), test: kind, cube: true, mods: modsFor(['stones', 'locks', 'ice'], 6, 60) };
+  if (/^cv\d+$/.test(kind)) { const sp = cubeSpec(clamp(Number(kind.slice(2)), 1, CUBE_LEVELS)); return { ...sp, cubeL: 0, key: 'test', title: '🧪 ' + sp.title, test: kind }; }
   if (/^lv\d+$/.test(kind)) { const L = clamp(Number(kind.slice(2)), 1, LEVELS), sp = levelSpec(L); return { ...sp, key: 'test', title: '🧪 ' + sp.title, test: kind }; }
   const seed = Math.floor(Math.random() * 2 ** 31), all = kind === 'all' || kind === 'xp' || kind === 'duel', N = all ? 16 : 12, n0 = all ? 75 : 45;
   const keys = kind === 'tt' ? ['stones', 'ice'] : all ? Object.keys(MODS_INFO) : [kind];
   const title = kind === 'all' ? 'Prueba: todos' : kind === 'xp' ? 'Prueba experto' : kind === 'tt' ? 'Prueba contrarreloj' : kind === 'duel' ? 'Prueba duelo' : `Prueba: ${MODS_INFO[kind][1]}`;
   return { key: 'test', title: '🧪 ' + title, n: N, minLen: 2, maxLen: 4, seed, test: kind, hard: kind === 'xp', timed: kind === 'tt', fake: kind === 'duel', mods: modsFor(keys, N, n0) };
 };
-const boardOf = spec => (spec.board ??= generate(spec));
+const boardOf = spec => (spec.board ??= spec.cube ? generateCube(spec) : generate(spec));
 
 /* ---------- Datos ---------- */
 const progress = (id = uid()) => S.data.arrows.find(d => d.id === 'p-' + id) || {};
 const myLevel = () => progress().lv || 1; // siguiente nivel por jugar (91 = terminó los 90)
 const myInf = () => progress().inf || 1;
+const myCube = () => progress().cv || 1;
 const daily = (day = todayKey()) => S.data.arrows.find(d => d.id === 'd-' + day) || {};
 const duelDoc = () => S.data.arrows.find(d => d.id === 'duel') || null;
 const fmtMs = ms => { const s = Math.max(0, Math.round(ms / 1000)), h = Math.floor(s / 3600), m = Math.floor(s / 60) % 60; return `${h ? h + ':' + String(m).padStart(2, '0') : m}:${String(s % 60).padStart(2, '0')}`; };
@@ -253,8 +345,8 @@ function render() {
   const dayRow = (who, r) => `<div class="row"><span>${who}</span><span class="small">${r ? `${r.expert ? '💀 ' : ''}<b>${fmtMs(r.ms)}</b> · ${r.errors} ${r.errors === 1 ? 'error' : 'errores'}${r.hints ? ` · ${r.hints} 💡` : ''}` : '<span class="muted">sin terminar</span>'}</span></div>`;
   const winner = me && them ? (score(me) === score(them) ? '¡Empate! 🤝' : score(me) < score(them) ? '¡Hoy ganas tú! 🏆' : `Hoy gana ${esc(nameOf(p))} 🏆`) : '';
   const done = L > LEVELS, cur = done ? infSpec(myInf()) : levelSpec(L), nm = done ? null : newModAt(L);
-  const lvBtn = n => n > L ? `<button disabled aria-label="Nivel ${n} bloqueado"><b>${n}</b><small>${isBoss(n) ? '👑' : '🔒'}</small></button>`
-    : `<button class="${n === L ? 'cur' : ''}${isBoss(n) ? ' boss' : ''}" onclick="playArrows('l${n}')" aria-label="Nivel ${n}"><b>${lx[n] ? '💀' : ''}${n}</b><small>${st[n] ? stars(st[n]) : n === L ? 'nuevo' : isBoss(n) ? '👑' : ''}</small></button>`;
+  const lvBtn = n => n > L ? `<button disabled aria-label="Nivel ${n} bloqueado"><b>${n}</b><small>${isBoss(n) ? '👑' : CUBES_IN_LADDER.has(n) ? '🧊' : '🔒'}</small></button>`
+    : `<button class="${n === L ? 'cur' : ''}${isBoss(n) ? ' boss' : ''}" onclick="playArrows('l${n}')" aria-label="Nivel ${n}"><b>${lx[n] ? '💀' : ''}${n}</b><small>${st[n] ? stars(st[n]) : n === L ? 'nuevo' : isBoss(n) ? '👑' : CUBES_IN_LADDER.has(n) ? '🧊' : ''}</small></button>`;
   $('s-arrows').innerHTML = `${backBar('Flechas', 's-more', `<span class="pill">⭐ ${total}</span>`)}
     ${surprise ? `<div class="glass small" style="border-color:rgba(255,181,71,.5)">🔒 <b>Sorpresa:</b> solo tú lo ves. Cuando quieras regalarlo: Administración → Pruebas → 🎁 Sorpresa.</div>` : ''}
     ${testCard()}
@@ -274,9 +366,19 @@ function render() {
     <div class="glass stack"><div class="row"><span class="label">⏱️ Contrarreloj</span><button class="btn small" onclick="playArrows('tt')">Jugar</button></div>
       <p class="tiny muted" style="margin:0">Saca todas las flechas que puedas en 5 minutos. Cada error resta 10 segundos.</p>
       <div class="row"><span class="small">Récord: tú <b>${pr.tt || 0}</b>${p ? ` · ${esc(nameOf(p))} <b>${pp.tt || 0}</b>` : ''}</span></div></div>
+    ${cubeCard()}
     <div class="glass stack"><span class="label">🗺️ Niveles</span><div class="ar-levels">${Array.from({ length: LEVELS }, (_, i) => lvBtn(i + 1)).join('')}</div></div>
     <div class="glass stack"><span class="label">📖 Obstáculos</span>${Object.entries(MODS_INFO).map(([k, [e, t, txt]]) => `<p class="small" style="margin:0">${e} <b>${t}</b> <span class="tiny muted">(desde el nivel ${MOD_FROM[k]})</span><br><span class="muted">${txt}</span></p>`).join('')}</div>
     <p class="tiny muted center" style="margin:0 8px">Toca una flecha: avanza hacia donde apunta y sale si nada la bloquea. Si choca pierdes una vida ❤️; cada ${LIFE_EVERY} flechas recuperas una. Con dos dedos acercas o alejas el tablero. Si sales, la partida queda guardada.</p>`;
+}
+function cubeCard() {
+  const V = myCube(), cs = progress().cs || {}, done = V > CUBE_LEVELS, cur = cubeSpec(Math.min(V, CUBE_LEVELS));
+  const btn = n => n > V ? `<button disabled aria-label="Cubo ${n} bloqueado"><b>${n}</b><small>${n % 10 === 0 ? '👑' : '🔒'}</small></button>`
+    : `<button class="${n === V ? 'cur' : ''}${n % 10 === 0 ? ' boss' : ''}" onclick="playArrows('c${n}')" aria-label="Cubo ${n}"><b>${n}</b><small>${cs[n] ? stars(cs[n]) : n === V ? 'nuevo' : n % 10 === 0 ? '👑' : ''}</small></button>`;
+  return `<div class="glass stack ar-cubecard"><div class="row"><span class="label">🧊 Cubo · ${done ? `¡los ${CUBE_LEVELS} completos! 🏆` : `nivel ${V} de ${CUBE_LEVELS}`}</span>
+      ${done ? '' : `<button class="btn small" onclick="playArrows('c${V}')">${loadSave(cur.key) ? 'Continuar' : 'Jugar'}</button>`}</div>
+    <p class="tiny muted" style="margin:0">Flechas en las 6 caras de un cubo: arrastra para girarlo. Cada flecha sale por la arista de su cara; algunas tienen el cuerpo doblado sobre otra cara y la estorban.${done ? '' : ` Este: ${cur.n}×${cur.n} por cara${Object.keys(cur.mods).length ? ' · ' + Object.keys(cur.mods).map(k => MODS_INFO[k][0]).join(' ') : ''}.`}</p>
+    <div class="ar-levels">${Array.from({ length: CUBE_LEVELS }, (_, i) => btn(i + 1)).join('')}</div></div>`;
 }
 function testCard() {
   if (!isOwner()) return '';
@@ -284,10 +386,11 @@ function testCard() {
   return `<details class="glass stack ar-test"><summary class="label">🧪 Zona de pruebas · solo tú</summary>
     <p class="tiny muted" style="margin:6px 0">Tableros chicos para ver cada cosa. No guardan récords, monedas ni partida, y no mandan avisos.</p>
     <div class="grid3">${Object.entries(MODS_INFO).map(([k, [e, t]]) => b(k, `${e} ${t}`)).join('')}</div>
-    <div class="add-row" style="margin-top:8px"><input id="arTestLv" type="number" min="1" max="${LEVELS}" inputmode="numeric" placeholder="Ir al nivel (1-${LEVELS})" aria-label="Nivel a probar" onkeydown="if(event.key==='Enter')arrowsTestLevel()"><button class="btn small" onclick="arrowsTestLevel()">Probar</button></div>
-    <p class="tiny muted" style="margin:0">Así se ve el nivel tal cual, sin desbloquearlo ni guardarlo.</p>
-    <div class="grid2" style="margin-top:8px">${b('all', '🎲 Todos juntos')}${b('xp', '💀 Experto')}${b('tt', '⏱️ Contrarreloj 1 min')}${b('duel', '⚔️ Duelo vs 🤖')}</div></details>`;
+    <div class="add-row" style="margin-top:8px"><input id="arTestLv" type="number" min="1" max="${LEVELS}" inputmode="numeric" placeholder="Ir al nivel (1-${LEVELS})" aria-label="Nivel a probar" onkeydown="if(event.key==='Enter')arrowsTestLevel()"><button class="btn small" onclick="arrowsTestLevel()">Nivel</button><button class="btn small" onclick="arrowsTestCube()">🧊 Cubo</button></div>
+    <p class="tiny muted" style="margin:0">Escribe un número y elige: nivel (1-${LEVELS}) o cubo (1-${CUBE_LEVELS}). Se ve tal cual, sin desbloquearlo ni guardarlo.</p>
+    <div class="grid2" style="margin-top:8px">${b('all', '🎲 Todos juntos')}${b('xp', '💀 Experto')}${b('tt', '⏱️ Contrarreloj 1 min')}${b('duel', '⚔️ Duelo vs 🤖')}${b('cube', '🧊 Cubo chico')}</div></details>`;
 }
+function arrowsTestCube() { const n = Number($('arTestLv')?.value); if (!(n >= 1 && n <= CUBE_LEVELS)) return toast(`Escribe un cubo del 1 al ${CUBE_LEVELS}`); playArrows('t:cv' + n); }
 function arrowsTestLevel() { const n = Number($('arTestLv')?.value); if (!(n >= 1 && n <= LEVELS)) return toast(`Escribe un nivel del 1 al ${LEVELS}`); playArrows('t:lv' + n); }
 function arrowsExpert(v) { try { localStorage.setItem('futari-ar-expert', v ? '1' : '0'); } catch {} render(); }
 
@@ -384,6 +487,7 @@ function specOf(what) {
   if (what === 'tt') return timedSpec(Math.floor(Math.random() * 2 ** 31));
   if (what === 'duel') { const d = duelDoc(); return d ? duelSpec(d) : null; }
   if (String(what).startsWith('t:')) return isOwner() ? testSpec(what.slice(2)) : null;
+  const c = /^c(\d+)$/.exec(String(what)); if (c) return cubeSpec(clamp(Number(c[1]), 1, CUBE_LEVELS));
   const m = /^([li])(\d+)$/.exec(String(what)); if (!m) return levelSpec(Math.min(LEVELS, myLevel()));
   return m[1] === 'i' ? infSpec(Number(m[2])) : levelSpec(clamp(Number(m[2]), 1, LEVELS));
 }
@@ -404,10 +508,13 @@ function playArrows(what) {
   clearInterval(timer); timer = setInterval(tickClock, 500);
   if (spec.duel) { duelPush(true); duelWatch(); }
 }
+// Índice de una casilla [x, y, cara?] (en el plano la cara es 0)
+const cix = (N, c) => (c[2] || 0) * N * N + c[1] * N + c[0];
+const ix = c => cix(G.N, c);
 function newGame(spec, what) {
-  const board = boardOf(spec), N = board.N, occ = new Int32Array(N * N).fill(-1);
-  for (const a of board.list) for (const [x, y] of a.cells) occ[y * N + x] = a.id;
-  const xp = spec.test === 'xp' || ((spec.hard || spec.day) && (!spec.test || /^lv/.test(spec.test)) && expertOn());
+  const board = boardOf(spec), N = board.N, occ = new Int32Array((board.cube ? 6 : 1) * N * N).fill(-1);
+  for (const a of board.list) for (const c of a.cells) occ[cix(N, c)] = a.id;
+  const xp = spec.test === 'xp' || ((spec.hard || spec.day) && (!spec.test || /^(lv|cv)/.test(spec.test)) && expertOn());
   const g = { spec, what, board, N, occ, gone: new Set(), lives: 3, errors: 0, hints: 0, paid: 0, elapsed: 0, t0: Date.now(), over: false,
     cracked: new Set(), boom: new Set(), dir: {}, next: 1, expert: xp, noLives: !!(spec.timed || spec.duel || spec.fake), vis: null };
   for (const a of board.list) if (a.rot) g.dir[a.id] = a.d0;
@@ -418,7 +525,7 @@ function newGame(spec, what) {
 }
 function restore(sv) {
   const { board, occ, N } = G;
-  for (const id of sv.removed) { const a = board.list[id]; if (!a) continue; G.gone.add(id); for (const [x, y] of a.cells) occ[y * N + x] = -1; if (a.num) G.next++; }
+  for (const id of sv.removed) { const a = board.list[id]; if (!a) continue; G.gone.add(id); for (const c of a.cells) occ[cix(N, c)] = -1; if (a.num) G.next++; }
   Object.assign(G, { lives: sv.lives, errors: sv.errors, hints: sv.hints || 0, paid: sv.paid || 0, elapsed: G.spec.duel ? 0 : sv.elapsed || 0 });
   (sv.cracked || []).forEach(id => G.cracked.add(id)); (sv.boom || []).forEach(id => G.boom.add(id)); Object.assign(G.dir, sv.dir || {});
 }
@@ -466,16 +573,17 @@ function badgesOf(a) {
   if (a.num) out.push(['nm', a.num, '#fff']);
   if (a.bomb && !G.boom.has(a.id)) out.push(['bm', Math.max(0, a.bomb - G.gone.size), '#3a0b12']);
   if (a.rot) out.push(['rt', '↻', '#2b2340']);
+  if (a.chain != null && G.board.cube) out.push(['cn', '🔗', '#2b2340']);
   return out;
 }
 function badgesSVG(a) {
-  const [mx, my] = ctr(midCell(a)), r = C * 0.27;
+  const [mx, my] = ctr(G.board.cube ? headCell(a) : midCell(a)), r = C * 0.27;
   return badgesOf(a).map(([k, txt, fill], i) => `<g class="bd ${k}" transform="translate(${mx + C * 0.3 + i * r * 1.9} ${my - C * 0.3})"><circle r="${r}" fill="${fill}"/>
     <text class="${k}-t" font-size="${k === 'nm' || k === 'bm' ? C * 0.34 : C * 0.3}" text-anchor="middle" dominant-baseline="central"${k === 'nm' ? ' fill="#1a1024"' : k === 'bm' || k === 'rt' ? ' fill="#fff"' : ''}>${txt}</text></g>`).join('');
 }
 function arrowSVG(a) {
   const ice = a.ice && !G.cracked.has(a.id);
-  return `<g id="ag${a.id}" class="${ice ? 'ice' : ''}" style="color:${a.c}">${ice ? `<path class="ib" d="${ptsD(bodyPts(a))}" stroke-width="${C * 0.66}"/>` : ''}<path class="ab" d="${ptsD(bodyPts(a))}" stroke-width="${C * 0.3}"/><path class="ah" d="${headD(a)}"/>${badgesSVG(a)}</g>`;
+  return `<g id="ag${a.id}" data-a="${a.id}" class="${ice ? 'ice' : ''}" style="color:${a.c}">${ice ? `<path class="ib" d="${ptsD(bodyPts(a))}" stroke-width="${C * 0.66}"/>` : ''}<path class="ab" d="${ptsD(bodyPts(a))}" stroke-width="${C * 0.3}"/><path class="ah" d="${headD(a)}"/>${badgesSVG(a)}</g>`;
 }
 function chainSVG(a) {
   if (a.chain == null || a.chain < a.id || G.gone.has(a.id)) return '';
@@ -497,11 +605,11 @@ function paintGame() {
       <div class="ar-lives" id="arLives" aria-label="Vidas"></div></div>
     <div class="ar-prog"><i id="arProg"></i></div>
     ${sp.duel || sp.fake ? `<div class="ar-opp" id="arOpp"><span>${sp.fake ? '🤖 Rival' : esc(nameOf(partnerUid()))}</span><div><i></i></div><span class="n">0</span></div>` : ''}
-    <div class="ar-vp" id="arVp"><div class="ar-world" id="arWorld" style="width:${W}px;height:${W}px;--c:${C}px">
-      <svg width="${W}" height="${W}" viewBox="0 0 ${W} ${W}" id="arSvg">${boardSVG()}</svg></div></div>
+    ${G.board.cube ? cubeHTML() : `<div class="ar-vp" id="arVp"><div class="ar-world" id="arWorld" style="width:${W}px;height:${W}px;--c:${C}px">
+      <svg width="${W}" height="${W}" viewBox="0 0 ${W} ${W}" id="arSvg">${boardSVG()}</svg></div></div>`}
     <div class="ar-bottom">${hint ? `<button class="btn ghost small" onclick="arrowHint()">💡 Pista${sp.day ? ' (+10 s)' : ''}</button>` : ''}<button class="btn ghost small" onclick="arrowFit()">⤢ Ver todo</button>
       ${sp.fake ? '' : sp.duel ? '<button class="btn ghost small" onclick="duelGiveUp()">🏳️ Rendirme</button>' : sp.timed ? '' : '<button class="btn ghost small" onclick="restartArrows()">↺ Reiniciar</button>'}</div>`;
-  updateFog(); updateHud(); tickClock(); setupCamera();
+  updateFog(); updateHud(); tickClock(); G.board.cube ? setupCube() : setupCamera();
 }
 function updateHud() {
   const n = G.board.list.length, left = n - G.gone.size;
@@ -531,6 +639,111 @@ function updateFog() {
   for (const a of G.board.list) if (!G.gone.has(a.id)) $('ag' + a.id)?.classList.toggle('fog', fogged(a));
 }
 const fogged = a => !!G.vis && !a.cells.some(([x, y]) => G.vis[y * G.N + x]);
+
+/* ---------- Cubo 3D: una SVG por cara puesta con matrix3d; se gira arrastrando ---------- */
+const add3 = (a, b, s = 1) => [a[0] + b[0] * s, a[1] + b[1] * s, a[2] + b[2] * s];
+const dot3 = (a, b) => a[0] * b[0] + a[1] * b[1] + a[2] * b[2];
+// Trazos de una flecha por cara (en px de cada cara); al doblar una arista el trazo sigue en la cara vecina
+function cubePieces(a) {
+  const N = G.N, W = N * C, out = {}, cells = a.cells;
+  const loc = (f, p3) => { const F = FACES[f], q = add3(p3, F.o, -1); return [dot3(q, F.u) * W, dot3(q, F.v) * W]; };
+  let curF = cells[0][2], cur = [ctr(cells[0])];
+  for (let i = 1; i < cells.length; i++) {
+    const c = cells[i], pc = cells[i - 1];
+    if (c[2] === pc[2]) { cur.push(ctr(c)); continue; }
+    const e3 = add3(cubeCenter(N, pc), FACES[c[2]].n, 0.5 / N);
+    cur.push(loc(pc[2], e3)); (out[curF] ||= []).push(cur); curF = c[2]; cur = [loc(c[2], e3), ctr(c)];
+  }
+  const [dx, dy] = DIRS[a.d], h = cur[cur.length - 1]; cur[cur.length - 1] = [h[0] + dx * C * 0.08, h[1] + dy * C * 0.08];
+  (out[curF] ||= []).push(cur);
+  return out;
+}
+const multiD = lines => lines.map(ptsD).join('');
+function cubeArrowSVG(a) {
+  const ice = a.ice && !G.cracked.has(a.id), hf = headCell(a)[2], parts = cubePieces(a), out = {};
+  for (const [f, lines] of Object.entries(parts)) {
+    const d = multiD(lines), head = Number(f) === hf;
+    out[f] = `<g ${head ? `id="ag${a.id}"` : ''} data-a="${a.id}" class="${ice ? 'ice' : ''}" style="color:${a.c}">${ice ? `<path class="ib" d="${d}" stroke-width="${C * 0.66}"/>` : ''}<path class="ht" d="${d}" stroke-width="${C * 0.95}"/><path class="ab" d="${d}" stroke-width="${C * 0.3}"/>${head ? `<path class="ah" d="${headD(a)}"/>${badgesSVG(a)}` : ''}</g>`;
+  }
+  return out;
+}
+function cubeHTML() {
+  const N = G.N, M = N * N, W = N * C, faces = Array.from({ length: 6 }, () => '');
+  for (const k of G.board.stones) { const f = Math.floor(k / M), x = (k % M) % N * C, y = Math.floor((k % M) / N) * C;
+    faces[f] += `<rect class="stone" x="${x + C * 0.1}" y="${y + C * 0.1}" width="${C * 0.8}" height="${C * 0.8}" rx="${C * 0.26}"/><circle class="stone-hl" cx="${x + C * 0.36}" cy="${y + C * 0.34}" r="${C * 0.1}"/>`; }
+  for (const a of G.board.list) if (!G.gone.has(a.id)) for (const [f, html] of Object.entries(cubeArrowSVG(a))) faces[f] += html;
+  const css = v => [v[0], -v[1], v[2]];
+  return `<div class="ar-vp ar-vp3" id="arVp"><div class="ar-cube" id="arCube">${FACES.map((F, f) => {
+    const u = css(F.u), v = css(F.v), n = css(F.n), t = [(F.o[0] - 0.5) * W, -(F.o[1] - 0.5) * W, (F.o[2] - 0.5) * W];
+    return `<div class="ar-face" id="arF${f}" style="width:${W}px;height:${W}px;transform:matrix3d(${[...u, 0, ...v, 0, ...n, 0, ...t, 1].map(x => Math.round(x * 1000) / 1000).join(',')})"><svg width="${W}" height="${W}" viewBox="0 0 ${W} ${W}">${faces[f]}</svg></div>`;
+  }).join('')}</div></div>`;
+}
+// Ángulos para ver de frente cada cara (frente, derecha, atrás, izquierda, arriba, abajo)
+const FACE_VIEW = [[-12, -12], [-12, -102], [-12, 168], [-12, 78], [-80, -12], [80, -12]];
+function setupCube() {
+  const vp = $('arVp'), cube = $('arCube'), W = G.N * C;
+  const rect = () => vp.getBoundingClientRect();
+  const fitK = () => { const r = rect(); return Math.min(r.width, r.height) / (W * 1.55); };
+  const cam = G.cam = { k: fitK(), rx: -24, ry: -34 };
+  const kMax = () => Math.max(fitK() * 3, 46 / C), kMin = () => fitK() * 0.8;
+  const rad = d => d * Math.PI / 180;
+  const apply = () => {
+    cam.rx = Math.max(-88, Math.min(88, cam.rx));
+    cube.style.transform = `scale(${cam.k}) rotateX(${cam.rx}deg) rotateY(${cam.ry}deg)`;
+    // Las caras de atrás no se ven ni se tocan
+    FACES.forEach((F, f) => {
+      const x = F.n[0], y = -F.n[1], z = F.n[2], ry = rad(cam.ry), rx = rad(cam.rx);
+      const z1 = -x * Math.sin(ry) + z * Math.cos(ry), y2 = y, z2 = y2 * Math.sin(rx) + z1 * Math.cos(rx);
+      const el = $('arF' + f); if (el) el.classList.toggle('back', z2 < 0.03);
+    });
+  };
+  G.fit = () => { cam.k = fitK(); apply(); };
+  G.focusFace = f => { [cam.rx, cam.ry] = FACE_VIEW[f]; cam.k = Math.max(cam.k, fitK() * 1.2); cube.style.transition = 'transform .45s ease'; apply(); setTimeout(() => { cube.style.transition = ''; }, 480); };
+  apply();
+  const pts = new Map(); let start = null, pinch = null, moved = false;
+  vp.onpointerdown = e => {
+    vp.setPointerCapture?.(e.pointerId); pts.set(e.pointerId, { x: e.clientX, y: e.clientY });
+    if (pts.size === 1) { start = { x: e.clientX, y: e.clientY, rx: cam.rx, ry: cam.ry, t: Date.now() }; moved = false; }
+    if (pts.size === 2) { const [a, b] = [...pts.values()]; pinch = { d: Math.hypot(a.x - b.x, a.y - b.y), k: cam.k }; moved = true; }
+  };
+  vp.onpointermove = e => {
+    if (!pts.has(e.pointerId)) return;
+    pts.set(e.pointerId, { x: e.clientX, y: e.clientY });
+    if (pts.size >= 2 && pinch) { const [a, b] = [...pts.values()]; cam.k = Math.min(kMax(), Math.max(kMin(), pinch.k * Math.hypot(a.x - b.x, a.y - b.y) / pinch.d)); apply(); }
+    else if (start && pts.size === 1) {
+      const dx = e.clientX - start.x, dy = e.clientY - start.y;
+      if (!moved && Math.hypot(dx, dy) > 8) moved = true;
+      if (moved) { cam.ry = start.ry + dx * 0.4; cam.rx = start.rx - dy * 0.4; apply(); }
+    }
+  };
+  const up = e => {
+    if (!pts.has(e.pointerId)) return;
+    pts.delete(e.pointerId);
+    if (pts.size < 2) pinch = null;
+    if (pts.size === 1) { const [p] = [...pts.values()]; start = { x: p.x, y: p.y, rx: cam.rx, ry: cam.ry, t: Date.now() }; return; }
+    if (!pts.size && start && !moved && Date.now() - start.t < 500) cubeTap(e.clientX, e.clientY);
+    start = null;
+  };
+  vp.onpointerup = up; vp.onpointercancel = e => { moved = true; up(e); };
+  vp.oncontextmenu = e => e.preventDefault();
+  vp.onwheel = e => { e.preventDefault(); cam.k = Math.min(kMax(), Math.max(kMin(), cam.k * (e.deltaY < 0 ? 1.12 : 1 / 1.12))); apply(); };
+}
+// Toque en el cubo: la flecha bajo el dedo (o muy cerca)
+function cubeTap(x, y) {
+  if (!G || G.over) return;
+  const at = (px, py) => document.elementsFromPoint(px, py).find(el => el.closest?.('.ar-face:not(.back) [data-a]'))?.closest('[data-a]');
+  let el = at(x, y);
+  for (const [ox, oy] of [[8, 0], [-8, 0], [0, 8], [0, -8], [12, 12], [-12, -12], [12, -12], [-12, 12]]) { if (el) break; el = at(x + ox, y + oy); }
+  if (el) tapArrow(Number(el.dataset.a));
+}
+function cubeMove(a, g, dist, back) {
+  const [dx, dy] = DIRS[curD(a)], all = pieces(a.id), others = all.filter(e => e !== g);
+  if (back) { g.animate([{ transform: 'translate(0,0)' }, { transform: `translate(${dx * dist}px,${dy * dist}px)`, offset: 0.45 }, { transform: 'translate(0,0)' }], { duration: 300 + dist / C * 40, easing: 'ease-in-out' }); return; }
+  g.querySelectorAll('.bd, .ib').forEach(e => e.style.opacity = '0');
+  others.forEach(e => e.animate([{ opacity: 1 }, { opacity: 0 }], { duration: 220, fill: 'forwards' }));
+  g.animate([{ transform: 'translate(0,0)', opacity: 1 }, { transform: `translate(${dx * dist}px,${dy * dist}px)`, opacity: 0 }], { duration: Math.min(700, 220 + dist / C * 30), easing: 'cubic-bezier(.5,0,.9,.6)', fill: 'forwards' })
+    .finished.then(() => all.forEach(e => e.remove())).catch(() => {});
+}
 
 /* ---------- Cámara: arrastrar, pellizcar, tocar y mantener ---------- */
 function setupCamera() {
@@ -618,10 +831,11 @@ function rotate(a) {
 function traceG(a, ignore = -1, flash = false) {
   const N = G.N, { base, portalTo } = G.board, [dx, dy] = DIRS[curD(a)];
   let [x, y] = headCell(a), steps = 0, straight = true, hops = 0;
+  const off = (headCell(a)[2] || 0) * N * N; // en el cubo, el camino es dentro de la cara de la punta
   for (;;) {
     x += dx; y += dy;
     if (x < 0 || y < 0 || x >= N || y >= N) return { free: true, steps, portal: hops > 0 };
-    const k = y * N + x, b = base[k];
+    const k = off + y * N + x, b = base[k];
     if (b === STONE) return { free: false, steps, stone: k, straight };
     if (b === PORTAL) { if (++hops > 3) return { free: false, steps, straight: false }; if (straight) { straight = false; if (flash) { $('pt' + k)?.classList.add('flash'); setTimeout(() => $('pt' + k)?.classList.remove('flash'), 500); } } const t = portalTo[k]; x = t % N; y = Math.floor(t / N); continue; }
     const o = G.occ[k];
@@ -632,7 +846,7 @@ function traceG(a, ignore = -1, flash = false) {
 function tapArrow(id) {
   const a = G.board.list[id]; if (!a || G.gone.has(id) || G.over) return;
   if (fogged(a)) return toast('🌫️ Está en la niebla');
-  const g = $('ag' + id); g?.classList.remove('hint'); navigator.vibrate?.(8);
+  const g = $('ag' + id); pieces(id).forEach(e => e.classList.remove('hint')); navigator.vibrate?.(8);
   if (a.lock != null && !G.gone.has(a.lock)) { nope(g); toast('🔒 Primero saca la flecha con la llave 🔑 de ese color'); return mistake(); }
   if (a.num && a.num !== G.next) { nope(g); toast(`🔢 Primero la ${G.next}`); return mistake(); }
   const p = a.chain != null && !G.gone.has(a.chain) ? G.board.list[a.chain] : null;
@@ -649,6 +863,7 @@ function tapArrow(id) {
 }
 function crack(a) {
   G.cracked.add(a.id); const g = $('ag' + a.id); if (!g) return;
+  pieces(a.id).forEach(e => { if (e !== g) { e.classList.remove('ice'); e.querySelector('.ib')?.remove(); } });
   g.classList.remove('ice'); g.querySelector('.ib')?.animate([{ opacity: 1, strokeWidth: C * 0.66 }, { opacity: 0, strokeWidth: C * 0.9 }], { duration: 300 }).finished.then(() => g.querySelector('.ib')?.remove());
   navigator.vibrate?.(15);
 }
@@ -656,7 +871,7 @@ function nope(g) { g?.animate([{ transform: 'translateX(0)' }, { transform: `tra
 function bump(a, g, tr) {
   const dist = tr.straight === false ? tr.steps * C + C * 0.5 : tr.steps * C + C * 0.3;
   slither(a, g, dist, true);
-  if (tr.blocker != null) setTimeout(() => { const b = $('ag' + tr.blocker); b?.classList.add('hit'); setTimeout(() => b?.classList.remove('hit'), 450); }, 120 + tr.steps * 20);
+  if (tr.blocker != null) setTimeout(() => { const b = pieces(tr.blocker); b.forEach(e => e.classList.add('hit')); setTimeout(() => b.forEach(e => e.classList.remove('hit')), 450); }, 120 + tr.steps * 20);
   if (tr.stone != null) toast('🪨 Hay una piedra en el camino');
 }
 // Un error: quita una vida (o suma tiempo en contrarreloj; en duelo cuenta 5 s)
@@ -668,7 +883,7 @@ function mistake() {
   if (!G.noLives && G.lives <= 0) setTimeout(outOfLives, 450);
 }
 function removeArrow(a, g, tr) {
-  G.gone.add(a.id); for (const [cx, cy] of a.cells) G.occ[cy * G.N + cx] = -1;
+  G.gone.add(a.id); for (const c of a.cells) G.occ[ix(c)] = -1;
   if (a.num) G.next++;
   $('ch' + Math.min(a.id, a.chain ?? a.id))?.remove();
   slither(a, g, (tr.steps + a.cells.length + (tr.portal ? 1 : 2)) * C, false, tr.portal);
@@ -677,7 +892,7 @@ function afterRemoval(removed) {
   const N = G.N;
   // 🔄 Giratorias: giran las que estaban pegadas a lo que salió
   const near = new Set();
-  for (const a of removed) for (const [x, y] of a.cells) for (const [dx, dy] of DIRS) {
+  if (!G.board.cube) for (const a of removed) for (const [x, y] of a.cells) for (const [dx, dy] of DIRS) {
     const nx = x + dx, ny = y + dy; if (nx < 0 || ny < 0 || nx >= N || ny >= N) continue;
     const o = G.occ[ny * N + nx]; if (o >= 0 && G.board.list[o].rot) near.add(o);
   }
@@ -692,9 +907,11 @@ function afterRemoval(removed) {
   updateFog(); updateHud(); save(); if (G.spec.duel) duelPush();
   if (G.gone.size === G.board.list.length) setTimeout(G.timed ? nextTimedBoard : win, 450);
 }
+const pieces = id => view ? [...view.querySelectorAll(`[data-a="${id}"]`)] : [];
 // Avanza la flecha por su propio trazo (como serpiente) y luego derecho; si choca, regresa
 function slither(a, g, dist, back, portal) {
   if (!g) return;
+  if (G.board.cube) return cubeMove(a, g, dist, back);
   const body = g.querySelector('.ab'), head = g.querySelector('.ah'), [dx, dy] = DIRS[curD(a)];
   g.querySelectorAll('.bd, .ib').forEach(e => e.style.opacity = back ? '' : '0');
   const pts = bodyPts(a), last = pts[pts.length - 1], far = [last[0] + dx * (dist + C), last[1] + dy * (dist + C)];
@@ -734,9 +951,10 @@ function arrowHint() {
     free = [r]; msg = '🔄 Mantenla presionada para girarla';
   }
   const a = free[Math.floor(Math.random() * free.length)];
-  document.querySelectorAll('#arSvg .hint').forEach(e => e.classList.remove('hint'));
-  $('ag' + a.id)?.classList.add('hint'); G.hints++; save(); if (msg) toast(msg);
-  const [hx, hy] = ctr(headCell(a)); if (G.N > 10) G.focus(hx, hy);
+  view.querySelectorAll('.hint').forEach(e => e.classList.remove('hint'));
+  pieces(a.id).forEach(e => e.classList.add('hint')); G.hints++; save(); if (msg) toast(msg);
+  if (G.board.cube) G.focusFace(headCell(a)[2]);
+  else { const [hx, hy] = ctr(headCell(a)); if (G.N > 10) G.focus(hx, hy); }
 }
 // Explicación de los obstáculos nuevos (una vez por teléfono) y leyenda con «?»
 function introMods() {
@@ -807,7 +1025,7 @@ function win() {
   if (sp.test) {
     const vs = sp.fake ? `<br>${G.fake.ms && G.fake.ms < ms ? '😅 El rival 🤖 terminó primero' : '🏆 ¡Le ganaste al rival 🤖!'}` : '';
     return overlay(`<div style="font-size:46px">🧪</div><h2>¡Prueba lista!</h2><p style="margin:0" class="center">${n} flechas en ${fmtMs(ms)} · ${errTxt}${vs}<br><span class="small muted">No se guardó nada</span></p>
-      <div class="grid2"><button class="btn ghost" onclick="closeArrows()">Salir</button><button class="btn" onclick="playArrows('t:${sp.test}')">${/^lv/.test(sp.test) ? 'Otra vez' : 'Otro tablero'}</button></div>`);
+      <div class="grid2"><button class="btn ghost" onclick="closeArrows()">Salir</button><button class="btn" onclick="playArrows('t:${sp.test}')">${/^(lv|cv)/.test(sp.test) ? 'Otra vez' : 'Otro tablero'}</button></div>`);
   }
   markActive();
   if (sp.duel) {
@@ -833,7 +1051,14 @@ function win() {
       body: them ? (score(r) < score(them) ? 'Te ganó hoy 😏' : 'Le ganaste hoy 🏆') : `${n} flechas, ${errTxt}. ¿Le ganas? El tablero es el mismo para los dos`, url: './?open=arrows', tag: 'arrows-' + day });
   } else {
     const pr = progress(), num = sp.num;
-    if (sp.inf) {
+    if (sp.cubeL) {
+      const had = pr.cs?.[num] || 0, coinsWon = num <= 5 ? 5 : sp.boss ? 20 : 10;
+      b.set(ref('arrows', 'p-' + uid()), { cv: Math.max(pr.cv || 1, num + 1), cs: { [num]: Math.max(had, s) } }, { merge: true });
+      if (!had && pt?.hatchedAt) b.update(ref('pet', 'main'), { bonus: increment(coinsWon) });
+      msg = `<span class="ar-stars">${stars(s)}</span><br>${n} flechas en ${fmtMs(ms)} · ${errTxt}${!had && pt?.hatchedAt ? ` · +${coinsWon} 🪙` : ''}${num === CUBE_LEVELS ? `<br><b>🏆 ¡Completaste los ${CUBE_LEVELS} cubos!</b>` : ''}`;
+      next = num < CUBE_LEVELS ? `<button class="btn" onclick="playArrows('c${num + 1}')">🧊 Cubo ${num + 1} →</button>` : '';
+      if (!had && (sp.boss || num === CUBE_LEVELS)) notify('arrows', { title: `🧊 ${meForPartner()} ${num === CUBE_LEVELS ? `completó los ${CUBE_LEVELS} cubos de Flechas 🏆` : `venció al cubo jefe ${num} 👑`}`, body: `${n} flechas en ${fmtMs(ms)} · ${errTxt}`, url: './?open=arrows', tag: 'arrows-c' + num });
+    } else if (sp.inf) {
       b.set(ref('arrows', 'p-' + uid()), { inf: Math.max(pr.inf || 1, num + 1) }, { merge: true });
       if (pt?.hatchedAt) b.update(ref('pet', 'main'), { bonus: increment(10) });
       msg = `<span class="ar-stars">${stars(s)}</span><br>${n} flechas en ${fmtMs(ms)} · ${errTxt}${pt?.hatchedAt ? ' · +10 🪙' : ''}`;
@@ -922,4 +1147,4 @@ async function giftRewrap() {
 on('arrows profiles', () => { if ($('s-arrows').classList.contains('active') && !view) render(); });
 on('arrows', duelWatch);
 onShow('s-arrows', render);
-expose({ playArrows, arrowHint, arrowFit, arrowsContinue, restartArrows, closeArrows, arrowsExpert, arrowsTestLevel, arrowsLegend, duelInvite, duelAccept, duelDecline, duelCancel, duelEnter, duelGiveUp, unwrapGift, giftGive, giftSave, giftHide, giftRewrap });
+expose({ playArrows, arrowHint, arrowFit, arrowsContinue, restartArrows, closeArrows, arrowsExpert, arrowsTestLevel, arrowsTestCube, arrowsLegend, duelInvite, duelAccept, duelDecline, duelCancel, duelEnter, duelGiveUp, unwrapGift, giftGive, giftSave, giftHide, giftRewrap });

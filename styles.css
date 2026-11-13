@@ -856,3 +856,25 @@ body:not([data-theme="light"]) .map-box .leaflet-tile-pane { filter: invert(1) h
 .ar-hero.boss { border-color: rgba(255,181,71,.6); background: linear-gradient(135deg, rgba(255,181,71,.16), var(--glass)); }
 .ar-bar { width: 100%; height: 6px; border-radius: 9px; background: var(--soft); overflow: hidden; }
 .ar-bar i { display: block; height: 100%; background: var(--grad); }
+/* Flechas: cubo 3D */
+.ar-vp3 { perspective: 1600px; display: grid; place-items: center; }
+.ar-cube { position: relative; width: 0; height: 0; transform-style: preserve-3d; will-change: transform; }
+.ar-face { position: absolute; left: 0; top: 0; transform-origin: 0 0; border-radius: 6px; overflow: visible;
+  background: color-mix(in srgb, var(--panel) 92%, #000); box-shadow: inset 0 0 0 3px var(--line);
+  background-image: radial-gradient(circle, var(--line) 2.2px, transparent 2.8px); background-size: 40px 40px; }
+.ar-face.back { visibility: hidden; pointer-events: none; }
+.ar-face svg { display: block; overflow: visible; }
+.ar-face .ab { fill: none; stroke: currentColor; stroke-linecap: round; stroke-linejoin: round; }
+.ar-face .ah { fill: currentColor; }
+.ar-face .ht { fill: none; stroke: transparent; stroke-linecap: round; pointer-events: stroke; }
+.ar-face .ib { fill: none; stroke: #BFEFFF; stroke-opacity: .55; stroke-linecap: round; stroke-linejoin: round; }
+.ar-face g.ice .ah { stroke: #BFEFFF; stroke-width: 3; }
+.ar-face .stone { fill: #5A5268; stroke: #3B3446; stroke-width: 2; }
+.ar-face .stone-hl { fill: rgba(255,255,255,.18); }
+.ar-face .bd circle { stroke: rgba(0,0,0,.35); stroke-width: 1.5; }
+.ar-face g.hit { color: #FF3B6B !important; animation: arHit .45s; }
+.ar-face g.hint { animation: arHint 1s ease-in-out infinite; }
+.ar-face g.hint .ab { stroke: #fff; }
+.ar-face g.hint .ah { fill: #fff; }
+.ar-face g.boom { animation: arBoom .7s; }
+.ar-cubecard { border-color: rgba(79,214,224,.45); }
