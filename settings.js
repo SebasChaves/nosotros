@@ -92,7 +92,7 @@ function renderSettings() {
         <button class="del" aria-label="Borrar" onclick="delIdea('${i.id}')">${icon('trash')}</button></li>`).join('') : '<li class="empty">Aún no agregan ideas propias</li>'}</ul></div>
 
     <div class="glass stack"><span class="label">Sesión</span><p class="small muted" style="margin:0">Entraste como ${esc(S.me.email)}</p>
-      <p class="tiny muted" style="margin:0">Futari guarda la hora, el modelo de teléfono, el navegador y la versión de la app cada vez que alguno de los dos la abre, para estadísticas de uso y para encontrar errores. Si activan las notificaciones, también guarda una dirección de cada teléfono (y si es iPhone o Android) para poder mandarle los avisos. También anota qué días hizo algo cada uno, para la racha y la mascota; el servicio de avisos lo lee para avisarles en la noche si la racha está en peligro.</p>
+      <p class="tiny muted" style="margin:0">Futari guarda la hora, el modelo de teléfono, el navegador y la versión de la app cada vez que alguno de los dos la abre, cuánto tiempo pasa cada uno en cada sección, y cuántos avisos se mandan y se abren, para estadísticas de uso y para encontrar errores. Si activan las notificaciones, también guarda una dirección de cada teléfono (y si es iPhone o Android) para poder mandarle los avisos. También anota qué días hizo algo cada uno, para la racha y la mascota; el servicio de avisos lo lee para avisarles en la noche si la racha está en peligro.</p>
       <button class="btn ghost" onclick="startTour()">Ver la guía otra vez</button>
       <button class="btn danger" onclick="logout()">Cerrar sesión</button></div>
     ${isTester() ? `<button class="btn ghost" onclick="go('s-admin')">${icon('gear')} Abrir administración</button>` : ''}`);
@@ -108,8 +108,7 @@ function notifCard(prefs, p) {
   else if (!pushSupported()) state = `<p class="small muted" style="margin:0">Este navegador no permite notificaciones. En Android, abre Futari con Chrome.</p>`;
   else if (pushPermission() === 'denied') state = `<p class="small muted" style="margin:0">Las notificaciones están bloqueadas para Futari. Actívalas en los ajustes del teléfono (Notificaciones → Futari) y vuelve aquí.</p>`;
   else if (pushHere) state = `<p class="small" style="margin:0">✅ Activadas en este teléfono</p>
-      <div class="grid2"><button class="btn ghost small" style="width:100%" onclick="testPush()">Probar</button><button class="btn ghost small" style="width:100%" onclick="disablePush()">Desactivar</button></div>
-      <button class="link" style="align-self:flex-start" onclick="diagnoseSchedule()">⏰ Revisar avisos programados</button>`;
+      <div class="grid2"><button class="btn ghost small" style="width:100%" onclick="testPush()">Probar</button><button class="btn ghost small" style="width:100%" onclick="disablePush()">Desactivar</button></div>`;
   else state = `<button class="btn" onclick="enablePush()">🔔 Activar en este teléfono</button>`;
   return `<div class="glass stack"><span class="label">${icon('bell')} Notificaciones</span>
     <p class="small muted" style="margin:0">Te avisan cuando ${esc(p ? nameOf(p) : 'tu pareja')} te manda algo, aunque tengas Futari cerrada.</p>

@@ -1,7 +1,7 @@
 // Registro de ingresos y errores para el panel de administración.
 // Ingreso = abrir la app (o volver a ella después de 20 minutos sin usarla). Se avisa a los dos en Ajustes.
-import { setDoc } from 'https://www.gstatic.com/firebasejs/11.0.2/firebase-firestore.js';
-import { S, newRef, dayKey } from './core.js';
+import { setDoc, increment } from 'https://www.gstatic.com/firebasejs/11.0.2/firebase-firestore.js';
+import { S, newRef, ref, dayKey, todayKey } from './core.js';
 
 const GAP = 20 * 60 * 1000;
 // Navegador: el orden importa (Samsung Internet, Edge y otros también dicen "Chrome" en su identificación).
@@ -57,3 +57,23 @@ addEventListener('unhandledrejection', e => logError(e.reason?.message || e.reas
 
 // Al volver a la app después de un rato cuenta como nuevo ingreso
 document.addEventListener('visibilitychange', () => { if (!document.hidden) logVisit(); });
+
+/* ---------- Tiempo en la app por sección (Administración → Estadísticas) ---------- */
+// Cada 5 segundos con la app a la vista se suma a la pantalla abierta. Se guarda al salir de la app o cada 5 minutos
+// en "usage/<día>_<uid>": { uid, day, total, secs: { home: 120, moments: 30, … } } (en segundos).
+let acc = {}, accTotal = 0;
+setInterval(() => {
+  if (document.hidden || !S.me) return;
+  const s = document.querySelector('.screen.active')?.id?.replace(/^s-/, '');
+  if (!s) return;
+  acc[s] = (acc[s] || 0) + 5; accTotal += 5;
+}, 5000);
+function flushUsage() {
+  if (!S.me || !accTotal) return;
+  const day = todayKey(), secs = Object.fromEntries(Object.entries(acc).map(([k, v]) => [k, increment(v)]));
+  setDoc(ref('usage', `${day}_${S.me.uid}`), { uid: S.me.uid, day, total: increment(accTotal), secs }, { merge: true }).catch(() => {});
+  acc = {}; accTotal = 0;
+}
+document.addEventListener('visibilitychange', () => { if (document.hidden) flushUsage(); });
+addEventListener('pagehide', flushUsage);
+setInterval(flushUsage, 5 * 60e3);

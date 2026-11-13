@@ -2,7 +2,7 @@
 import { initializeApp } from 'https://www.gstatic.com/firebasejs/11.0.2/firebase-app.js';
 import { getAuth, connectAuthEmulator } from 'https://www.gstatic.com/firebasejs/11.0.2/firebase-auth.js';
 import { initializeFirestore, persistentLocalCache, persistentMultipleTabManager, memoryLocalCache,
-         connectFirestoreEmulator, doc, collection, getDoc, setDoc } from 'https://www.gstatic.com/firebasejs/11.0.2/firebase-firestore.js';
+         connectFirestoreEmulator, doc, collection, getDoc, setDoc, increment } from 'https://www.gstatic.com/firebasejs/11.0.2/firebase-firestore.js';
 import { firebaseConfig } from './firebase-config.js';
 
 /* ================= Interfaz ================= */
@@ -465,6 +465,13 @@ export const S = {
   priv: Object.fromEntries(PRIVATE.map(c => [c, []])),
 };
 export const uid = () => S.me?.uid;
+// Estadísticas de Administración (doc "stats/<día>"): kind = 'sent' (avisos que mandaste), 'opened' (avisos que abriste)
+// o 'acts' (cosas que no quedan guardadas para siempre, como instantáneas y reacciones). No se lee en vivo.
+export function countStat(kind, key) {
+  if (!S.me || !key) return;
+  const day = todayKey();
+  setDoc(ref('stats', day), { day, [kind]: { [uid()]: { [key]: increment(1) } } }, { merge: true }).catch(() => {});
+}
 // Marca que hoy hiciste algo en Futari (cuenta para la racha y para alimentar a la mascota). Una escritura al día.
 export function markActive() {
   const k = todayKey();

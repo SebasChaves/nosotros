@@ -1,9 +1,8 @@
 {
-  "version": "36",
-  "notes": [
-    "Ajustes → Notificaciones: nuevo botón «⏰ Revisar avisos programados» para comprobar que los recordatorios y avisos de la noche pueden llegarles"
-  ],
+  "version": "37",
+  "notes": [],
   "history": [
+    { "version": "37", "notes": [] },
     { "version": "36", "notes": [
       "Ajustes → Notificaciones: nuevo botón «⏰ Revisar avisos programados» para comprobar que los recordatorios y avisos de la noche pueden llegarles"
     ] },

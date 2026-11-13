@@ -1,10 +1,12 @@
-// Panel de administración (solo visible para TESTERS): ingresos por día con horas, actividad, datos, errores y herramientas.
+// Panel de administración (solo visible para TESTERS), en tres pestañas:
+//   Ingresos (por día, horas, teléfonos, datos, errores) · Estadísticas (uso, notificaciones, quién hace más) · Pruebas.
 import { query, where, orderBy, limit, getDocs, getCountFromServer, writeBatch } from 'https://www.gstatic.com/firebasejs/11.0.2/firebase-firestore.js';
 import { $, S, db, esc, icon, paint, onShow, expose, toast, ask, col, ref, avatar, loadPhotos, nameOf,
          today, dayKey, todayKey, parseDate, fmtShort, fmtDay, plural, COLLECTIONS, uid, EMU } from './core.js';
 import { isTester, testerCard } from './testing.js';
+import { NOTIF_TYPES, pushHere } from './push.js';
 
-let range = 14, selDay = null, visits = [], errors = [], photoCount = null, loading = false;
+let range = 14, selDay = null, visits = [], errors = [], usage = [], stats = [], photoCount = null, loading = false, tab = 'ingresos';
 const COLORS = ['var(--g1)', 'var(--g2)'];
 const people = () => {
   const ids = Object.entries(S.settings.members || {}).sort((a, b) => (a[1].joined || 0) - (b[1].joined || 0)).map(([id]) => id);
@@ -35,14 +37,18 @@ function deviceInfo(v) {
 
 async function load() {
   if (loading) return; loading = true;
-  const since = new Date(today().getFullYear(), today().getMonth(), today().getDate() - (range - 1)).getTime();
+  const sinceDate = new Date(today().getFullYear(), today().getMonth(), today().getDate() - (range - 1)), since = sinceDate.getTime(), sinceKey = dayKey(sinceDate);
   try {
-    const [vs, es, pc] = await Promise.all([
+    const [vs, es, pc, us, st] = await Promise.all([
       getDocs(query(col('visits'), where('at', '>=', since), orderBy('at', 'desc'))),
       getDocs(query(col('errors'), orderBy('at', 'desc'), limit(20))),
       getCountFromServer(col('photos')).catch(() => null),
+      getDocs(query(col('usage'), where('day', '>=', sinceKey))).catch(() => null),
+      getDocs(query(col('stats'), where('day', '>=', sinceKey))).catch(() => null),
     ]);
     visits = vs.docs.map(d => ({ id: d.id, ...d.data() }));
+    usage = us ? us.docs.map(d => d.data()) : [];
+    stats = st ? st.docs.map(d => d.data()) : [];
     errors = es.docs.map(d => ({ id: d.id, ...d.data() }));
     photoCount = pc ? pc.data().count : null;
   } catch (e) { console.error(e); toast('No se pudieron cargar los datos'); }
@@ -112,31 +118,114 @@ function render() {
     <span class="sub">${esc(nameOf(e.uid))} · ${ago(e.at)} · ${esc(e.screen || '')} · ${esc([e.os, e.browser, e.app && 'v' + e.app].filter(Boolean).join(' · '))}${e.where ? ' · ' + esc(e.where) : ''}</span></div></li>`).join('')}</ul>
     <button class="btn ghost small" onclick="admClearErrors()">Borrar errores</button>` : '<p class="small muted" style="margin:0">Sin errores registrados 🎉</p>';
 
-  paint('s-admin', `<div class="topbar"><div class="row start"><button class="icon-btn" aria-label="Volver" onclick="go('s-more')">${icon('back')}</button><h1>Admin</h1></div>
+  const head = `<div class="topbar"><div class="row start"><button class="icon-btn" aria-label="Volver" onclick="go('s-more')">${icon('back')}</button><h1>Admin</h1></div>
       <button class="btn ghost small" onclick="admReload()">${loading ? 'Cargando…' : 'Actualizar'}</button></div>
-    <div class="chips">${[7, 14, 30].map(n => `<button class="chip ${range === n ? 'on' : ''}" onclick="admRange(${n})">${n} días</button>`).join('')}</div>
+    <div class="seg">${[['ingresos', 'Ingresos'], ['stats', 'Estadísticas'], ['pruebas', 'Pruebas']].map(([k, l]) => `<button class="${tab === k ? 'on' : ''}" onclick="admTab('${k}')">${l}</button>`).join('')}</div>
+    ${tab !== 'pruebas' ? `<div class="chips">${[7, 14, 30].map(n => `<button class="chip ${range === n ? 'on' : ''}" onclick="admRange(${n})">${n} días</button>`).join('')}</div>` : ''}`;
+  if (tab === 'stats') { paint('s-admin', head + statsHTML(ids, days)); loadPhotos($('s-admin')); return; }
+  if (tab === 'pruebas') { paint('s-admin', head + testsHTML()); showVersion(); return; }
+  paint('s-admin', `${head}
     <div class="stack" style="gap:14px">${summary}</div>
     <div class="glass stack"><div class="row"><span class="label">Ingresos por día</span><span class="small muted">${visits.length} en ${range} días</span></div>${chart}${legend}</div>
     <div class="glass"><div class="row"><span class="label">${capital(fmtDay(parseDate(selDay)))}</span></div>${detail}</div>
     <div class="glass stack"><span class="label">Todos los días · horas de cada uno</span>${table}</div>
     <div class="glass stack"><span class="label">Horas más activas</span>${heat}</div>
     <div class="glass stack"><span class="label">Datos guardados</span>${data}</div>
-    <div class="glass stack"><span class="label">Errores recientes</span>${errs}</div>
+    <div class="glass stack"><span class="label">Errores recientes</span>${errs}</div>`);
+  loadPhotos($('s-admin'));
+}
+
+/* ---------- Pestaña Pruebas: notificaciones, herramientas y zona de pruebas ---------- */
+function testsHTML() {
+  return `<div class="glass stack"><span class="label">🔔 Notificaciones</span>
+      <p class="small muted" style="margin:0">${pushHere ? 'Activadas en este teléfono.' : 'No están activadas en este teléfono (Ajustes → Notificaciones).'}</p>
+      <div class="grid2"><button class="btn ghost small" style="width:100%" onclick="testPush()">Probar aviso</button>
+        <button class="btn ghost small" style="width:100%" onclick="diagnoseSchedule()">⏰ Avisos programados</button></div>
+      <p class="tiny muted" style="margin:0">«Avisos programados» le pregunta al servicio de Cloudflare qué ve (hora, permiso de lectura, recordatorios de hoy) y te manda una prueba por el mismo camino que los recordatorios.</p></div>
     <div class="glass stack"><span class="label">Herramientas</span>
       <div class="grid2"><button class="btn ghost small" style="width:100%" onclick="admCsv()">⬇️ Ingresos (CSV)</button>
-        <button class="btn ghost small" style="width:100%" onclick="admPurge()">🧹 Ingresos de +90 días</button>
+        <button class="btn ghost small" style="width:100%" onclick="admPurge()">🧹 Registros de +90 días</button>
         <button class="btn ghost small" style="width:100%" onclick="admForceUpdate()">🔄 Forzar actualización</button>
         <button class="btn ghost small" style="width:100%" onclick="startTour()">👋 Ver la guía</button></div>
       <p class="tiny muted" style="margin:0" id="admVersion">Proyecto: ${EMU ? 'emulador local' : 'nosotros-app-2e254'}</p></div>
-    ${testerCard()}`);
-  loadPhotos($('s-admin'));
-  showVersion();
+    ${testerCard()}`;
+}
+
+/* ---------- Pestaña Estadísticas ---------- */
+const SCREENS = { home: 'Inicio', decide: 'Decidir', moments: 'Momentos', love: 'Detalles', more: 'Más', settings: 'Ajustes', cal: 'Calendario',
+  reminders: 'Recordatorios', music: 'Playlist', grocery: 'Súper', money: 'Gastos', trips: 'Viajes', trip: 'Viaje', places: 'Restaurantes',
+  shows: 'Pelis y series', recipes: 'Recetas', map: 'Mapa', badges: 'Logros', game: 'Juego de retos', us: 'Gustos y regalos', quiz: 'Quiz',
+  bucket: 'Bucket list', summary: 'Resumen del año', gallery: 'Galería', search: 'Buscar', admin: 'Admin' };
+const dur = s => { const m = Math.round(s / 60); return m < 1 ? (s ? '<1 min' : '0') : m < 60 ? `${m} min` : `${Math.floor(m / 60)} h ${m % 60 ? (m % 60) + ' min' : ''}`.trim(); };
+// Barra comparando a los dos (izquierda uno, derecha el otro)
+const duel = (ids, vals, fmt = n => n) => {
+  const tot = vals.reduce((a, b) => a + b, 0), w = tot ? Math.round(vals[0] / tot * 100) : 50;
+  return `<div class="adm-duel ${tot ? '' : 'zero'}"><b class="num">${fmt(vals[0])}</b><div class="adm-duelbar" style="--w:${w}%">${tot ? `<i style="background:${COLORS[0]}"></i><i style="background:${COLORS[1]}"></i>` : ''}</div><b class="num">${fmt(vals[1] ?? 0)}</b></div>`;
+};
+function statsHTML(ids, days) {
+  const inRange = d => d >= days[days.length - 1] && d <= days[0];
+  const msInRange = ms => ms && inRange(dayKey(new Date(ms)));
+  const names = `<div class="row"><span class="small"><i class="adm-dot" style="background:${COLORS[0]}"></i>${esc(nameOf(ids[0]))}</span>${ids[1] ? `<span class="small">${esc(nameOf(ids[1]))}<i class="adm-dot" style="background:${COLORS[1]};margin:0 0 0 6px"></i></span>` : ''}</div>`;
+
+  // 1. Uso de la app
+  const use = ids.map((id, i) => {
+    const mine = usage.filter(u => u.uid === id), total = mine.reduce((s, u) => s + (u.total || 0), 0);
+    const daysActive = new Set(visits.filter(v => v.uid === id).map(v => v.day)).size;
+    const secs = {}; for (const u of mine) for (const [k, v] of Object.entries(u.secs || {})) secs[k] = (secs[k] || 0) + v;
+    const top = Object.entries(secs).sort((a, b) => b[1] - a[1]).slice(0, 6), mx = Math.max(1, ...top.map(t => t[1]));
+    const visitsN = visits.filter(v => v.uid === id).length;
+    return `<div class="glass stack" style="gap:8px"><div class="row start" style="gap:8px">${avatar(id, 28)}<b>${esc(nameOf(id))}</b></div>
+      <div class="grid2" style="gap:6px">
+        <div class="adm-kpi"><b class="num">${dur(total)}</b><span class="tiny muted">en la app</span></div>
+        <div class="adm-kpi"><b class="num">${daysActive}/${range}</b><span class="tiny muted">días que entró</span></div>
+        <div class="adm-kpi"><b class="num">${daysActive ? dur(total / daysActive) : '0'}</b><span class="tiny muted">por día activo</span></div>
+        <div class="adm-kpi"><b class="num">${visitsN}</b><span class="tiny muted">ingresos</span></div></div>
+      ${top.length ? `<span class="tiny muted">Secciones donde pasa más tiempo</span>${top.map(([k, v]) => `<div class="adm-bar"><span class="small">${esc(SCREENS[k] || k)}</span><span class="adm-barline"><i style="width:${Math.round(v / mx * 100)}%;background:${COLORS[i % 2]}"></i></span><span class="tiny muted num">${dur(v)}</span></div>`).join('')}`
+        : '<p class="tiny muted" style="margin:0">Todavía no hay tiempo registrado (se empezó a medir en esta versión).</p>'}</div>`;
+  }).join('');
+
+  // 2. Notificaciones (enviadas por quien las mandó; abiertas por quien las tocó)
+  const sum = (kind, id, key) => stats.reduce((s, d) => s + (d[kind]?.[id]?.[key] || 0), 0);
+  const SHORT = { snaps: '📸 Instantáneas', reacts: '😍 Reacciones', notes: '💌 Notas', thinks: '❤️ Corazones', songs: '🎵 Canciones', coupons: '🎟️ Cupones',
+    streak: '🔥 Racha', reminders: '🔔 Recordatorios', dates: '🎂 Fechas' };
+  const notif = `<table class="adm-table adm-notif"><thead><tr><th>Aviso</th>${ids.map(id => `<th>${esc(nameOf(id))}</th>`).join('')}</tr></thead><tbody>
+    ${NOTIF_TYPES.map(([k]) => `<tr><td>${SHORT[k] || k}</td>${ids.map(id => `<td><b>${sum('sent', id, k)}</b> <span class="muted">/ ${sum('opened', id, k)}</span></td>`).join('')}</tr>`).join('')}
+    </tbody></table>
+    <p class="tiny muted" style="margin:0"><b>mandó</b> / abrió: «mandó» son los avisos que esa persona generó para su pareja; «abrió», los que tocó.</p>
+    <p class="tiny muted" style="margin:0">Los avisos programados (racha, recordatorios, fechas) los manda el servicio de Cloudflare, así que solo se cuentan cuando los abren. Se empezó a contar en esta versión.</p>`;
+
+  // 3. Quién hace más (en el periodo)
+  const D = S.data;
+  const rows = [
+    ['❤️ «Pensando en ti»', id => D.thinks.filter(t => inRange(t.id)).reduce((s, t) => s + (Number(t[id]) || 0), 0)],
+    ['📸 Instantáneas', id => sum('acts', id, 'snap')],
+    ['😍 Reacciones', id => sum('acts', id, 'react')],
+    ['💌 Notas', id => D.notes.filter(n => n.fromUid === id && msInRange(n.createdAt)).length],
+    ['🎟️ Cupones regalados', id => D.coupons.filter(c => c.fromUid === id && msInRange(c.createdAt)).length],
+    ['🎵 Canciones dedicadas', id => D.songs.filter(s => s.dedication?.by === id && msInRange(s.dedication.at)).length],
+    ['🙂 Días con ánimo', id => D.moods.filter(m => inRange(m.id) && m[id]).length],
+    ['💬 Preguntas respondidas', id => D.answers.filter(a => inRange(a.id) && a.answers?.[id]).length],
+    ['⚡ Respondió primero', id => D.answers.filter(a => { if (!inRange(a.id)) return false; const x = a.answers || {}, o = ids.find(u => u !== id); return x[id]?.at && x[o]?.at && x[id].at < x[o].at; }).length],
+    ['📷 Fotos del día', id => D.daily.filter(d => inRange(d.id) && d[id]).length],
+    ['📚 Momentos guardados', id => D.moments.filter(m => m.by === id && msInRange(m.createdAt)).length],
+    ['📌 Planes creados', id => D.events.filter(e => e.by === id && msInRange(e.createdAt)).length],
+  ];
+  const who = ids.length < 2 ? '<p class="small muted" style="margin:0">Hace falta que estén los dos.</p>'
+    : names + rows.map(([l, f]) => { const v = ids.map(f); return `<div class="adm-who"><span class="small">${l}</span>${duel(ids, v)}</div>`; }).join('')
+      + '<p class="tiny muted" style="margin:0">Instantáneas y reacciones se cuentan desde esta versión (las instantáneas se borran a las 24 h).</p>';
+
+  return `<div class="glass stack"><span class="label">📱 Uso de la app · ${range} días</span>
+      <p class="tiny muted" style="margin:0">Tiempo con Futari abierta y a la vista, por sección.</p></div>
+    <div class="stack" style="gap:14px">${use}</div>
+    <div class="glass stack"><span class="label">⚖️ Quién hace más · ${range} días</span>${who}</div>
+    <div class="glass stack"><span class="label">🔔 Notificaciones · ${range} días</span>${notif}</div>`;
 }
 async function showVersion() {
   try { const t = await (await fetch('sw.js', { cache: 'no-store' })).text(); const v = t.match(/CACHE = '([^']+)'/)?.[1]; const el = $('admVersion'); if (el && v) el.textContent += ` · versión ${v.replace('nosotros-', '')}`; } catch {}
 }
 
 function admRange(n) { range = n; load(); }
+function admTab(t) { tab = t; render(); window.scrollTo?.(0, 0); }
 function admDay(d) { selDay = d; render(); }
 function admReload() { load(); }
 function admCsv() {
@@ -148,11 +237,12 @@ function admCsv() {
   setTimeout(() => URL.revokeObjectURL(a.href), 1000);
 }
 async function admPurge() {
-  if (!(await ask('¿Borrar los registros de ingresos de hace más de 90 días?', { ok: 'Borrar', danger: true }))) return;
-  const cut = Date.now() - 90 * 864e5;
-  const old = await getDocs(query(col('visits'), where('at', '<', cut)));
-  for (let i = 0; i < old.docs.length; i += 400) { const b = writeBatch(db); old.docs.slice(i, i + 400).forEach(d => b.delete(d.ref)); await b.commit(); }
-  toast(`${plural(old.size, 'registro borrado', 'registros borrados')}`);
+  if (!(await ask('¿Borrar los registros de ingresos, tiempo de uso y avisos de hace más de 90 días?', { ok: 'Borrar', danger: true }))) return;
+  const cut = Date.now() - 90 * 864e5, cutDay = dayKey(new Date(cut));
+  const docs = [...(await getDocs(query(col('visits'), where('at', '<', cut)))).docs,
+    ...(await getDocs(query(col('usage'), where('day', '<', cutDay)))).docs, ...(await getDocs(query(col('stats'), where('day', '<', cutDay)))).docs];
+  for (let i = 0; i < docs.length; i += 400) { const b = writeBatch(db); docs.slice(i, i + 400).forEach(d => b.delete(d.ref)); await b.commit(); }
+  toast(`${plural(docs.length, 'registro borrado', 'registros borrados')}`);
 }
 async function admClearErrors() {
   const all = await getDocs(col('errors'));
@@ -167,4 +257,4 @@ async function admForceUpdate() {
 }
 
 onShow('s-admin', () => { render(); load(); });
-expose({ admRange, admDay, admReload, admCsv, admPurge, admClearErrors, admForceUpdate });
+expose({ admTab, admRange, admDay, admReload, admCsv, admPurge, admClearErrors, admForceUpdate });

@@ -96,7 +96,7 @@ de solo lectura** y manda, según la hora de Costa Rica (`TIME_ZONE`):
 
 ### Si un aviso programado no llega
 
-En la app: **Ajustes → Notificaciones → ⏰ Revisar avisos programados**. Llama a `POST /diagnostico` del Worker (con la
+En la app: **Administración → Pruebas → ⏰ Avisos programados** (solo lo ve el dueño; «Probar» sigue en Ajustes para los dos). Llama a `POST /diagnostico` del Worker (con la
 sesión de Firebase), que hace lo mismo que el Cron —leer la base con la cuenta de servicio, buscar los recordatorios de
 hoy— y manda una prueba «Futari ⏰» a tus teléfonos. La app explica cada paso (hora y zona que ve el Worker, clave de
 lectura, permiso 403, recordatorios encontrados, teléfonos). Si todo sale bien y aun así no llegan a su hora, el

@@ -41,7 +41,7 @@ manifest.json   PWA (nombre, íconos, colores)
 | `quiz.js`, `us.js`, `summary.js`, `badges.js` | Quiz de pareja, gustos + ideas de regalo privadas, resumen del año, logros |
 | `search.js`, `tour.js` | Buscador global y guía de bienvenida |
 | `lock.js` | PIN opcional por teléfono (hash SHA-256 en localStorage) |
-| `tracking.js`, `admin.js`, `testing.js` | Registro de ingresos/errores, panel de administración y zona de pruebas (solo `TESTERS`) |
+| `tracking.js`, `admin.js`, `testing.js` | Registro de ingresos, errores y tiempo por sección; Administración (solo `TESTERS`) con pestañas Ingresos, Estadísticas (uso, notificaciones, quién hace más) y Pruebas (avisos, herramientas, zona de pruebas) |
 
 ## El núcleo (`core.js`)
 

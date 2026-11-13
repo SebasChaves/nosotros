@@ -26,6 +26,9 @@ GitHub Pages publica la rama `main` tal cual. Los teléfonos reciben la versión
    - `notes` (arriba) = las de la versión actual; la primera se muestra en la barrita de "Hay una versión nueva".
    - `history`: agrega la nueva **al principio**, no borres las anteriores.
    - Notas cortas, en español, pensadas para la pareja (qué pueden hacer ahora), no técnicas.
+   - **Lo de Administración no va en las novedades** (la pareja también las ve). Si la versión solo trae cambios de
+     Administración o internos, deja `notes: []` (y así en `history`): no sale la ventana de Novedades y la barrita
+     dice «Mejoras y arreglos».
    - Guárdalo como UTF-8 **sin BOM** y verifica que es JSON válido.
 4. Probar en el emulador (docs/PRUEBAS.md).
 5. Commit y push:

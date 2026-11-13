@@ -3,7 +3,7 @@
 // (push-config.js, docs/NOTIFICACIONES.md) que avise a los teléfonos de su pareja.
 // En el emulador (?emu) no se llama al Worker: el aviso se anota en la consola y en window.__pushLog.
 import { setDoc, updateDoc, deleteField } from 'https://www.gstatic.com/firebasejs/11.0.2/firebase-firestore.js';
-import { $, S, auth, EMU, ref, on, partnerUid, profile, uid, toast, go, esc, openSheet, ANDROID, IOS } from './core.js';
+import { $, S, auth, EMU, ref, on, partnerUid, profile, uid, toast, go, esc, openSheet, countStat, ANDROID, IOS } from './core.js';
 import { PUSH } from './push-config.js';
 
 // [tipo, nombre en Ajustes]. Cada uno elige cuáles recibe (prefs.notif[tipo] === false = apagado).
@@ -83,7 +83,9 @@ export async function notify(type, { title, body = '', url = './', tag = '' }, t
   if (to !== 'me' && profile(who).prefs?.notif?.[type] === false) return;
   const subs = subsOf(who);
   if (!subs.length) return;
-  const msg = { title, body, url, tag };
+  // El tipo va en el enlace (&n=) para contar cuántos se abren
+  const msg = { title, body, url: to === 'me' ? url : url + (url.includes('?') ? '&' : '?') + 'n=' + type, tag };
+  if (to !== 'me') countStat('sent', type);
   if (EMU) { (window.__pushLog ||= []).push({ to: who, type, ...msg, devices: subs.length }); console.info('[aviso emulador]', who, msg); return; }
   if (!pushConfigured()) return;
   try {
@@ -171,18 +173,22 @@ function openWhenReady(what) {
   };
   run();
 }
+// Los avisos programados del Worker no llevan &n=: se deduce por la sección que abren
+const openedType = (what, n) => n || { pet: 'streak', reminders: 'reminders', cal: 'dates' }[what] || what;
 export function handleOpenParam() {
   const qs = new URLSearchParams(location.search), what = qs.get('open');
   if (!what) return;
-  qs.delete('open');
+  const n = qs.get('n');
+  qs.delete('open'); qs.delete('n');
+  if (S.me) countStat('opened', openedType(what, n)); else setTimeout(() => countStat('opened', openedType(what, n)), 3000);
   history.replaceState(null, '', location.pathname + (qs.toString() ? '?' + qs.toString().replace(/=(&|$)/g, '$1') : ''));
   openWhenReady(what);
 }
 // Si la app ya estaba abierta, el service worker manda el enlace del aviso por mensaje
 navigator.serviceWorker?.addEventListener('message', e => {
   const u = e.data?.futariOpen; if (!u) return;
-  const what = new URL(u, location.href).searchParams.get('open');
-  if (what) openWhenReady(what);
+  const sp = new URL(u, location.href).searchParams, what = sp.get('open');
+  if (what) { countStat('opened', openedType(what, sp.get('n'))); openWhenReady(what); }
 });
 
 on('push', () => { syncSub(); refreshHere().then(() => window.rerenderSettings?.()); });

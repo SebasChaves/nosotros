@@ -14,7 +14,7 @@ private/<uid>/gifts/<id>             ideas de regalo: solo las ve su dueño
 ```
 
 `COLLECTIONS` en `core.js` es la lista de colecciones que se escuchan en vivo y se incluyen en el respaldo.
-Colecciones que **no** están en esa lista (se leen bajo demanda): `photos`, `visits`, `errors`.
+Colecciones que **no** están en esa lista (se leen bajo demanda): `photos`, `visits`, `errors`, `usage`, `stats`.
 
 ## Colecciones principales
 
@@ -39,6 +39,8 @@ Casi todos los docs llevan `by: uid` (quién lo creó) y `createdAt: ms`. Fechas
 | `snaps` | instantáneas: `by, at (ms), text, replyTo?, seen{uid: ms}, reacts{uid: {e, at}}, reactSeen?, saved?(id del momento)` — foto en `photos/snap-<id>` (+ miniatura). Duran 24 h: al abrir la app, `snaps.js` borra las vencidas y sus fotos. «Guardar en Momentos» copia la foto a un momento (`fromSnap: true`) |
 | `activity` | id = día: `{ <uid>: true }` — ese día hizo algo que no queda guardado en otro lado (instantánea, nota, cupón, canción); `markActive()` en `core.js`. Cuenta para la racha |
 | `pet` | doc `main`: `start (día de adopción), createdAt, by, species?, name?, hatchedAt?, hatchedBy?, namedBy?` — el crecimiento se calcula con los días de racha desde `start` (`pet.js`) |
+| `usage` | id = `<día>_<uid>`: `uid, day, total, secs{pantalla: segundos}` — tiempo con la app a la vista por sección (`tracking.js`). Solo para Administración |
+| `stats` | id = día: `day, sent{uid:{tipo:n}}, opened{uid:{tipo:n}}, acts{uid:{snap,react}}` — avisos mandados/abiertos y acciones que no quedan guardadas (`countStat` en `core.js`). Solo para Administración |
 | `push` | id = uid: `subs { <llave>: { endpoint, keys{p256dh,auth}, device, at } }` — un teléfono por elemento (docs/NOTIFICACIONES.md) |
 | `dates` | fechas especiales: `title, date, emoji, yearly, by, createdAt, editedBy?, editedAt?` — tipos en `DATE_KINDS` (`data.js`); se crean/editan con `openFecha` (`calendar.js`), desde el Calendario o Inicio → Fechas |
 | `shows` | `title, type movie|tv, year, tmdbId, poster, overview, providers[], status want|watching|seen, progress{s,e}, ratings, seenAt` |

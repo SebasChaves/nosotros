@@ -623,3 +623,21 @@ body:not([data-theme="light"]) .map-box .leaflet-tile-pane { filter: invert(1) h
 @keyframes petZ { 0% { opacity: 0; transform: translate(0, 0); } 30% { opacity: 1; } 100% { opacity: 0; transform: translate(8px, -14px); } }
 @keyframes petTear { 0% { opacity: 0; transform: translateY(0); } 20% { opacity: 1; } 100% { opacity: 0; transform: translateY(18px); } }
 @media (prefers-reduced-motion: reduce) { .pet-body { animation: none !important; } }
+
+/* Administración → Estadísticas */
+.adm-kpi { display: flex; flex-direction: column; gap: 2px; padding: 8px 10px; border-radius: 12px; background: var(--line); }
+.adm-kpi b { font-size: 17px; }
+.adm-bar { display: grid; grid-template-columns: 96px 1fr 58px; align-items: center; gap: 8px; }
+.adm-bar .small { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.adm-barline { height: 8px; border-radius: 8px; background: var(--line); overflow: hidden; }
+.adm-barline i { display: block; height: 100%; border-radius: 8px; }
+.adm-bar .num { text-align: right; }
+.adm-who { display: flex; flex-direction: column; gap: 4px; padding: 6px 0; border-bottom: 1px solid var(--line); }
+.adm-duel { display: grid; grid-template-columns: 34px 1fr 34px; align-items: center; gap: 8px; }
+.adm-duel b:last-child { text-align: right; }
+.adm-duelbar { display: flex; height: 8px; border-radius: 8px; overflow: hidden; background: var(--line); }
+.adm-duelbar i:first-child { width: var(--w); } .adm-duelbar i:last-child { flex: 1; }
+.adm-duel.zero { opacity: .45; }
+.adm-notif { width: 100%; font-size: 13px; }
+.adm-notif td, .adm-notif th { white-space: nowrap; }
+.adm-notif td:not(:first-child), .adm-notif th:not(:first-child) { text-align: right; }
