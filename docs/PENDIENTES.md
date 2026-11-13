@@ -17,11 +17,13 @@
 - Calendario de Samsung (compartir .ics), cámara y fotos pesadas en el Android de la pareja.
 - Cámara propia (v31) en los dos teléfonos: permiso de cámara en la app instalada (iPhone puede volver a pedirlo),
   cambiar adelante/atrás, espejo, y que la foto salga derecha (no de lado).
+- Instantáneas (v32): acceso directo «Instantánea» del ícono en Android (puede tardar hasta un día en aparecer en la
+  app instalada); en iPhone no existen esos accesos directos.
 
 ## Ideas conversadas, no hechas
 
-- Accesos directos al mantener presionado el ícono (solo Android; `shortcuts` en `manifest.json`). Hay maqueta
-  (`accesos-directos-futari.html`). Widgets reales no son posibles en una app web.
+- Más accesos directos al mantener presionado el ícono (solo Android; `shortcuts` en `manifest.json`). Ya está
+  «Mandar instantánea» (`./?snap`, v32). Hay maqueta (`accesos-directos-futari.html`). Widgets reales no son posibles en una app web.
 - Ligar una canción a un momento. Actualizar la guía (`tour.js`) con lo nuevo (deslizar pestañas, recordatorios, urgentes).
 - Panel de administración: secciones más usadas, tiempo por visita, quién agrega qué, velocidad de carga, aviso de
   errores nuevos, mensaje para la pareja.

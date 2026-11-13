@@ -1,11 +1,18 @@
 {
-  "version": "31",
+  "version": "32",
   "notes": [
-    "Cámara propia de Futari: toma la foto al instante y ya no sale en modo espejo",
-    "En la cámara: ⇋ Espejo para voltearla si la quieren así, y 🔄 para cambiar entre la de adelante y la de atrás",
-    "En iPhone también se puede elegir entre tomar foto o elegir de la galería"
+    "📸 Instantáneas: fotos rápidas para tu pareja, con texto encima si quieres. Duran 24 horas",
+    "Reaccionen con ❤️😂😍🥺🔥 o respondan con otra foto",
+    "Guarden en Momentos las que quieran conservar",
+    "Están en Inicio, en Momentos → Instantáneas y, en Android, manteniendo presionado el ícono de Futari"
   ],
   "history": [
+    { "version": "32", "notes": [
+      "📸 Instantáneas: fotos rápidas para tu pareja, con texto encima si quieres. Duran 24 horas",
+      "Reaccionen con ❤️😂😍🥺🔥 o respondan con otra foto",
+      "Guarden en Momentos las que quieran conservar",
+      "Están en Inicio, en Momentos → Instantáneas y, en Android, manteniendo presionado el ícono de Futari"
+    ] },
     { "version": "31", "notes": [
       "Cámara propia de Futari: toma la foto al instante y ya no sale en modo espejo",
       "En la cámara: ⇋ Espejo para voltearla si la quieren así, y 🔄 para cambiar entre la de adelante y la de atrás",

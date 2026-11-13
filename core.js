@@ -182,7 +182,7 @@ function deliverFile(input, f) {
   input.dispatchEvent(new Event('change', { bubbles: true }));
 }
 // Abre el selector del sistema (galería, o la cámara del teléfono con capture). Debe llamarse dentro de un toque.
-function nativePick(accept, capture, onFile) {
+export function nativePick(accept, capture, onFile) {
   const tmp = document.createElement('input');
   tmp.type = 'file'; tmp.accept = accept || 'image/*'; tmp.hidden = true; tmp.dataset.direct = '1';
   if (capture) tmp.setAttribute('capture', capture);
@@ -220,7 +220,7 @@ if (ANDROID || IOS) document.addEventListener('click', e => {
    cámara (adelante/atrás) y, para cada una, si el espejo estaba puesto (localStorage "futari-cam"). */
 const camPref = () => { try { return JSON.parse(localStorage.getItem('futari-cam')) || {}; } catch { return {}; } };
 const saveCamPref = p => { try { localStorage.setItem('futari-cam', JSON.stringify({ ...camPref(), ...p })); } catch {} };
-function openCamera(accept, onFile) {
+export function openCamera(accept, onFile) {
   let facing = camPref().facing || 'environment', mirror = !!camPref()['mirror_' + facing], stream = null, review = false, closed = false, multi = true;
   const el = document.createElement('div');
   el.className = 'dialog cam';
@@ -456,7 +456,7 @@ export const write = p => p.catch(err => {
 
 /* ================= Estado ================= */
 export const COLLECTIONS = ['bucket', 'ideas', 'notes', 'coupons', 'dates', 'moments', 'lists', 'answers',
-  'moods', 'challenges', 'groceries', 'expenses', 'places', 'trips', 'quiz', 'profiles', 'shows', 'events', 'cards', 'games', 'thinks', 'daily', 'pins', 'recipes', 'recipefav', 'menu', 'songs', 'reminders'];
+  'moods', 'challenges', 'groceries', 'expenses', 'places', 'trips', 'quiz', 'profiles', 'shows', 'events', 'cards', 'games', 'thinks', 'daily', 'pins', 'recipes', 'recipefav', 'menu', 'songs', 'reminders', 'snaps'];
 export const PRIVATE = ['gifts'];
 export const S = {
   me: null,
@@ -499,7 +499,7 @@ export function rerenderAll() {
 
 /* ================= Fotos ================= */
 const photoCache = {};
-const getPhoto = id => (photoCache[id] ??= getDoc(ref('photos', id)).then(s => s.data()?.data || '').catch(() => { delete photoCache[id]; return ''; }));
+export const getPhoto = id => (photoCache[id] ??= getDoc(ref('photos', id)).then(s => s.data()?.data || '').catch(() => { delete photoCache[id]; return ''; }));
 export function cachePhoto(id, data) { photoCache[id] = Promise.resolve(data); }
 export function forgetPhoto(id) { delete photoCache[id]; }
 // Cada foto de un momento tiene una miniatura liviana (~30 KB) con id "t-<id>" para listas y galería.

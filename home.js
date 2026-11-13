@@ -12,6 +12,7 @@ import { quizWaiting } from './quiz.js';
 import { myDailyDone, partnerDailyDone } from './daily.js';
 import { dueReminders, urgentReminders, whenTxt } from './reminders.js';
 import { songDedication } from './music.js';
+import { snapsCard } from './snaps.js';
 
 /* ---------- Racha y "Pensando en ti" ---------- */
 // Un día cuenta para la racha si los dos hicieron algo: marcar ánimo, responder la pregunta o mandar un "pensando en ti".
@@ -233,7 +234,7 @@ function renderHome() {
   } else hero = counterCard();
   const up = upcoming().slice(0, 5);
   const cards = {
-    urgent: urgentCard, counter: () => hero, today: todayCard, memory: memoryCard, mood: moodCard, question: questionCard, challenge: challengeCard,
+    urgent: urgentCard, counter: () => hero, snaps: snapsCard, today: todayCard, memory: memoryCard, mood: moodCard, question: questionCard, challenge: challengeCard,
     upcoming: () => `<div class="glass"><div class="row"><span class="label">${icon('cal')} Próximos momentos</span>
       <div class="row" style="gap:0"><button class="link" onclick="go('s-cal')">Calendario</button><button class="link" onclick="openFechas()">Fechas</button></div></div>
       <div style="margin-top:6px">${up.length ? up.map(m => `<div class="event"><div>${esc(m.label)}<div class="tiny muted">${fmtDate(m.date)}</div></div>
@@ -253,12 +254,18 @@ function renderHome() {
 }
 
 /* ---------- Personalización de Inicio ---------- */
-export const HOME_CARDS = [['urgent', '🔴 Recordatorios urgentes'], ['counter', '💞 Contador'], ['today', '📌 Hoy'], ['memory', '📸 Un día como hoy'],
+export const HOME_CARDS = [['urgent', '🔴 Recordatorios urgentes'], ['counter', '💞 Contador'], ['snaps', '📸 Instantáneas'], ['today', '📌 Hoy'], ['memory', '📸 Un día como hoy'],
   ['mood', '🙂 ¿Cómo te sientes?'], ['question', '💬 Pregunta del día'], ['challenge', '🏆 Reto de la semana'], ['upcoming', '🗓️ Próximos momentos']];
-// [{ id, on }] en el orden elegido; las tarjetas nuevas que no estén guardadas se agregan al final, visibles.
+// [{ id, on }] en el orden elegido; las tarjetas nuevas que no estén guardadas se agregan visibles, detrás de la
+// tarjeta que tienen antes en HOME_CARDS (por ejemplo, Instantáneas queda debajo del contador).
 export function homeLayout() {
-  const saved = (profile(uid()).prefs?.home || []).filter(c => HOME_CARDS.some(([id]) => id === c.id));
-  return [...saved, ...HOME_CARDS.filter(([id]) => !saved.some(c => c.id === id)).map(([id]) => ({ id, on: true }))];
+  const out = (profile(uid()).prefs?.home || []).filter(c => HOME_CARDS.some(([id]) => id === c.id));
+  HOME_CARDS.forEach(([id], k) => {
+    if (out.some(c => c.id === id)) return;
+    const prev = k > 0 ? out.findIndex(c => c.id === HOME_CARDS[k - 1][0]) : -1;
+    out.splice(prev >= 0 ? prev + 1 : (k === 0 ? 0 : out.length), 0, { id, on: true });
+  });
+  return out;
 }
 const greetName = () => profile(uid()).prefs?.myNick || myName();
 
@@ -296,6 +303,6 @@ setInterval(() => {
   const m = $('heroMin'); if (m) m.innerHTML = `<b>${mins % 60}</b>minutos`;
 }, 20000);
 
-on('dates moments moods answers challenges trips profiles events thinks notes coupons lists quiz daily reminders songs', renderHome);
+on('dates moments moods answers challenges trips profiles events thinks notes coupons lists quiz daily reminders songs snaps', renderHome);
 on('thinks', checkIncomingThink);
 expose({ sendThink, openFechas, answerQuestion, openAnswers, setMood, skipChallenge, doneChallenge });

@@ -553,3 +553,44 @@ body:not([data-theme="light"]) .map-box .leaflet-tile-pane { filter: invert(1) h
 .cam-shoot { width: 74px; height: 74px; border-radius: 50%; border: 4px solid #fff; background: rgba(255,255,255,.25); box-shadow: inset 0 0 0 4px #000; }
 .cam-shoot:active { background: #fff; transform: scale(.94); }
 .cam-bar .btn { width: 100%; }
+
+/* Instantáneas (snaps.js) */
+.snap-frame { position: relative; border-radius: 18px; overflow: hidden; background: #000; }
+.snap-frame img { display: block; width: 100%; max-height: 52vh; object-fit: contain; }
+.snap-text { position: absolute; left: 50%; bottom: 14%; transform: translateX(-50%); max-width: 86%; padding: 7px 14px; border-radius: 14px;
+  background: rgba(0,0,0,.55); color: #fff; font-weight: 700; font-size: 17px; line-height: 1.3; text-align: center; overflow-wrap: anywhere;
+  backdrop-filter: blur(6px); -webkit-backdrop-filter: blur(6px); pointer-events: none; }
+.snap-new { position: relative; display: block; width: 100%; padding: 0; border: 0; border-radius: 18px; overflow: hidden; cursor: pointer; background: #000; aspect-ratio: 4 / 3; }
+.snap-new img { width: 100%; height: 100%; object-fit: cover; filter: blur(14px) brightness(.75); transform: scale(1.1); }
+.snap-new span { position: absolute; inset: 0; display: flex; align-items: center; justify-content: center; gap: 8px; color: #fff; font-weight: 700; font-size: 17px; }
+.snap-strip { display: flex; gap: 8px; overflow-x: auto; scrollbar-width: none; margin: 0 -2px; padding: 2px; }
+.snap-strip::-webkit-scrollbar { display: none; }
+.snap-strip .snap-thumb { flex: 0 0 74px; }
+.snap-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px; }
+.snap-thumb { position: relative; aspect-ratio: 3 / 4; padding: 0; border: 2px solid transparent; border-radius: 14px; overflow: hidden; background: var(--line); cursor: pointer; }
+.snap-thumb.new { border-color: var(--g1); }
+.snap-thumb img { width: 100%; height: 100%; object-fit: cover; display: block; }
+.snap-thumb > .av { position: absolute; left: 4px; bottom: 4px; box-shadow: 0 0 0 1.5px rgba(0,0,0,.5); }
+.snap-thumb b { position: absolute; right: 4px; top: 4px; font-size: 15px; line-height: 1; }
+.dialog.snapview { padding: 0; background: #000; z-index: 96; flex-direction: column; align-items: stretch; justify-content: flex-start; color: #fff; }
+.sv-bars { display: flex; gap: 4px; padding: calc(env(safe-area-inset-top) + 8px) 12px 0; }
+.sv-bars i { flex: 1; height: 3px; border-radius: 3px; background: rgba(255,255,255,.3); }
+.sv-bars i.done, .sv-bars i.on { background: #fff; }
+.sv-head { display: flex; align-items: center; gap: 10px; padding: 10px 12px; }
+.sv-who { flex: 1; display: flex; flex-direction: column; line-height: 1.25; }
+.sv-who span { font-size: 12px; opacity: .75; }
+.sv-x { width: 40px; height: 40px; border-radius: 50%; border: 0; background: rgba(255,255,255,.16); color: #fff; display: grid; place-items: center; }
+.sv-x .ic { width: 20px; height: 20px; }
+.sv-photo { position: relative; flex: 1; min-height: 0; display: flex; align-items: center; justify-content: center; }
+.sv-pic { position: relative; display: flex; max-width: 100%; max-height: 100%; }
+.sv-pic img { max-width: 100%; max-height: 100%; object-fit: contain; display: block; }
+.sv-photo { overflow: hidden; }
+.sv-prev, .sv-next { position: absolute; top: 0; bottom: 0; width: 35%; border: 0; background: none; padding: 0; }
+.sv-prev { left: 0; } .sv-next { right: 0; }
+.sv-bottom { display: flex; flex-direction: column; gap: 10px; padding: 10px 14px calc(env(safe-area-inset-bottom) + 14px); }
+.dialog .sv-note { margin: 0; font-size: 13.5px; opacity: .85; color: #fff; }
+.sv-reacts { display: flex; justify-content: space-around; }
+.sv-reacts button { width: 50px; height: 50px; border-radius: 50%; border: 0; background: rgba(255,255,255,.12); font-size: 25px; line-height: 1; transition: transform .12s; }
+.sv-reacts button.on { background: rgba(255,255,255,.9); transform: scale(1.12); }
+.sv-actions { display: flex; gap: 8px; }
+.sv-actions .btn { flex: 1; }

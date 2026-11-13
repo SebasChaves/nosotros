@@ -8,6 +8,7 @@ import { todayAnswers } from './home.js';
 import { listNeedsMyVote } from './decide.js';
 import { unreadNotes, couponAlerts } from './love.js';
 import './moments.js';
+import { unseenSnaps, snapShortcut } from './snaps.js';
 import './lists.js';
 import './money.js';
 import './places.js';
@@ -32,7 +33,7 @@ import { logVisit } from './tracking.js';
 import { maybeStartTour, resetTourCheck } from './tour.js';
 
 // Versión de esta copia de la app. Súbela junto con version.json y la caché de sw.js al publicar.
-export const APP_VERSION = '31';
+export const APP_VERSION = '32';
 window.FUTARI_VERSION = APP_VERSION; // lo guarda el registro de ingresos (panel de administración)
 
 // Si la app estuvo abierta hace poco (Android la cierra sola al salir), se vuelve rápido a la misma pantalla.
@@ -68,6 +69,7 @@ else onAuthStateChanged(auth, user => {
   if (!user) { setState('out'); return; }
   setState('in');
   listen();
+  snapShortcut(); // acceso directo «Instantánea» del ícono
 });
 
 async function login() {
@@ -161,6 +163,7 @@ function updateBadges() {
   setDot('dot-decide', S.data.lists.filter(listNeedsMyVote).length);
   setDot('dot-love', unreadNotes() + couponAlerts());
   setDot('dot-more', quizWaiting() ? 1 : 0);
+  setDot('dot-moments', unseenSnaps().length);
 }
 
 /* ---------- Datos de la primera versión (solo en el teléfono) ---------- */
