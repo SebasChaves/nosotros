@@ -40,6 +40,9 @@ Teléfono de Ana                      Cloudflare Worker                 Servicio
 
 ## Configurar el servicio (una sola vez, lo hace el dueño)
 
+**Estado:** configurado en noviembre de 2026 (Worker `futari-push`, versión 34 de la app). Estos pasos sirven si hay que
+rehacerlo (otra cuenta, llaves nuevas).
+
 1. **Llaves.** Abre https://sebaschaves.github.io/nosotros/notificaciones/llaves.html → «Crear llaves». Deja la página
    abierta hasta el paso 4.
 2. **Cuenta.** Crea una cuenta gratis en https://dash.cloudflare.com (solo correo y contraseña, sin tarjeta).

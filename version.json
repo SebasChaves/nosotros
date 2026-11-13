@@ -1,9 +1,16 @@
 {
-  "version": "33",
+  "version": "34",
   "notes": [
-    "🔔 Ya casi: las notificaciones están en camino. Pronto podrán activarlas en Ajustes → Notificaciones"
+    "🔔 ¡Notificaciones! Les llega un aviso al teléfono cuando su pareja les manda una instantánea, una nota, un cupón, una canción o un «pensando en ti»",
+    "Actívenlas en Ajustes → Notificaciones y toquen «Probar» (en iPhone, abran Futari desde el ícono de la pantalla de inicio)",
+    "Elijan ahí qué avisos quieren recibir. Al tocar un aviso se abre Futari justo en lo que llegó"
   ],
   "history": [
+    { "version": "34", "notes": [
+      "🔔 ¡Notificaciones! Les llega un aviso al teléfono cuando su pareja les manda una instantánea, una nota, un cupón, una canción o un «pensando en ti»",
+      "Actívenlas en Ajustes → Notificaciones y toquen «Probar» (en iPhone, abran Futari desde el ícono de la pantalla de inicio)",
+      "Elijan ahí qué avisos quieren recibir. Al tocar un aviso se abre Futari justo en lo que llegó"
+    ] },
     { "version": "33", "notes": [
       "🔔 Ya casi: las notificaciones están en camino. Pronto podrán activarlas en Ajustes → Notificaciones"
     ] },
