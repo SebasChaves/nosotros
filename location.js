@@ -1,6 +1,6 @@
 // Ubicación para fotos: se toma sola de la foto (si el teléfono la guardó), o se busca, o "Dónde estoy".
 // Uso en un formulario: placeField('id') en el HTML, después initPlace('id', lugarInicial) y al guardar getPlace('id').
-import { $, esc, expose, toast } from './core.js';
+import { $, S, esc, expose, toast } from './core.js';
 
 const state = {}; // id -> { place, open, results }
 
@@ -49,7 +49,9 @@ export async function placeFromPoint(lat, lng) {
 
 /* ---------- Campo de ubicación ---------- */
 export const placeField = id => `<div id="${id}" class="place-field"></div>`;
-export function initPlace(id, place = null) { state[id] = { place, open: false, results: [] }; draw(id); }
+// opts.query(): texto para buscar al abrir (p. ej. el nombre del restaurante). opts.onPick(lugar, resultado): al elegir uno.
+// opts.label: texto del botón.
+export function initPlace(id, place = null, opts = {}) { state[id] = { place, open: false, results: [], opts }; draw(id); }
 export const getPlace = id => state[id]?.place || null;
 export function setPlace(id, place) { if (!state[id]) return; state[id].place = place; state[id].open = false; draw(id); }
 function draw(id) {
@@ -57,32 +59,40 @@ function draw(id) {
   if (s.place) {
     el.innerHTML = `<div class="place-chip"><span>📍</span><span class="grow">${esc(s.place.name)}</span><button type="button" class="del" aria-label="Quitar ubicación" onclick="plClear('${id}')">✕</button></div>`;
   } else if (!s.open) {
-    el.innerHTML = `<button type="button" class="link" style="padding:0;text-align:left" onclick="plOpen('${id}')">📍 Agregar ubicación</button>`;
+    el.innerHTML = `<button type="button" class="link" style="padding:0;text-align:left" onclick="plOpen('${id}')">${esc(s.opts?.label || '📍 Agregar ubicación')}</button>`;
   } else {
     el.innerHTML = `<div class="stack" style="gap:8px">
       <div class="add-row"><input id="${id}Q" placeholder="Busca el lugar: un restaurante, una playa, una ciudad…" aria-label="Buscar lugar" onkeydown="if(event.key==='Enter'){event.preventDefault();plSearch('${id}')}">
         <button type="button" class="btn" aria-label="Buscar" onclick="plSearch('${id}')">🔎</button></div>
       <div id="${id}R" class="stack" style="gap:2px"></div>
       <button type="button" class="btn ghost small" onclick="plHere('${id}')">📍 Dónde estoy</button></div>`;
-    setTimeout(() => $(`${id}Q`)?.focus(), 50);
+    const q = s.opts?.query?.() || '';
+    if (q) { $(`${id}Q`).value = q; plSearch(id); } else setTimeout(() => $(`${id}Q`)?.focus(), 50);
   }
 }
 function plOpen(id) { state[id].open = true; draw(id); }
 function plClear(id) { state[id].place = null; state[id].open = false; draw(id); }
-async function plSearch(id) {
+// Primero se busca en su país (según la moneda de Ajustes); si no hay nada, en todo el mundo.
+const COUNTRY = { CRC: 'cr', MXN: 'mx', COP: 'co', GTQ: 'gt', PEN: 'pe', ARS: 'ar', CLP: 'cl', EUR: 'es', USD: '' };
+async function plSearch(id, world = false) {
   const q = $(`${id}Q`)?.value.trim(); if (!q || q.length < 2) return;
   const box = $(`${id}R`); box.innerHTML = '<p class="small muted center" style="margin:0">Buscando…</p>';
+  const cc = world ? '' : (COUNTRY[S.settings.currency] ?? 'cr');
+  const find = c => fetch(`https://nominatim.openstreetmap.org/search?format=json&limit=5&addressdetails=1&accept-language=es${c ? '&countrycodes=' + c : ''}&q=${encodeURIComponent(q)}`).then(r => r.json());
   try {
-    const r = await (await fetch(`https://nominatim.openstreetmap.org/search?format=json&limit=5&addressdetails=1&accept-language=es&q=${encodeURIComponent(q)}`)).json();
+    let r = await find(cc), local = !!cc;
+    if (!r.length && cc) { r = await find(''); local = false; }
     state[id].results = r;
-    box.innerHTML = r.length ? r.map((x, i) => `<button type="button" class="result-row" onclick="plChoose('${id}',${i})"><span class="e">📍</span><span class="grow small">${esc(x.display_name)}</span></button>`).join('')
-      : '<p class="small muted center" style="margin:0">Sin resultados. Prueba con otro nombre.</p>';
+    box.innerHTML = (r.length ? r.map((x, i) => `<button type="button" class="result-row" onclick="plChoose('${id}',${i})"><span class="e">📍</span><span class="grow small">${esc(x.display_name)}</span></button>`).join('')
+      : '<p class="small muted center" style="margin:0">Sin resultados. Prueba con otro nombre.</p>')
+      + (local && r.length ? `<button type="button" class="link small" style="padding:4px 0" onclick="plSearch('${id}',true)">¿No es ninguno? Buscar en otros países</button>` : '');
   } catch { box.innerHTML = '<p class="small muted center" style="margin:0">No se pudo buscar. Revisa la conexión.</p>'; }
 }
 function plChoose(id, i) {
   const x = state[id].results[i]; if (!x) return;
   const name = x.name || x.display_name.split(',')[0], area = short(x.address);
-  setPlace(id, { name: area && area !== name ? `${name}, ${area}` : name, lat: +x.lat, lng: +x.lon, country: x.address?.country || '' });
+  const place = { name: area && area !== name ? `${name}, ${area}` : name, lat: +x.lat, lng: +x.lon, country: x.address?.country || '' };
+  setPlace(id, place); state[id].opts?.onPick?.(place, x);
 }
 function plHere(id) {
   if (!navigator.geolocation) return toast('Este teléfono no permite ubicación');
@@ -97,5 +107,20 @@ export async function placeFromPhoto(id, file) {
   const place = await placeFromPoint(gps.lat, gps.lng);
   if (!getPlace(id)) { setPlace(id, place); toast('Ubicación tomada de la foto'); }
 }
+
+/* ---------- Distancias ---------- */
+export function distKm(a, b) {
+  const R = 6371, r = x => x * Math.PI / 180, dLat = r(b.lat - a.lat), dLng = r(b.lng - a.lng);
+  const h = Math.sin(dLat / 2) ** 2 + Math.cos(r(a.lat)) * Math.cos(r(b.lat)) * Math.sin(dLng / 2) ** 2;
+  return 2 * R * Math.asin(Math.sqrt(h));
+}
+export const fmtKm = k => k < 1 ? `${Math.round(k * 1000 / 50) * 50} m` : `${k < 10 ? k.toFixed(1).replace('.', ',') : Math.round(k)} km`;
+export const myPosition = () => new Promise((ok, bad) => {
+  if (!navigator.geolocation) return bad(new Error('nogeo'));
+  navigator.geolocation.getCurrentPosition(p => ok({ lat: p.coords.latitude, lng: p.coords.longitude }), bad, { enableHighAccuracy: false, timeout: 10000, maximumAge: 300000 });
+});
+// Enlaces para llegar con Google Maps o Waze.
+export const mapsUrl = p => `https://www.google.com/maps/search/?api=1&query=${p.lat},${p.lng}`;
+export const wazeUrl = p => `https://waze.com/ul?ll=${p.lat},${p.lng}&navigate=yes`;
 
 expose({ plOpen, plClear, plSearch, plChoose, plHere });

@@ -31,6 +31,7 @@ function render() {
     <div class="seg">${STATUS.map(([k, l]) => `<button class="${tab === k ? 'on' : ''}" onclick="showsTab('${k}')">${l} · ${count(k)}</button>`).join('')}</div>
     <div class="row"><div class="chips">${[['all', 'Todo'], ['movie', 'Películas'], ['tv', 'Series']].map(([k, l]) => `<button class="chip ${kind === k ? 'on' : ''}" onclick="showsKind('${k}')">${l}</button>`).join('')}</div></div>
     ${tab === 'want' && count('want') >= 2 ? `<button class="btn ghost" onclick="showsToDecide()">${icon('dice')} ¿Qué vemos hoy?</button>` : ''}
+    ${HAS_TMDB ? `<button class="btn ghost" onclick="openSuggestions()">✨ Sugerencias para ustedes</button>` : ''}
     ${list.length ? `<div class="posters">${list.map(s => `<button class="poster" onclick="openShow('${s.id}')">
       <span class="img">${s.poster ? `<img src="${IMG(s.poster, 342)}" alt="" loading="lazy">` : (s.type === 'tv' ? '📺' : '🎬')}
         ${s.status === 'watching' && s.type === 'tv' && s.progress ? `<span class="tag">T${s.progress.s} · E${s.progress.e}</span>` : ''}</span>
@@ -80,8 +81,9 @@ function searchShows(q) {
     } catch (e) { console.error(e); const box = $('shResults'); if (box) box.innerHTML = '<p class="small muted center">No se pudo buscar. Revisa la conexión o agrégala a mano.</p>'; }
   }, 350);
 }
-async function pickShow(i) {
+async function pickShow(i, keep = false) {
   const r = lastResults[i]; if (!r) return;
+  if (keep) { const b = document.querySelector(`[data-sug="${i}"]`); if (b) { b.disabled = true; b.textContent = '✓'; } }
   const type = r.media_type;
   let providers = [], seasons = null;
   try {
@@ -98,7 +100,42 @@ async function pickShow(i) {
     poster: r.poster_path || null, overview: (r.overview || '').slice(0, 600), providers, seasons,
     status: 'want', ratings: {}, by: uid(), createdAt: Date.now(),
   }));
-  tab = 'want'; closeSheet(); toast('Agregada a la lista');
+  if (!keep) { tab = 'want'; closeSheet(); }
+  toast('Agregada a Por ver');
+}
+
+/* ---------- Sugerencias ---------- */
+// Recomendaciones de TMDB a partir de lo que vieron y les gustó (o de lo que tienen por ver). Sin datos: lo más visto de la semana.
+async function openSuggestions() {
+  openSheet('<div class="stack" id="sugBox"><h2>✨ Sugerencias</h2><p class="small muted center">Buscando ideas…</p></div>');
+  const withId = S.data.shows.filter(s => s.tmdbId);
+  const liked = withId.filter(s => s.status === 'seen' && Object.values(s.ratings || {}).some(v => v >= 4));
+  const seeds = (liked.length ? liked : withId.filter(s => s.status === 'seen').length ? withId.filter(s => s.status === 'seen') : withId)
+    .sort((a, b) => (b.seenAt || b.createdAt || 0) - (a.seenAt || a.createdAt || 0)).slice(0, 6);
+  const have = new Set(S.data.shows.map(s => `${s.type}-${s.tmdbId}`));
+  const found = new Map();
+  try {
+    if (seeds.length) {
+      const lists = await Promise.all(seeds.map(s => tmdb(`${s.type}/${s.tmdbId}/recommendations`).then(d => ({ s, d })).catch(() => null)));
+      for (const x of lists.filter(Boolean)) for (const r of (x.d.results || []).slice(0, 12)) {
+        const type = r.media_type || x.s.type, key = `${type}-${r.id}`;
+        if (have.has(key) || r.adult) continue;
+        const f = found.get(key) || { ...r, media_type: type, n: 0, because: [] };
+        f.n++; if (f.because.length < 2) f.because.push(x.s.title); found.set(key, f);
+      }
+    }
+    if (found.size < 6) {
+      const t = await tmdb('trending/all/week').catch(() => ({}));
+      for (const r of (t.results || [])) { const key = `${r.media_type}-${r.id}`; if ((r.media_type === 'movie' || r.media_type === 'tv') && !have.has(key) && !found.has(key)) found.set(key, { ...r, n: 0, because: [] }); }
+    }
+  } catch {}
+  lastResults = [...found.values()].sort((a, b) => b.n - a.n || (b.vote_average || 0) - (a.vote_average || 0)).slice(0, 18);
+  const box = $('sugBox'); if (!box) return;
+  box.innerHTML = `<h2>✨ Sugerencias</h2>${seeds.length ? '<p class="small muted" style="margin:0">Según lo que han visto y agregado</p>' : '<p class="small muted" style="margin:0">Lo más visto esta semana. Mientras más agreguen y califiquen, mejores sugerencias.</p>'}
+    ${lastResults.length ? lastResults.map((r, i) => `<div class="result" style="cursor:default">${r.poster_path ? `<img src="${IMG(r.poster_path, 92)}" alt="">` : `<span class="ph">${r.media_type === 'tv' ? '📺' : '🎬'}</span>`}
+      <span class="grow"><b>${esc(r.title || r.name)}</b><span class="sub small muted" style="display:block">${[(r.release_date || r.first_air_date || '').slice(0, 4), r.media_type === 'tv' ? 'Serie' : 'Película', r.vote_average ? '★ ' + r.vote_average.toFixed(1) : ''].filter(Boolean).join(' · ')}</span>
+        ${r.because.length ? `<span class="tiny muted" style="display:block">${seeds.every(s => s.status === 'seen') ? 'Porque vieron' : 'Parecida a'} ${r.because.map(esc).join(' y ')}</span>` : ''}</span>
+      <button class="btn small" data-sug="${i}" aria-label="Agregar a Por ver" onclick="pickShow(${i},true)">${icon('plus')}</button></div>`).join('') : '<p class="small muted center">No se pudieron cargar sugerencias. Revisa la conexión.</p>'}`;
 }
 
 /* ---------- Detalle ---------- */
@@ -151,5 +188,5 @@ function showsToDecide() {
 }
 
 on('shows', () => { render(); if (openId && $('showDetail') && $('sheet').classList.contains('show')) openShow(openId); });
-expose({ showsTab, showsKind, openAddShow, manualShow, saveManualShow, searchShows, pickShow, openShow,
+expose({ openSuggestions, showsTab, showsKind, openAddShow, manualShow, saveManualShow, searchShows, pickShow, openShow,
   setShowStatus, stepShow, rateShow, delShow, showsToDecide });

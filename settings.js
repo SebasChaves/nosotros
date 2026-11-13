@@ -29,6 +29,7 @@ function renderMore() {
       ${tile('s-places', 'fork', 'Restaurantes', plural(S.data.places.length, 'lugar', 'lugares'))}
       ${tile('s-shows', 'film', 'Pelis y series', plural(S.data.shows.filter(s => (s.status || 'want') === 'want').length, 'por ver', 'por ver'))}
       ${tile('s-cal', 'cal', 'Calendario', nextPlan ? esc(nextPlan.title) : 'Planes de los dos')}
+      ${tile('s-reminders', 'bell', 'Recordatorios', (n => n ? plural(n, 'pendiente', 'pendientes') : 'Nada pendiente')(S.data.reminders.filter(r => !r.done).length))}
       ${tile('s-recipes', 'pot', 'Recetas', S.data.menu.length ? 'Recetas y menú semanal' : `Más de 40 recetas`)}
       ${tile('s-map', 'map', 'Nuestro mapa', plural(S.data.pins.length, 'lugar', 'lugares'))}
       ${tile('s-music', 'music', 'Su playlist', plural(S.data.songs.length, 'canción', 'canciones'))}

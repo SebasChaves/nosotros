@@ -1,9 +1,43 @@
 {
-  "version": "23",
+  "version": "24",
   "notes": [
-    "Calendario: toca un plan para editarlo",
-    "Calendario: en Android, opción para pasar el plan al calendario de Samsung u otro",
-    "Ubicación en los momentos y en la foto del día: se toma sola de la foto si la trae, o búscala o usa «Dónde estoy»",
-    "Las fotos con ubicación aparecen en el mapa 📷"
+    "Restaurantes: busquen dónde queda, Cómo llegar con Google Maps o Waze, Cerca de mí, tipo y precio",
+    "Restaurantes en el mapa 🍽️, y se pueden editar los que ya tenían",
+    "Playlist: busquen la canción y se pone sola la portada, o pongan una foto suya",
+    "Playlist: escuchen un adelanto de 30 segundos ▶",
+    "Playlist: marquen «Nuestra canción» 💞 y dedíquense canciones 💌 (le aparece al otro en Hoy)",
+    "Pelis y series: ✨ Sugerencias según lo que han visto y les gustó",
+    "Recordatorios 🔔 en Más: aparecen en Hoy desde su fecha, y se pueden pasar al calendario del teléfono con alarma",
+    "Las novedades ahora muestran todo lo que salió desde la última vez que actualizaron"
+  ],
+  "history": [
+    { "version": "24", "notes": [
+      "Restaurantes: busquen dónde queda, Cómo llegar con Google Maps o Waze, Cerca de mí, tipo y precio",
+      "Restaurantes en el mapa 🍽️, y se pueden editar los que ya tenían",
+      "Playlist: busquen la canción y se pone sola la portada, o pongan una foto suya",
+      "Playlist: escuchen un adelanto de 30 segundos ▶",
+      "Playlist: marquen «Nuestra canción» 💞 y dedíquense canciones 💌 (le aparece al otro en Hoy)",
+      "Pelis y series: ✨ Sugerencias según lo que han visto y les gustó",
+      "Recordatorios 🔔 en Más: aparecen en Hoy desde su fecha, y se pueden pasar al calendario del teléfono con alarma",
+      "Las novedades ahora muestran todo lo que salió desde la última vez que actualizaron"
+    ] },
+    { "version": "23", "notes": [
+      "Calendario: toca un plan para editarlo",
+      "Calendario: en Android, opción para pasar el plan al calendario de Samsung u otro",
+      "Ubicación en los momentos y en la foto del día: se toma sola de la foto si la trae, o búscala o usa «Dónde estoy»",
+      "Las fotos con ubicación aparecen en el mapa 📷"
+    ] },
+    { "version": "22", "notes": [
+      "Arreglo en iPhone: la barra de abajo ya no se sube ni queda una franja oscura en pantallas cortas"
+    ] },
+    { "version": "21", "notes": [
+      "Aviso cuando hay una versión nueva, con un botón para actualizar",
+      "Botón atrás de Android: cierra ventanas y fotos, y vuelve a la pantalla anterior",
+      "Deslizar el dedo a los lados para cambiar de pestaña",
+      "Las ventanas de abajo se cierran arrastrándolas hacia abajo",
+      "Las fotos abiertas tienen botón para cerrar y se cierran deslizando hacia abajo",
+      "En Android se puede elegir entre tomar foto con la cámara o elegir de la galería",
+      "Se pueden subir fotos muy pesadas en Android"
+    ] }
   ]
 }

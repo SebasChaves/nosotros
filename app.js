@@ -24,13 +24,14 @@ import './admin.js';
 import './recipes.js';
 import './map.js';
 import './music.js';
+import './reminders.js';
 import { startBadgeWatch } from './badges.js';
 import { lockNow } from './lock.js';
 import { logVisit } from './tracking.js';
 import { maybeStartTour, resetTourCheck } from './tour.js';
 
 // Versión de esta copia de la app. Súbela junto con version.json y la caché de sw.js al publicar.
-export const APP_VERSION = '23';
+export const APP_VERSION = '24';
 
 // Si la app estuvo abierta hace poco (Android la cierra sola al salir), se vuelve rápido a la misma pantalla.
 const RESUME_KEY = 'futari-resume';
@@ -191,7 +192,7 @@ function afterIn() {
   // Pantallas que dependen de algo elegido antes (un viaje, una partida) no se restauran.
   if (resume?.screen && !['s-home', 's-trip', 's-search', 's-game', 's-quiz'].includes(resume.screen) && $(resume.screen)) go(resume.screen);
   let seen = null; try { seen = localStorage.getItem('futari-version'); localStorage.setItem('futari-version', APP_VERSION); } catch {}
-  if (seen && seen !== APP_VERSION) setTimeout(showNews, 1200);
+  if (seen && seen !== APP_VERSION) setTimeout(() => showNews(seen), 1200);
   setTimeout(checkUpdate, 4000);
   setInterval(checkUpdate, 30 * 60000);
 }
@@ -209,10 +210,16 @@ async function updateNow(btn) {
   try { const reg = await navigator.serviceWorker?.getRegistration(); await reg?.update(); } catch {}
   location.reload();
 }
-async function showNews() {
+// Muestra todo lo nuevo desde la última versión que se abrió en este teléfono (acumulado, de lo más nuevo a lo más viejo).
+async function showNews(seen) {
   let v; try { v = await getVersion(); } catch { return; }
-  if (v?.version !== APP_VERSION || !v.notes?.length) return;
-  openSheet(`<div class="stack"><h2>✨ Novedades</h2><ul class="news" style="margin:0;padding-left:20px">${v.notes.map(n => `<li>${esc(n)}</li>`).join('')}</ul>
+  const hist = (v?.history || [{ version: v?.version, notes: v?.notes || [] }])
+    .filter(h => Number(h.version) > Number(seen) && Number(h.version) <= Number(APP_VERSION) && h.notes?.length)
+    .sort((a, b) => Number(b.version) - Number(a.version));
+  if (!hist.length) return;
+  const notes = hist.flatMap(h => h.notes);
+  openSheet(`<div class="stack"><h2>✨ Novedades</h2>${hist.length > 1 ? `<p class="small muted" style="margin:0">Lo nuevo de las últimas ${hist.length} actualizaciones</p>` : ''}
+    <ul class="news" style="margin:0;padding-left:20px;max-height:52vh;overflow:auto">${notes.map(n => `<li>${esc(n)}</li>`).join('')}</ul>
     <button class="btn" onclick="closeSheet()">¡Genial!</button></div>`);
 }
 

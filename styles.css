@@ -471,6 +471,7 @@ body[data-theme="light"] .tour { background: rgba(40, 20, 50, .35); }
 .map-pin { width: 34px; height: 34px; border-radius: 50% 50% 50% 0; transform: rotate(-45deg); background: var(--grad); display: grid; place-items: center; box-shadow: 0 6px 14px -6px rgba(0,0,0,.6); border: 2px solid #fff; }
 .map-pin span { transform: rotate(45deg); font-size: 16px; line-height: 1; }
 .map-pin.photo { background: #fff; border-color: var(--g1); }
+.map-pin.food { background: #FFE9C7; border-color: #FFB547; }
 .place-chip { display: flex; align-items: center; gap: 8px; padding: 8px 6px 8px 12px; border-radius: 14px; background: var(--soft); border: 1px solid var(--line); font-size: 14px; }
 .place-chip .grow { flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .place-link { display: block; padding: 0; margin-top: 6px; font-size: 13px; text-align: left; }
@@ -504,3 +505,9 @@ body[data-theme="light"] .tour { background: rgba(40, 20, 50, .35); }
 @keyframes shake { 20%, 60% { transform: translateX(-10px); } 40%, 80% { transform: translateX(10px); } }
 
 body:not([data-theme="light"]) .map-box .leaflet-tile-pane { filter: invert(1) hue-rotate(180deg) brightness(.9) contrast(.9) saturate(.7); }
+
+/* Playlist */
+.song-ours { border-color: color-mix(in srgb, var(--g1) 55%, var(--line)); box-shadow: 0 0 0 1px color-mix(in srgb, var(--g1) 30%, transparent) inset; }
+.play-btn { flex-shrink: 0; font-size: 15px; }
+.dedic { font-size: 13.5px; line-height: 1.45; padding: 8px 12px; border-radius: 12px; background: var(--soft); }
+.song-cover { cursor: pointer; flex-shrink: 0; display: block; }

@@ -77,7 +77,14 @@ function drawPins(fit) {
       .bindPopup(`<b>${esc(p.title)}</b><br>${p.date ? fmtShort(parseDate(p.date)) : ''} · ${esc(p.name)}<br><a href="#" onclick="viewPhoto({src:'',dataset:{thumb:'${p.id}'}});return false">Ver foto</a>`)
       .addTo(layer);
   }
-  const all = [...pins, ...photos];
+  // Restaurantes con ubicación (de la sección Restaurantes)
+  const food = !filter || filter === '🍽️' ? S.data.places.filter(p => p.loc) : [];
+  for (const p of food) {
+    L.marker([p.loc.lat, p.loc.lng], { icon: L.divIcon({ className: '', html: `<div class="map-pin food"><span>🍽️</span></div>`, iconSize: [34, 34], iconAnchor: [17, 34] }) })
+      .bindPopup(`<b>${esc(p.name)}</b><br>${esc(p.status === 'been' ? 'Ya fueron' : 'Quieren ir')}${p.kind ? ' · ' + esc(p.kind) : ''}<br><a href="#" onclick="go('s-places');return false">Ver en Restaurantes</a>`)
+      .addTo(layer);
+  }
+  const all = [...pins, ...photos, ...food.map(p => p.loc)];
   if (fit && all.length) map.fitBounds(all.map(p => [p.lat, p.lng]), { padding: [40, 40], maxZoom: 13 });
 }
 function flyPin(id) { const p = S.data.pins.find(x => x.id === id); if (p && map) { map.flyTo([p.lat, p.lng], 14); window.scrollTo({ top: 0, behavior: 'smooth' }); } }
@@ -142,6 +149,6 @@ function savePin() {
 }
 async function delPin(id) { if (await ask('¿Quitar este lugar del mapa?')) { write(deleteDoc(ref('pins', id))); map?.closePopup(); } }
 
-on('pins moments daily', () => { if ($('mapBox') && $('s-map').classList.contains('active')) render(); });
+on('pins moments daily places', () => { if ($('mapBox') && $('s-map').classList.contains('active')) render(); });
 onShow('s-map', render);
 expose({ showOnMap, addPin, searchPlace, choosePlace, myLocation, pickOnMap, cancelPick, savePin, delPin, flyPin, pinFilter });

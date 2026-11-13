@@ -10,6 +10,8 @@ import { unreadNotes } from './love.js';
 import { listNeedsMyVote } from './decide.js';
 import { quizWaiting } from './quiz.js';
 import { myDailyDone, partnerDailyDone } from './daily.js';
+import { dueReminders } from './reminders.js';
+import { songDedication } from './music.js';
 
 /* ---------- Racha y "Pensando en ti" ---------- */
 // Un día cuenta para la racha si los dos hicieron algo: marcar ánimo, responder la pregunta o mandar un "pensando en ti".
@@ -50,6 +52,8 @@ function todayCard() {
   const row = (e, text, action) => rows.push(`<button class="result-row" onclick="${action}"><span class="e">${e}</span><span class="grow">${text}</span>${icon('send')}</button>`);
   for (const it of itemsFor(tk)) row(it.kind === 'plan' ? '📌' : it.kind === 'trip' ? '✈️' : '🎉', `<b>Hoy:</b> ${esc(it.label)}${it.time ? ' · ' + esc(it.time) : ''}`, `go('s-cal');calPick('${tk}')`);
   for (const it of itemsFor(tomorrow).filter(i => i.kind !== 'trip')) row('⏰', `<b>Mañana:</b> ${esc(it.label)}`, `go('s-cal');calPick('${tomorrow}')`);
+  for (const r of dueReminders().slice(0, 4)) row('🔔', `<b>${r.date < tk ? 'Pendiente' : 'Recordar'}:</b> ${esc(r.text)}${r.time ? ' · ' + esc(r.time) : ''}`, "go('s-reminders')");
+  const ded = songDedication(); if (ded) row('💌', `<b>${esc(nameOf(ded.dedication.by))}</b> te dedicó una canción: ${esc(ded.title)}`, 'openDedication()');
   const ans = todayAnswers();
   if (!ans?.answers?.[uid()]) row('💬', p && ans?.answers?.[p] ? `Responde la pregunta del día (${pn} ya respondió)` : 'Responde la pregunta del día', `document.getElementById('answerText')?.scrollIntoView({block:'center'});document.getElementById('answerText')?.focus()`);
   if (!myDailyDone()) row('📷', partnerDailyDone() ? `${pn} ya subió su foto del día: sube la tuya para verla` : 'Sube tu foto del día', `go('s-moments');momTab('daily')`);
@@ -271,6 +275,6 @@ function renderHome() {
   loadPhotos($('s-home'));
 }
 
-on('dates moments moods answers challenges trips profiles events thinks notes coupons lists quiz daily', renderHome);
+on('dates moments moods answers challenges trips profiles events thinks notes coupons lists quiz daily reminders songs', renderHome);
 on('thinks', checkIncomingThink);
 expose({ sendThink, openFechas, addFecha, delFecha, answerQuestion, openAnswers, setMood, skipChallenge, doneChallenge });
