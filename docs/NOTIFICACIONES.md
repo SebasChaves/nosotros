@@ -84,6 +84,7 @@ de solo lectura** y manda, según la hora de Costa Rica (`TIME_ZONE`):
 | 20:00 | «🐱 Mochi tiene hambre» / «🔥 Su racha de N días se acaba hoy» a quien aún no hizo nada hoy (si hay racha o mascota) | `streak` |
 | el minuto exacto del recordatorio (o 8:00) | recordatorios 🔔 de hoy no hechos, a quien le toca | `reminders` |
 | 8:00 / 9:00 | «Hoy es…» / «Mañana es…»: fechas especiales, aniversarios y mesiversarios | `dates` |
+| domingo 19:00 | «📊 Su semana en Futari»: días juntos, corazones e instantáneas o preguntas (como `week.js`) | `week` |
 
 - La racha usa la misma regla que `home.js` (`didSomething`): `moods`, `answers`, `thinks`, `daily` y `activity`.
   Si cambias esa regla, cámbiala también en el Worker.

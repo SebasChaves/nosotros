@@ -1,7 +1,18 @@
 {
-  "version": "39",
-  "notes": [],
+  "version": "40",
+  "notes": [
+    "🔮 Nuevo: «¿Qué respondería tu pareja?». Cada día una pregunta en Inicio: respondes por ti y adivinas qué eligió tu pareja. Cada acierto da 5 🪙 a su mascota",
+    "📊 Resumen de la semana: los domingos les llega un aviso con su semana, y en Inicio ven sus números, fotos y cómo les fue comparado con la semana anterior",
+    "🐾 Avisos de la mascota: cuando tu pareja le compra algo, le pone nombre o te supera un récord en los juegos",
+    "👋 La guía ahora incluye todo lo nuevo (mascota, instantáneas, notificaciones y atajos). Te sale una vez; después está en Ajustes"
+  ],
   "history": [
+    { "version": "40", "notes": [
+      "🔮 Nuevo: «¿Qué respondería tu pareja?». Cada día una pregunta en Inicio: respondes por ti y adivinas qué eligió tu pareja. Cada acierto da 5 🪙 a su mascota",
+      "📊 Resumen de la semana: los domingos les llega un aviso con su semana, y en Inicio ven sus números, fotos y cómo les fue comparado con la semana anterior",
+      "🐾 Avisos de la mascota: cuando tu pareja le compra algo, le pone nombre o te supera un récord en los juegos",
+      "👋 La guía ahora incluye todo lo nuevo (mascota, instantáneas, notificaciones y atajos). Te sale una vez; después está en Ajustes"
+    ] },
     { "version": "39", "notes": [] },
     { "version": "38", "notes": [
       "🎨 Su mascota tiene dibujo nuevo, igual en los dos teléfonos: parpadea, respira y cambia de cara (feliz, con hambre, triste o dormida)",

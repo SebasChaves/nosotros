@@ -10,6 +10,7 @@ import { unreadNotes, couponAlerts } from './love.js';
 import './moments.js';
 import { unseenSnaps, snapShortcut } from './snaps.js';
 import { handleOpenParam } from './push.js';
+import { guessWaiting } from './guess.js';
 import './lists.js';
 import './money.js';
 import './places.js';
@@ -34,7 +35,7 @@ import { logVisit } from './tracking.js';
 import { maybeStartTour, resetTourCheck } from './tour.js';
 
 // Versión de esta copia de la app. Súbela junto con version.json y la caché de sw.js al publicar.
-export const APP_VERSION = '39';
+export const APP_VERSION = '40';
 window.FUTARI_VERSION = APP_VERSION; // lo guarda el registro de ingresos (panel de administración)
 
 // Si la app estuvo abierta hace poco (Android la cierra sola al salir), se vuelve rápido a la misma pantalla.
@@ -161,7 +162,7 @@ function updateBadges() {
   if (!S.me) return;
   const setDot = (id, n) => { const el = $(id); el.hidden = !n; el.textContent = n > 9 ? '9+' : n; };
   const p = partnerUid(), ans = todayAnswers();
-  setDot('dot-home', (p && ans?.answers?.[p] && !ans?.answers?.[uid()] ? 1 : 0) + urgentReminders().length);
+  setDot('dot-home', (p && ans?.answers?.[p] && !ans?.answers?.[uid()] ? 1 : 0) + (guessWaiting() ? 1 : 0) + urgentReminders().length);
   setDot('dot-decide', S.data.lists.filter(listNeedsMyVote).length);
   setDot('dot-love', unreadNotes() + couponAlerts());
   setDot('dot-more', quizWaiting() ? 1 : 0);

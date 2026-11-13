@@ -12,6 +12,7 @@ import { bothDid, didSomething, streak } from './home.js';
 import { backBar } from './lists.js';
 import { sceneSVG, petSVG, ITEMS, SLOTS, timeOfDay } from './pet-art.js';
 import { GAMES, playGame } from './pet-games.js';
+import { notify, meForPartner } from './push.js';
 
 // [emoji, nombre, artículo]
 export const SPECIES = [['🐱', 'gatito', 'un'], ['🐶', 'perrito', 'un'], ['🐰', 'conejito', 'un'], ['🦊', 'zorrito', 'un'], ['🐼', 'panda', 'un'],
@@ -158,6 +159,7 @@ async function buyItem(id) {
   if (!(await ask(`¿Comprar ${it.name} por ${it.price} 🪙? Quedarían ${money - it.price} 🪙.`, { ok: 'Comprar' }))) return;
   write(updateDoc(ref('pet', 'main'), { spent: increment(it.price), [`owned.${id}`]: true, [`wear.${it.slot}`]: id, lastBuy: { id, by: uid(), at: Date.now() } }));
   celebrate(); toast(`¡${it.name} para ${p.name || 'su mascota'}! Ya se lo pusieron`);
+  notify('pet', { title: `💝 ${meForPartner()} le compró ${it.name.toLowerCase()} a ${p.name || 'su mascota'}`, body: 'Ya lo tiene puesto. ¡Vayan a verlo!', url: './?open=petgames', tag: 'pet-buy' });
   tab = 'vestir'; slotSel = it.slot;
 }
 function wearItem(id) {
@@ -179,6 +181,9 @@ function startGame(id) {
     if (record) patch[`best.${id}.${uid()}`] = score;
     if (earn) { patch.bonus = increment(earn); patch[`gameDay.${uid()}`] = { day: todayKey(), n: used + earn }; }
     if (Object.keys(patch).length) write(updateDoc(ref('pet', 'main'), patch));
+    // Si superaste el récord de tu pareja (y antes no lo tenías superado), se le avisa
+    const theirs = partner ? cur.best?.[id]?.[partner] || 0 : 0;
+    if (record && theirs > 0 && score > theirs && mine <= theirs) notify('pet', { title: `🏆 ${meForPartner()} superó tu récord en ${g.name}`, body: `${score} puntos contra tus ${theirs}. ¿La revancha?`, url: './?open=petgames', tag: 'pet-rec-' + id });
     return { coins: earn, capped: !earn && used >= GAME_CAP, mine: Math.max(mine, score), record: record && mine > 0, theirs: partner ? cur.best?.[id]?.[partner] || 0 : null, theirsName: partner ? nameOf(partner) : '' };
   });
 }
@@ -200,6 +205,7 @@ function hatchPet() {
   setTimeout(() => {
     write(updateDoc(ref('pet', 'main'), { species: sp, hatchedAt: Date.now(), hatchedBy: uid() }));
     celebrate();
+    notify('pet', { title: '🐣 ¡Nació su mascota!', body: `Es ${SPECIES.find(s => s[0] === sp)?.[2] || 'un'} ${speciesName(sp)}. ¿Cómo le van a poner?`, url: './?open=pet', tag: 'pet-hatch' });
     openSheet(`<div class="stack center"><svg viewBox="0 0 160 160" style="width:150px;height:150px;align-self:center" role="img" aria-label="${esc(speciesName(sp))}">${petSVG({ species: sp, mood: 'feliz', stage: 1 })}</svg>
       <h2>¡Nació ${SPECIES.find(s => s[0] === sp)?.[2] || 'un'} ${esc(speciesName(sp))}!</h2>
       <p class="muted" style="margin:0">¿Cómo le van a poner?</p>
@@ -217,8 +223,10 @@ function renamePet() {
 function savePetName() {
   const name = $('petName').value.trim();
   if (!name) return toast('Escribe un nombre');
+  const before = pet()?.name;
   write(updateDoc(ref('pet', 'main'), { name, namedBy: uid() }));
   closeSheet(); toast(`¡Hola, ${name}! 💕`);
+  if (name !== before) notify('pet', { title: `🐾 ${meForPartner()} ${before ? 'le cambió el nombre' : 'le puso nombre'} a su mascota`, body: `Ahora se llama ${name} 💕`, url: './?open=pet', tag: 'pet-name' });
 }
 function petHelp() {
   const p = pet();

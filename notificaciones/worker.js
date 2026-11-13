@@ -16,7 +16,7 @@
 //   COUPLE_ID          (texto, opcional) por defecto nosotros
 // Ver docs/NOTIFICACIONES.md. Sin dependencias: se pega tal cual en el editor de Cloudflare.
 
-const WORKER_VERSION = 4; // súbelo al cambiar este archivo (la app lo muestra en el diagnóstico)
+const WORKER_VERSION = 5; // súbelo al cambiar este archivo (la app lo muestra en el diagnóstico)
 const enc = new TextEncoder();
 const b64u = buf => btoa(String.fromCharCode(...new Uint8Array(buf))).replace(/\+/g, '-').replace(/\//g, '_').replace(/=+$/, '');
 const unb64u = s => Uint8Array.from(atob(s.replace(/-/g, '+').replace(/_/g, '/') + '==='.slice((s.length + 3) % 4)), c => c.charCodeAt(0));
@@ -138,6 +138,7 @@ export async function encryptPayload(sub, payload, fixed = {}) {
 //   al minuto exacto del recordatorio (o 8:00 si no tiene hora) los recordatorios de hoy
 //   20:00 racha en peligro / mascota con hambre (a quien todavía no ha hecho nada hoy)
 //   8:00 «Hoy es…» y 9:00 «Mañana es…» para fechas especiales, aniversarios y mesiversarios
+//   domingo 19:00 resumen de la semana (lunes a domingo), como el de week.js en la app
 // Para gastar pocas lecturas: cada minuto solo consulta los recordatorios de hoy; el resto se lee solo si hay algo que mandar.
 // Devuelve la lista de avisos (sirve para las pruebas). La app usa la misma regla de racha que home.js.
 export async function runSchedule(env, when = Date.now(), { dryRun = false } = {}) {
@@ -149,7 +150,8 @@ export async function runSchedule(env, when = Date.now(), { dryRun = false } = {
   const today = `${L.year}-${L.month}-${L.day}`;
   const shift = (key, n) => { const [y, m, d] = key.split('-').map(Number); const x = new Date(Date.UTC(y, m - 1, d + n)); return x.toISOString().slice(0, 10); };
   const yesterday = shift(today, -1), tomorrow = shift(today, 1);
-  const STREAK_HOUR = 20, TODAY_HOUR = 8, TOMORROW_HOUR = 9;
+  const STREAK_HOUR = 20, TODAY_HOUR = 8, TOMORROW_HOUR = 9, WEEK_HOUR = 19;
+  const weekday = new Date(Date.UTC(...today.split('-').map((x, i) => i === 1 ? x - 1 : +x))).getUTCDay(); // 0 = domingo
 
   const db = await firestoreReader(env);
   // Recordatorios de hoy que tocan en este minuto (los que no tienen hora, a las 8:00)
@@ -225,6 +227,23 @@ export async function runSchedule(env, when = Date.now(), { dryRun = false } = {
       if (months > 0 && Math.min(sd, lastDay) === d) items.push(months % 12 === 0 ? `💍 su aniversario #${months / 12}` : `🗓️ su mesiversario #${months}`);
     }
     for (const it of items) for (const u of members) add(u, 'dates', { title: `${word} es ${it}`, body: word === 'Mañana' ? '¿Ya tienen algo preparado? 💝' : '¡Que sea un gran día! 🎉', url: './?open=cal', tag: `date-${day}-${it}`.slice(0, 60) });
+  }
+
+  // 4. Resumen de la semana (domingo 19:00)
+  if (onTheHour && hour === WEEK_HOUR && weekday === 0 && members.length === 2) {
+    const keys = Array.from({ length: 7 }, (_, i) => shift(today, i - 6));
+    const COLS = ['moods', 'answers', 'thinks', 'daily', 'activity', 'stats', 'guess'], days = {};
+    const docs = await db.getMany(keys.flatMap(k => COLS.map(c => `${c}/${k}`)));
+    for (const [path, d] of Object.entries(docs)) { const [c, k] = path.split('/'); (days[k] ||= {})[c] = d; }
+    const did = (k, u) => { const x = days[k] || {}; return !!(x.moods?.[u] || x.answers?.answers?.[u] || x.thinks?.[u] || x.daily?.[u] || x.activity?.[u]); };
+    const together = keys.filter(k => members.every(u => did(k, u))).length;
+    const hearts = keys.reduce((s, k) => s + members.reduce((a, u) => a + (Number(days[k]?.thinks?.[u]) || 0), 0), 0);
+    const snaps = keys.reduce((s, k) => s + members.reduce((a, u) => a + (Number(days[k]?.stats?.acts?.[u]?.snap) || 0), 0), 0);
+    const answers = keys.filter(k => members.every(u => days[k]?.answers?.answers?.[u])).length;
+    const parts = [`🔥 ${together} de 7 días juntos`, `❤️ ${hearts} ${hearts === 1 ? 'corazón' : 'corazones'}`];
+    if (snaps) parts.push(`📸 ${snaps} ${snaps === 1 ? 'instantánea' : 'instantáneas'}`); else parts.push(`💬 ${answers} ${answers === 1 ? 'pregunta' : 'preguntas'}`);
+    const title = together >= 6 ? '🏆 ¡Qué semana! Su resumen en Futari' : '📊 Su semana en Futari';
+    for (const u of members) add(u, 'week', { title, body: parts.join(' · ') + '. Toquen para ver el resumen completo.', url: './?open=week', tag: 'week-' + today });
   }
 
   if (!dryRun) {

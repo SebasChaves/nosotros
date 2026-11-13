@@ -10,7 +10,8 @@ import { PUSH } from './push-config.js';
 export const NOTIF_TYPES = [['snaps', '📸 Instantáneas y respuestas'], ['reacts', '😍 Reacciones a tus instantáneas'], ['notes', '💌 Notas nuevas'],
   ['thinks', '❤️ «Pensando en ti»'], ['songs', '🎵 Canciones dedicadas'], ['coupons', '🎟️ Cupones nuevos, canjeados y cumplidos'],
   // Programados: los manda el Worker solo (notificaciones/worker.js → scheduled)
-  ['streak', '🔥 Racha en peligro y mascota con hambre (en la noche)'], ['reminders', '🔔 Recordatorios del día'], ['dates', '🎂 Fechas especiales (el día antes y el mismo día)']];
+  ['pet', '🐾 Su mascota (compras, récords, nacimiento)'], ['guess', '🔮 ¿Qué respondería tu pareja?'],
+  ['streak', '🔥 Racha en peligro y mascota con hambre (en la noche)'], ['reminders', '🔔 Recordatorios del día'], ['dates', '🎂 Fechas especiales (el día antes y el mismo día)'], ['week', '📊 Resumen de la semana (domingo en la noche)']];
 
 export const pushConfigured = () => !!(PUSH.url && PUSH.publicKey);
 export const pushSupported = () => 'serviceWorker' in navigator && 'PushManager' in window && 'Notification' in window;
@@ -161,6 +162,8 @@ const OPEN = {
   home: () => go('s-home'),
   pet: () => { go('s-home'); setTimeout(() => document.querySelector('.pet-card')?.scrollIntoView({ behavior: 'smooth', block: 'center' }), 300); },
   reminders: () => go('s-reminders'),
+  petgames: () => window.openPet?.('juegos'),
+  week: () => { go('s-home'); window.openWeek?.(); },
   cal: () => go('s-cal'),
 };
 // Espera a que estén cargados los datos y a que se quite el candado del PIN
@@ -174,7 +177,7 @@ function openWhenReady(what) {
   run();
 }
 // Los avisos programados del Worker no llevan &n=: se deduce por la sección que abren
-const openedType = (what, n) => n || { pet: 'streak', reminders: 'reminders', cal: 'dates' }[what] || what;
+const openedType = (what, n) => n || { pet: 'streak', reminders: 'reminders', cal: 'dates', week: 'week' }[what] || what;
 export function handleOpenParam() {
   const qs = new URLSearchParams(location.search), what = qs.get('open');
   if (!what) return;

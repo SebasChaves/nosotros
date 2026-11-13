@@ -29,6 +29,7 @@
 - Mascota: más ropa y detalles en la tienda, más juegos, que el otro vea cuando la acariciaste o le compraste algo (aviso),
   ropa por temporada (Navidad, San Valentín).
 - Mascota (v38): probar en los teléfonos los juegos con el dedo (Atrapa y Salta) y que se vea fluido.
+- v40: que la guía «Lo nuevo» salga una sola vez en cada teléfono; aviso del resumen el domingo 19:00 (Worker v5).
 
 - Más accesos directos al mantener presionado el ícono (solo Android; `shortcuts` en `manifest.json`). Ya está
   «Mandar instantánea» (`./?snap`, v32). Hay maqueta (`accesos-directos-futari.html`). Widgets reales no son posibles en una app web.

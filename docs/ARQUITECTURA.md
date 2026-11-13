@@ -25,6 +25,9 @@ manifest.json   PWA (nombre, íconos, colores)
 | `love.js` | Detalles: frasco de notas y cupones canjeables |
 | `snaps.js` | Instantáneas: fotos rápidas de 24 h con texto, reacciones, respuesta y «Guardar en Momentos»; tarjeta de Inicio y pestaña en Momentos |
 | `pet.js`, `pet-art.js`, `pet-games.js` | Mascota: huevo que nace a los 3 días comidos y crece por etapas con la racha; triste si ayer no comió (no pierde lo crecido). Pantalla `s-pet` con Vestir, Tienda (monedas de los dos) y Juegos. `pet-art.js` dibuja en SVG (estilo mochi, 10 animales, ropa, escenario por hora); `pet-games.js` tiene los 4 juegos (canvas) |
+| `guess.js` | «¿Qué respondería tu pareja?»: pregunta diaria de 4 opciones, tarjeta en Inicio, historial de aciertos |
+| `week.js` | Resumen de la semana (lunes a domingo): tarjeta en Inicio domingo y lunes, hoja con números, comparación y mosaico de fotos |
+| `tour.js` | Guía de bienvenida. `TOUR_VERSION`: si alguien ya vio una versión anterior le sale una vez «Lo nuevo» (`NEW_STEPS`). Al agregar algo grande, súmalo a los pasos y sube la versión |
 | `push.js` (+ `push-config.js`) | Notificaciones: activar en el teléfono, `notify()` a la pareja, preferencias y `?open=` al tocar un aviso (docs/NOTIFICACIONES.md) |
 | `settings.js` | Pantalla **Más** (mosaico de secciones) y **Ajustes** (nombre, fecha, moneda, acento, tema, avatar, fondo, PIN, respaldo) |
 | `lists.js` | Bucket list, súper y la función `backBar()` (barra superior con botón Volver) |

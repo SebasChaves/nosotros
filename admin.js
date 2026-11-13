@@ -260,6 +260,7 @@ function statsHTML(ids, days) {
     ['🙂 Días con ánimo', id => D.moods.filter(m => inRange(m.id) && m[id]).length],
     ['💬 Preguntas respondidas', id => D.answers.filter(a => inRange(a.id) && a.answers?.[id]).length],
     ['⚡ Respondió primero', id => D.answers.filter(a => { if (!inRange(a.id)) return false; const x = a.answers || {}, o = ids.find(u => u !== id); return x[id]?.at && x[o]?.at && x[id].at < x[o].at; }).length],
+    ['🔮 Aciertos (¿Qué respondería?)', id => { const o = ids.find(u => u !== id); return D.guess.filter(g => inRange(g.id) && g[id] && g[o] && g[id].guess === g[o].me).length; }],
     ['📷 Fotos del día', id => D.daily.filter(d => inRange(d.id) && d[id]).length],
     ['📚 Momentos guardados', id => D.moments.filter(m => m.by === id && msInRange(m.createdAt)).length],
     ['📌 Planes creados', id => D.events.filter(e => e.by === id && msInRange(e.createdAt)).length],

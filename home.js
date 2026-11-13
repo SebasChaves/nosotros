@@ -14,6 +14,8 @@ import { dueReminders, urgentReminders, whenTxt } from './reminders.js';
 import { songDedication } from './music.js';
 import { snapsCard } from './snaps.js';
 import { petCard } from './pet.js';
+import { guessCard, guessWaiting } from './guess.js';
+import { weekCard } from './week.js';
 import { notify, meForPartner } from './push.js';
 
 /* ---------- Racha y "Pensando en ti" ---------- */
@@ -70,6 +72,7 @@ function todayCard() {
   const ded = songDedication(); if (ded) row('💌', `<b>${esc(nameOf(ded.dedication.by))}</b> te dedicó una canción: ${esc(ded.title)}`, 'openDedication()');
   const ans = todayAnswers();
   if (!ans?.answers?.[uid()]) row('💬', p && ans?.answers?.[p] ? `Responde la pregunta del día (${pn} ya respondió)` : 'Responde la pregunta del día', `document.getElementById('answerText')?.scrollIntoView({block:'center'});document.getElementById('answerText')?.focus()`);
+  if (guessWaiting()) row('🔮', `${pn} ya respondió «¿Qué respondería ${pn}?»: adivina qué dijo`, `document.querySelector('.guess-card')?.scrollIntoView({behavior:'smooth',block:'center'})`);
   if (!myDailyDone()) row('📷', partnerDailyDone() ? `${pn} ya subió su foto del día: sube la tuya para verla` : 'Sube tu foto del día', `go('s-moments');momTab('daily')`);
   const lb = S.settings.lastBackup, dataCount = S.data.notes.length + S.data.moments.length + S.data.bucket.length;
   if (dataCount > 10 && (!lb || Date.now() - lb > 30 * 864e5)) row('💾', lb ? `Hace ${Math.round((Date.now() - lb) / 864e5)} días que no descargan un respaldo` : 'Descarguen su primer respaldo', 'exportData()');
@@ -240,7 +243,7 @@ function renderHome() {
   } else hero = counterCard();
   const up = upcoming().slice(0, 5);
   const cards = {
-    urgent: urgentCard, counter: () => hero, pet: petCard, snaps: snapsCard, today: todayCard, memory: memoryCard, mood: moodCard, question: questionCard, challenge: challengeCard,
+    urgent: urgentCard, counter: () => hero, pet: petCard, snaps: snapsCard, guess: guessCard, week: weekCard, today: todayCard, memory: memoryCard, mood: moodCard, question: questionCard, challenge: challengeCard,
     upcoming: () => `<div class="glass"><div class="row"><span class="label">${icon('cal')} Próximos momentos</span>
       <div class="row" style="gap:0"><button class="link" onclick="go('s-cal')">Calendario</button><button class="link" onclick="openFechas()">Fechas</button></div></div>
       <div style="margin-top:6px">${up.length ? up.map(m => `<div class="event"><div>${esc(m.label)}<div class="tiny muted">${fmtDate(m.date)}</div></div>
@@ -260,8 +263,8 @@ function renderHome() {
 }
 
 /* ---------- Personalización de Inicio ---------- */
-export const HOME_CARDS = [['urgent', '🔴 Recordatorios urgentes'], ['counter', '💞 Contador'], ['pet', '🥚 Su mascota'], ['snaps', '📸 Instantáneas'], ['today', '📌 Hoy'], ['memory', '📸 Un día como hoy'],
-  ['mood', '🙂 ¿Cómo te sientes?'], ['question', '💬 Pregunta del día'], ['challenge', '🏆 Reto de la semana'], ['upcoming', '🗓️ Próximos momentos']];
+export const HOME_CARDS = [['urgent', '🔴 Recordatorios urgentes'], ['counter', '💞 Contador'], ['week', '📊 Resumen de la semana (domingo y lunes)'], ['pet', '🥚 Su mascota'], ['snaps', '📸 Instantáneas'], ['today', '📌 Hoy'], ['memory', '📸 Un día como hoy'],
+  ['mood', '🙂 ¿Cómo te sientes?'], ['question', '💬 Pregunta del día'], ['guess', '🔮 ¿Qué respondería tu pareja?'], ['challenge', '🏆 Reto de la semana'], ['upcoming', '🗓️ Próximos momentos']];
 // [{ id, on }] en el orden elegido; las tarjetas nuevas que no estén guardadas se agregan visibles, detrás de la
 // tarjeta que tienen antes en HOME_CARDS (por ejemplo, Instantáneas queda debajo del contador).
 export function homeLayout() {
@@ -309,6 +312,7 @@ setInterval(() => {
   const m = $('heroMin'); if (m) m.innerHTML = `<b>${mins % 60}</b>minutos`;
 }, 20000);
 
-on('dates moments moods answers challenges trips profiles events thinks notes coupons lists quiz daily reminders songs snaps activity pet', renderHome);
+on('dates moments moods answers challenges trips profiles events thinks notes coupons lists quiz daily reminders songs snaps activity pet guess', renderHome);
+window.rerenderHome = () => { if ($('s-home').classList.contains('active')) renderHome(); };
 on('thinks', checkIncomingThink);
 expose({ sendThink, openFechas, answerQuestion, openAnswers, setMood, skipChallenge, doneChallenge });
