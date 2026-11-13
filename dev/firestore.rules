@@ -1,0 +1,16 @@
+rules_version = '2';
+// Reglas SOLO para el emulador local (cuentas de prueba). Las reglas reales están en la consola de Firebase.
+service cloud.firestore {
+  match /databases/{database}/documents {
+    function isCouple() {
+      return request.auth != null
+        && request.auth.token.email in ['ana@prueba.test', 'beto@prueba.test'];
+    }
+    match /couples/{couple}/{document=**} {
+      allow read, write: if isCouple();
+    }
+    match /private/{owner}/{document=**} {
+      allow read, write: if isCouple() && request.auth.uid == owner;
+    }
+  }
+}

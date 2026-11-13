@@ -1,0 +1,64 @@
+# Pendientes, servicios externos y trampas conocidas
+
+## Pospuesto por el dueño (no lo hagas sin que lo pida)
+
+- **Notificaciones push.** Requieren el plan Blaze de Firebase (tarjeta) para Cloud Functions. Mientras tanto los
+  recordatorios se pueden pasar al calendario del teléfono con alarma (.ics).
+- **Blindar los registros de administración.** Hoy `visits` y `errors` están en `couples/nosotros/` y ambas cuentas
+  podrían leerlos. La idea: moverlos fuera de `couples/` y limitar la lectura al uid del dueño con reglas.
+
+## Pendiente de confirmar
+
+- **Cambio de contraseña dentro de la app:** `app.js` maneja `?mode=resetPassword&oobCode=…`. Funciona solo si en
+  Firebase → Authentication → Templates → Restablecimiento de contraseña → "Personalizar URL de acción" está puesta la
+  URL de la app. Confirmar con el dueño si ya lo hizo.
+- Ventanas de confirmación en iPhone (eliminar canción, reiniciar votos): se rehicieron porque no respondían; falta
+  que lo confirmen en el iPhone.
+- Calendario de Samsung (compartir .ics), cámara y fotos pesadas en el Android de la pareja.
+
+## Ideas conversadas, no hechas
+
+- Accesos directos al mantener presionado el ícono (solo Android; `shortcuts` en `manifest.json`). Hay maqueta
+  (`accesos-directos-futari.html`). Widgets reales no son posibles en una app web.
+- Ligar una canción a un momento. Actualizar la guía (`tour.js`) con lo nuevo (deslizar pestañas, recordatorios, urgentes).
+- Panel de administración: secciones más usadas, tiempo por visita, quién agrega qué, velocidad de carga, aviso de
+  errores nuevos, mensaje para la pareja.
+- Otras: cartas "Ábrelo cuando…", tareas de la casa, metas de ahorro, check-in semanal, test de lenguajes del amor,
+  cambiar la URL a /futari o dominio propio.
+
+## Servicios externos (todos gratis, sin cuenta salvo TMDB)
+
+| Servicio | Uso | Notas |
+|---|---|---|
+| TMDB | buscar pelis/series, pósters, dónde verlas, sugerencias | clave de solo lectura en `tmdb-config.js`; mostrar el aviso de atribución |
+| OpenStreetMap tiles + Leaflet 1.9.4 (unpkg) | mapa | en modo oscuro se oscurece con un filtro CSS. CARTO pide clave: no usar |
+| Nominatim | buscar lugares y nombre de un punto | priorizar el país con `countrycodes` (según la moneda); sin abusar (1 búsqueda por acción) |
+| iTunes Search API | portada y adelanto de 30 s de canciones | CORS abierto; artwork `100x100bb` → `600x600bb` |
+| noembed.com | (antes) datos de un enlace de canción | ya casi no se usa |
+| Google Fonts | Sora (texto) y Pacifico (logo "Futari") | |
+| Airbnb, Booking, Google Flights, etc. | solo enlaces con la búsqueda armada (`booking.js`) | no hay API |
+
+## Trampas conocidas (aprendidas a la mala)
+
+**iPhone (app instalada, barra translúcida):**
+- Si la página es más corta que la pantalla, iOS calcula mal el alto y sube la barra de pestañas dejando una
+  franja abajo. Por eso `html`/`body` tienen `min-height` de 100% + `env(safe-area-inset-top)`. No lo quites.
+- Estirar el fondo fijo (`#bgfx`) más allá del borde lo hizo verse como un cuadro: déjalo en `inset: 0`.
+- Los toques en ventanas superpuestas fallaban escuchando el clic en el fondo: cada botón del diálogo tiene su propio `onclick`.
+
+**Android (Samsung):**
+- El selector de fotos nuevo no ofrece cámara → `core.js` pregunta cámara/galería (no pongas `capture` a mano).
+- Fotos de 50–200 MP: decodificar reducidas con `createImageBitmap(file, { resizeWidth })`. HEIF no se puede abrir.
+- Samsung cierra apps en segundo plano: al volver en <30 min se salta la animación y vuelve a la misma pantalla.
+- La conexión de Firestore queda dormida al volver: se hace `disableNetwork` + `enableNetwork`.
+- Samsung Internet vs Chrome: probar/recomendar Chrome (el panel de admin avisa).
+
+**Código:**
+- Todas las funciones expuestas comparten `window`: dos módulos con `delPlan` se pisaron. Usa nombres únicos.
+- Repintar toda una pantalla borra lo que se está escribiendo si el input no tiene `id`, o si se repinta el contenedor
+  del formulario: separa encabezado y cuerpo.
+- Algo recién creado puede no estar en `S.data` hasta que llegue el snapshot (usa un "pendiente" como `pendingSel`).
+- Semanas: usar `Math.floor` al calcular desplazamientos (con `Math.round` jueves a domingo caían en la semana siguiente).
+- Montos: "20.000" es veinte mil en Costa Rica (`parseAmount`).
+- Al editar desde PowerShell, plantillas JS con `${…}` y textos con tildes se rompen fácil: preferir la herramienta de
+  edición de archivos y verificar que no queden `` `{ `` sueltos ni archivos con BOM.
