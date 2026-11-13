@@ -1,14 +1,14 @@
 // Flechas: rompecabezas de sacar flechas del tablero. Cada flecha es una línea (a veces con curvas) con punta; al tocarla
 // avanza hacia donde apunta y sale si nada la bloquea; si choca, regresa y se pierde una vida (3, y cada 50 flechas sacadas
 // se recupera una; sin vidas se puede seguir pagando monedas de la mascota). Tableros de 16 a 700 flechas con zoom.
-// - Calentamiento (4×4 a 9×9), Difícil (de ~150 a ~700 flechas, con obstáculos que aparecen por nivel: MODS_INFO),
+// - 90 niveles (1–5 para aprender, después de 300 a 700 flechas, jefes cada 10, obstáculos: MODS_INFO) y modo infinito,
 //   Reto del día (el mismo para los dos; crece en la semana), Contrarreloj (5 min) y Duelo en vivo (arrows/duel).
 //   💀 Modo experto (por teléfono): sin pistas, sin recuperar vidas ni pagar para seguir.
 //   Todo sale de una semilla: el mismo nivel es igual en los dos teléfonos. La partida a medias se guarda en el teléfono.
 // - Sorpresa: hasta que el dueño lo «regala» desde Administración (couples/nosotros.features.arrows.on), solo lo ve él.
 //   Al regalarlo, a la pareja le aparece envuelto en papel de regalo (Más, Inicio y juegos de la mascota) hasta que lo abre
 //   (profiles/<uid>.prefs.unwrapped.arrows).
-// Datos: arrows/p-<uid> { level, stars{n}, hard, hstars{n}, hx{n: experto}, tt (récord contrarreloj), dw (duelos ganados) }
+// Datos: arrows/p-<uid> { lv (siguiente nivel 1–91), ls{n: estrellas}, lx{n: experto}, inf (tablero infinito), tt (récord contrarreloj), dw (duelos ganados) }
 //   · arrows/duel { did, seed, size, from, to, state invite|live|done|declined|cancelled, at, startAt, p{uid:{n,total,e,done,ms,gaveUp}}, winner } · arrows/d-<día> { <uid>: { ms, errors, hints, arrows, at } }.
 import { setDoc, updateDoc, increment, writeBatch } from 'https://www.gstatic.com/firebasejs/11.0.2/firebase-firestore.js';
 import { $, S, EMU, db, esc, icon, on, onShow, expose, toast, write, ref, coupleRef, profile, uid, partnerUid, nameOf, partnerName,
@@ -153,7 +153,7 @@ export const MODS_INFO = {
   portals: ['🌀', 'Portales', 'Una flecha que entra a un portal sale por el otro del mismo color y sigue derecho.'],
   fog: ['🌫️', 'Niebla', 'Solo ves lo que está cerca de la parte despejada. Lo demás se va descubriendo.'],
 };
-const MOD_FROM = { stones: 2, ice: 3, locks: 5, nums: 7, bombs: 9, chains: 11, rot: 13, portals: 15, fog: 17 }; // nivel difícil en que aparece
+const MOD_FROM = { stones: 6, ice: 12, locks: 20, nums: 28, bombs: 36, chains: 44, rot: 52, portals: 60, fog: 70 }; // nivel en que se estrena cada obstáculo
 const clamp = (v, a, b) => Math.max(a, Math.min(b, v));
 function modsFor(keys, N, n0) {
   const m = {}, has = k => keys.includes(k);
@@ -168,18 +168,41 @@ function modsFor(keys, N, n0) {
   if (has('fog')) m.fog = true;
   return m;
 }
-// Tamaño según cuántas flechas se quieren (unas 0,3 × N² con líneas de 2 a 5)
-const sizeFor = arrows => Math.max(8, Math.min(48, Math.round(Math.sqrt(arrows / 0.3))));
+// Tamaño según cuántas flechas se quieren
+// (0,27 deja margen para piedras y portales, que ocupan casillas; así un nivel de «300» nunca sale con menos)
+const sizeFor = arrows => Math.max(8, Math.min(52, Math.ceil(Math.sqrt(arrows / 0.27))));
 // Calentamiento: tableros chicos (4×4 a 9×9), sin obstáculos
-export const levelSpec = L => ({ key: 'n' + L, title: 'Nivel ' + L, n: Math.min(9, 4 + Math.floor((L - 1) / 3)), minLen: 1, maxLen: L <= 3 ? 1 : Math.min(3, 1 + Math.floor((L - 1) / 4)), seed: hash('nivel-' + L), mods: {} });
-// Difícil: de ~150 a ~700 flechas; cada pocos niveles aparece un obstáculo nuevo y después se mezclan
-export const hardTarget = H => Math.min(700, 150 + (H - 1) * 40);
-export const hardMods = H => {
-  const intro = Object.entries(MOD_FROM).filter(([, f]) => f <= H).map(([k]) => k), newest = intro[intro.length - 1], R = rng(hash('mods-' + H));
-  return intro.filter(k => k === newest || R() < (k === 'fog' ? 0.3 : 0.55));
+// Niveles 1–90 (una sola escalera):
+//  1–5 para aprender (~30 flechas, sin obstáculos); desde el 6 nunca menos de 300 y sube hasta 700.
+//  Cada 10 hay un jefe 👑 (más flechas y más obstáculos) y el siguiente da un pequeño respiro.
+//  Piedras en ~la mitad de los niveles; cada obstáculo se estrena en su nivel (MOD_FROM) y después sale en ~1 de cada 3-4,
+//  con máximo 2 además de las piedras (3 en los jefes). Después del 90: modo infinito (700 flechas, mezcla al azar).
+export const LEVELS = 90;
+export const isBoss = L => L >= 10 && L % 10 === 0;
+export const levelTarget = L => {
+  if (L <= 5) return 30;
+  const base = 300 + (L - 6) * 400 / 83;
+  return Math.round(clamp(isBoss(L) ? base * 1.18 : L % 10 === 1 ? base * 0.9 : base, 300, 700));
 };
-export const newModAt = H => Object.entries(MOD_FROM).find(([, f]) => f === H)?.[0];
-export const hardSpec = H => { const n0 = hardTarget(H), N = sizeFor(n0); return { key: 'h' + H, num: H, title: 'Difícil ' + H, n: N, minLen: 2, maxLen: 5, seed: hash('dificil-' + H), hard: true, mods: modsFor(hardMods(H), N, n0) }; };
+export const newModAt = L => Object.entries(MOD_FROM).find(([k, f]) => f === L && k !== 'stones')?.[0];
+export function levelMods(L) {
+  if (L <= 5) return [];
+  const R = rng(hash('mods-' + L)), boss = isBoss(L), out = [], fresh = newModAt(L);
+  if (R() < 0.5 || boss || L === MOD_FROM.stones) out.push('stones');
+  const known = Object.entries(MOD_FROM).filter(([k, f]) => k !== 'stones' && f < L).map(([k]) => k), max = boss ? 3 : 2, extra = [];
+  if (fresh) extra.push(fresh);
+  for (const k of known.sort(() => R() - 0.5)) if (extra.length < max && R() < (boss ? 0.7 : 0.28)) extra.push(k);
+  if (boss) for (const k of known) if (extra.length < 2 && !extra.includes(k)) extra.push(k);
+  return [...out, ...extra];
+}
+export const levelSpec = L => {
+  if (L <= 5) { const N = L <= 3 ? 9 : 10; return { key: 'l' + L, num: L, title: 'Nivel ' + L, n: N, minLen: 2, maxLen: L <= 3 ? 3 : 4, seed: hash('nivel-' + L), mods: {} }; }
+  const n0 = levelTarget(L), N = sizeFor(n0);
+  return { key: 'l' + L, num: L, title: `${isBoss(L) ? '👑 ' : ''}Nivel ${L}`, n: N, minLen: 2, maxLen: 5, seed: hash('nivel-' + L), hard: true, boss: isBoss(L), mods: modsFor(levelMods(L), N, n0) };
+};
+// Modo infinito (después del 90)
+export const infSpec = k => { const R = rng(hash('inf-' + k)), known = Object.keys(MOD_FROM).filter(x => x !== 'stones').sort(() => R() - 0.5).slice(0, 2), N = sizeFor(700);
+  return { key: 'i' + k, num: k, inf: true, title: `♾️ Infinito ${k}`, n: N, minLen: 2, maxLen: 5, seed: hash('inf-' + k), hard: true, mods: modsFor(['stones', ...known], N, 700) }; };
 // Reto del día: crece en la semana y cada día tiene sus obstáculos
 const DAY_TARGET = [650, 250, 300, 350, 420, 500, 580]; // domingo..sábado
 const DAY_MODS = [['fog', 'stones', 'locks'], ['stones', 'ice'], ['locks', 'ice'], ['nums', 'stones'], ['bombs', 'chains'], ['rot', 'portals'], ['stones', 'ice', 'locks', 'nums', 'bombs', 'chains', 'rot', 'portals']];
@@ -191,6 +214,7 @@ const duelSpec = d => { const n0 = DUEL_SIZES[d.size]?.[0] || 250, N = sizeFor(n
 // Zona de pruebas (solo el dueño): tableros chicos con un obstáculo, todos juntos, y los modos en versión corta.
 // No guardan nada (ni récords, ni monedas, ni partida a medias) ni mandan avisos.
 const testSpec = kind => {
+  if (/^lv\d+$/.test(kind)) { const L = clamp(Number(kind.slice(2)), 1, LEVELS), sp = levelSpec(L); return { ...sp, key: 'test', title: '🧪 ' + sp.title, test: kind }; }
   const seed = Math.floor(Math.random() * 2 ** 31), all = kind === 'all' || kind === 'xp' || kind === 'duel', N = all ? 16 : 12, n0 = all ? 75 : 45;
   const keys = kind === 'tt' ? ['stones', 'ice'] : all ? Object.keys(MODS_INFO) : [kind];
   const title = kind === 'all' ? 'Prueba: todos' : kind === 'xp' ? 'Prueba experto' : kind === 'tt' ? 'Prueba contrarreloj' : kind === 'duel' ? 'Prueba duelo' : `Prueba: ${MODS_INFO[kind][1]}`;
@@ -200,8 +224,8 @@ const boardOf = spec => (spec.board ??= generate(spec));
 
 /* ---------- Datos ---------- */
 const progress = (id = uid()) => S.data.arrows.find(d => d.id === 'p-' + id) || {};
-const myLevel = () => progress().level || 1;
-const myHard = () => progress().hard || 1;
+const myLevel = () => progress().lv || 1; // siguiente nivel por jugar (91 = terminó los 90)
+const myInf = () => progress().inf || 1;
 const daily = (day = todayKey()) => S.data.arrows.find(d => d.id === 'd-' + day) || {};
 const duelDoc = () => S.data.arrows.find(d => d.id === 'duel') || null;
 const fmtMs = ms => { const s = Math.max(0, Math.round(ms / 1000)), h = Math.floor(s / 3600), m = Math.floor(s / 60) % 60; return `${h ? h + ':' + String(m).padStart(2, '0') : m}:${String(s % 60).padStart(2, '0')}`; };
@@ -220,25 +244,28 @@ export const arrowsAlerts = () => { const d = duelDoc(); return arrowsVisible() 
 /* ---------- Pantalla ---------- */
 function render() {
   if (!arrowsVisible()) { $('s-arrows').innerHTML = `${backBar('Flechas')}<p class="empty">Todavía no 😉</p>`; return; }
-  const L = myLevel(), H = myHard(), pr = progress(), st = pr.stars || {}, hs = pr.hstars || {}, hx = pr.hx || {};
-  const total = [...Object.values(st), ...Object.values(hs)].reduce((a, b) => a + b, 0);
+  const L = myLevel(), pr = progress(), st = pr.ls || {}, lx = pr.lx || {};
+  const total = Object.values(st).reduce((a, b) => a + b, 0);
   const d = daily(), me = d[uid()], p = partnerUid(), them = p && d[p], ds = dailySpec(), pp = p ? progress(p) : {};
   const surprise = isOwner() && !giftInfo().on, xp = expertOn();
   const cont = spec => { const s = loadSave(spec.key); return s ? ` · vas en ${s.removed.length} de ${s.total}` : ''; };
   const modList = m => Object.keys(m).map(k => MODS_INFO[k][0]).join(' ');
   const dayRow = (who, r) => `<div class="row"><span>${who}</span><span class="small">${r ? `${r.expert ? '💀 ' : ''}<b>${fmtMs(r.ms)}</b> · ${r.errors} ${r.errors === 1 ? 'error' : 'errores'}${r.hints ? ` · ${r.hints} 💡` : ''}` : '<span class="muted">sin terminar</span>'}</span></div>`;
   const winner = me && them ? (score(me) === score(them) ? '¡Empate! 🤝' : score(me) < score(them) ? '¡Hoy ganas tú! 🏆' : `Hoy gana ${esc(nameOf(p))} 🏆`) : '';
-  const lv = (n, cur, sv, pre, x = {}) => `<button class="${n === cur ? 'cur' : ''}" onclick="playArrows('${pre}${n}')" aria-label="Nivel ${n}"><b>${x[n] ? '💀' : ''}${n}</b><small>${sv[n] ? stars(sv[n]) : n === cur ? 'nuevo' : ''}</small></button>`;
-  const hsp = hardSpec(H), nm = newModAt(H);
+  const done = L > LEVELS, cur = done ? infSpec(myInf()) : levelSpec(L), nm = done ? null : newModAt(L);
+  const lvBtn = n => n > L ? `<button disabled aria-label="Nivel ${n} bloqueado"><b>${n}</b><small>${isBoss(n) ? '👑' : '🔒'}</small></button>`
+    : `<button class="${n === L ? 'cur' : ''}${isBoss(n) ? ' boss' : ''}" onclick="playArrows('l${n}')" aria-label="Nivel ${n}"><b>${lx[n] ? '💀' : ''}${n}</b><small>${st[n] ? stars(st[n]) : n === L ? 'nuevo' : isBoss(n) ? '👑' : ''}</small></button>`;
   $('s-arrows').innerHTML = `${backBar('Flechas', 's-more', `<span class="pill">⭐ ${total}</span>`)}
     ${surprise ? `<div class="glass small" style="border-color:rgba(255,181,71,.5)">🔒 <b>Sorpresa:</b> solo tú lo ves. Cuando quieras regalarlo: Administración → Pruebas → 🎁 Sorpresa.</div>` : ''}
     ${testCard()}
     ${duelCard()}
-    <div class="glass stack ar-hero hard"><div class="ar-hero-ic">🔥</div><div class="stack" style="gap:2px;align-items:center"><span class="label">Difícil · nivel ${H}</span>
-      <span class="tiny muted">Unas ${hardTarget(H)} flechas${Object.keys(hsp.mods).length ? ' · ' + modList(hsp.mods) : ''}${cont(hsp)}</span>
-      ${nm ? `<span class="small">✨ Nuevo: ${MODS_INFO[nm][0]} ${MODS_INFO[nm][1]}</span>` : ''}</div>
-      <button class="btn" onclick="playArrows('h${H}')">${loadSave(hsp.key) ? 'Continuar' : `Jugar difícil ${H}`}</button>
-      <label class="row ar-xp"><input type="checkbox" ${xp ? 'checked' : ''} onchange="arrowsExpert(this.checked)"><span class="small">💀 Modo experto: sin pistas, sin recuperar vidas ni pagar para seguir (difícil y reto)</span></label></div>
+    <div class="glass stack ar-hero ${cur.boss ? 'boss' : 'hard'}"><div class="ar-hero-ic">${done ? '🏆' : cur.boss ? '👑' : L <= 5 ? '🌱' : '🔥'}</div>
+      <div class="stack" style="gap:2px;align-items:center"><span class="label">${done ? `¡Completaste los ${LEVELS} niveles!` : `Nivel ${L} de ${LEVELS}${cur.boss ? ' · jefe' : ''}`}</span>
+      <span class="tiny muted">${done ? `♾️ Modo infinito · tablero ${myInf()} · ` : ''}Unas ${done ? 700 : levelTarget(L)} flechas${Object.keys(cur.mods).length ? ' · ' + modList(cur.mods) : ''}${cont(cur)}</span>
+      ${nm ? `<span class="small">✨ Se estrena: ${MODS_INFO[nm][0]} ${MODS_INFO[nm][1]}</span>` : ''}</div>
+      <button class="btn" onclick="playArrows('${done ? 'i' + myInf() : 'l' + L}')">${loadSave(cur.key) ? 'Continuar' : done ? 'Jugar infinito' : `Jugar nivel ${L}`}</button>
+      <div class="ar-bar"><i style="width:${Math.min(100, (L - 1) / LEVELS * 100)}%"></i></div>
+      <label class="row ar-xp"><input type="checkbox" ${xp ? 'checked' : ''} onchange="arrowsExpert(this.checked)"><span class="small">💀 Modo experto: sin pistas, sin recuperar vidas ni pagar para seguir (desde el nivel 6 y en el reto)</span></label></div>
     <div class="glass stack"><div class="row"><span class="label">🗓️ Reto del día</span><span class="tiny muted">El mismo para los dos</span></div>
       <p class="tiny muted" style="margin:0">Hoy: ${ds.n}×${ds.n} · ${modList(ds.mods)}${cont(ds)}. Crece durante la semana: el domingo es el más grande.</p>
       ${dayRow('Tú', me)}${p ? dayRow(esc(nameOf(p)), them) : ''}
@@ -247,10 +274,8 @@ function render() {
     <div class="glass stack"><div class="row"><span class="label">⏱️ Contrarreloj</span><button class="btn small" onclick="playArrows('tt')">Jugar</button></div>
       <p class="tiny muted" style="margin:0">Saca todas las flechas que puedas en 5 minutos. Cada error resta 10 segundos.</p>
       <div class="row"><span class="small">Récord: tú <b>${pr.tt || 0}</b>${p ? ` · ${esc(nameOf(p))} <b>${pp.tt || 0}</b>` : ''}</span></div></div>
-    <div class="glass stack"><div class="row"><span class="label">🌱 Calentamiento · nivel ${L}</span><button class="btn small" onclick="playArrows('n${L}')">Jugar</button></div>
-      ${L > 1 ? `<div class="ar-levels">${Array.from({ length: L }, (_, i) => i + 1).reverse().slice(0, 30).map(n => lv(n, L, st, 'n')).join('')}</div>` : ''}</div>
-    ${H > 1 ? `<div class="glass stack"><span class="label">🔥 Difíciles</span><div class="ar-levels">${Array.from({ length: H }, (_, i) => i + 1).reverse().map(n => lv(n, H, hs, 'h', hx)).join('')}</div></div>` : ''}
-    <div class="glass stack"><span class="label">📖 Obstáculos</span>${Object.entries(MODS_INFO).map(([k, [e, t, txt]]) => `<p class="small" style="margin:0">${e} <b>${t}</b> <span class="tiny muted">(desde difícil ${MOD_FROM[k]})</span><br><span class="muted">${txt}</span></p>`).join('')}</div>
+    <div class="glass stack"><span class="label">🗺️ Niveles</span><div class="ar-levels">${Array.from({ length: LEVELS }, (_, i) => lvBtn(i + 1)).join('')}</div></div>
+    <div class="glass stack"><span class="label">📖 Obstáculos</span>${Object.entries(MODS_INFO).map(([k, [e, t, txt]]) => `<p class="small" style="margin:0">${e} <b>${t}</b> <span class="tiny muted">(desde el nivel ${MOD_FROM[k]})</span><br><span class="muted">${txt}</span></p>`).join('')}</div>
     <p class="tiny muted center" style="margin:0 8px">Toca una flecha: avanza hacia donde apunta y sale si nada la bloquea. Si choca pierdes una vida ❤️; cada ${LIFE_EVERY} flechas recuperas una. Con dos dedos acercas o alejas el tablero. Si sales, la partida queda guardada.</p>`;
 }
 function testCard() {
@@ -259,8 +284,11 @@ function testCard() {
   return `<details class="glass stack ar-test"><summary class="label">🧪 Zona de pruebas · solo tú</summary>
     <p class="tiny muted" style="margin:6px 0">Tableros chicos para ver cada cosa. No guardan récords, monedas ni partida, y no mandan avisos.</p>
     <div class="grid3">${Object.entries(MODS_INFO).map(([k, [e, t]]) => b(k, `${e} ${t}`)).join('')}</div>
+    <div class="add-row" style="margin-top:8px"><input id="arTestLv" type="number" min="1" max="${LEVELS}" inputmode="numeric" placeholder="Ir al nivel (1-${LEVELS})" aria-label="Nivel a probar" onkeydown="if(event.key==='Enter')arrowsTestLevel()"><button class="btn small" onclick="arrowsTestLevel()">Probar</button></div>
+    <p class="tiny muted" style="margin:0">Así se ve el nivel tal cual, sin desbloquearlo ni guardarlo.</p>
     <div class="grid2" style="margin-top:8px">${b('all', '🎲 Todos juntos')}${b('xp', '💀 Experto')}${b('tt', '⏱️ Contrarreloj 1 min')}${b('duel', '⚔️ Duelo vs 🤖')}</div></details>`;
 }
+function arrowsTestLevel() { const n = Number($('arTestLv')?.value); if (!(n >= 1 && n <= LEVELS)) return toast(`Escribe un nivel del 1 al ${LEVELS}`); playArrows('t:lv' + n); }
 function arrowsExpert(v) { try { localStorage.setItem('futari-ar-expert', v ? '1' : '0'); } catch {} render(); }
 
 /* ---------- Duelo en vivo ---------- */
@@ -356,8 +384,8 @@ function specOf(what) {
   if (what === 'tt') return timedSpec(Math.floor(Math.random() * 2 ** 31));
   if (what === 'duel') { const d = duelDoc(); return d ? duelSpec(d) : null; }
   if (String(what).startsWith('t:')) return isOwner() ? testSpec(what.slice(2)) : null;
-  const m = /^([nh])(\d+)$/.exec(String(what)); if (!m) return levelSpec(myLevel());
-  return m[1] === 'h' ? hardSpec(Number(m[2])) : levelSpec(Number(m[2]));
+  const m = /^([li])(\d+)$/.exec(String(what)); if (!m) return levelSpec(Math.min(LEVELS, myLevel()));
+  return m[1] === 'i' ? infSpec(Number(m[2])) : levelSpec(clamp(Number(m[2]), 1, LEVELS));
 }
 function playArrows(what) {
   if (!arrowsVisible() || arrowsWrapped()) return;
@@ -379,7 +407,7 @@ function playArrows(what) {
 function newGame(spec, what) {
   const board = boardOf(spec), N = board.N, occ = new Int32Array(N * N).fill(-1);
   for (const a of board.list) for (const [x, y] of a.cells) occ[y * N + x] = a.id;
-  const xp = spec.test === 'xp' || ((spec.hard || spec.day) && !spec.test && expertOn());
+  const xp = spec.test === 'xp' || ((spec.hard || spec.day) && (!spec.test || /^lv/.test(spec.test)) && expertOn());
   const g = { spec, what, board, N, occ, gone: new Set(), lives: 3, errors: 0, hints: 0, paid: 0, elapsed: 0, t0: Date.now(), over: false,
     cracked: new Set(), boom: new Set(), dir: {}, next: 1, expert: xp, noLives: !!(spec.timed || spec.duel || spec.fake), vis: null };
   for (const a of board.list) if (a.rot) g.dir[a.id] = a.d0;
@@ -779,7 +807,7 @@ function win() {
   if (sp.test) {
     const vs = sp.fake ? `<br>${G.fake.ms && G.fake.ms < ms ? '😅 El rival 🤖 terminó primero' : '🏆 ¡Le ganaste al rival 🤖!'}` : '';
     return overlay(`<div style="font-size:46px">🧪</div><h2>¡Prueba lista!</h2><p style="margin:0" class="center">${n} flechas en ${fmtMs(ms)} · ${errTxt}${vs}<br><span class="small muted">No se guardó nada</span></p>
-      <div class="grid2"><button class="btn ghost" onclick="closeArrows()">Salir</button><button class="btn" onclick="playArrows('t:${sp.test}')">Otro tablero</button></div>`);
+      <div class="grid2"><button class="btn ghost" onclick="closeArrows()">Salir</button><button class="btn" onclick="playArrows('t:${sp.test}')">${/^lv/.test(sp.test) ? 'Otra vez' : 'Otro tablero'}</button></div>`);
   }
   markActive();
   if (sp.duel) {
@@ -804,13 +832,23 @@ function win() {
     notify('arrows', { title: `🏹 ${meForPartner()} resolvió las Flechas del día en ${fmtMs(ms)}`,
       body: them ? (score(r) < score(them) ? 'Te ganó hoy 😏' : 'Le ganaste hoy 🏆') : `${n} flechas, ${errTxt}. ¿Le ganas? El tablero es el mismo para los dos`, url: './?open=arrows', tag: 'arrows-' + day });
   } else {
-    const pr = progress(), hard = !!sp.hard, num = Number(sp.key.slice(1)), field = hard ? 'hstars' : 'stars', had = pr[field]?.[num] || 0;
-    const coinsWon = hard ? 10 : 3;
-    b.set(ref('arrows', 'p-' + uid()), { [hard ? 'hard' : 'level']: Math.max((hard ? pr.hard : pr.level) || 1, num + 1), [field]: { [num]: Math.max(had, s) }, ...(G.expert && hard ? { hx: { [num]: true } } : {}) }, { merge: true });
-    if (!had && pt?.hatchedAt) b.update(ref('pet', 'main'), { bonus: increment(coinsWon) });
-    msg = `<span class="ar-stars">${stars(s)}</span>${G.expert && hard ? '<br>💀 ¡En modo experto!' : ''}<br>${n} flechas en ${fmtMs(ms)} · ${errTxt}${!had && pt?.hatchedAt ? ` · +${coinsWon} 🪙` : ''}`;
-    next = `<button class="btn" onclick="playArrows('${hard ? 'h' : 'n'}${num + 1}')">${hard ? 'Difícil' : 'Nivel'} ${num + 1} →</button>`;
-    if (hard) notify('arrows', { title: `🔥 ${meForPartner()} terminó Flechas difícil ${num}${G.expert ? ' en modo experto 💀' : ''}`, body: `${n} flechas en ${fmtMs(ms)} · ${errTxt}`, url: './?open=arrows', tag: 'arrows-h' + num });
+    const pr = progress(), num = sp.num;
+    if (sp.inf) {
+      b.set(ref('arrows', 'p-' + uid()), { inf: Math.max(pr.inf || 1, num + 1) }, { merge: true });
+      if (pt?.hatchedAt) b.update(ref('pet', 'main'), { bonus: increment(10) });
+      msg = `<span class="ar-stars">${stars(s)}</span><br>${n} flechas en ${fmtMs(ms)} · ${errTxt}${pt?.hatchedAt ? ' · +10 🪙' : ''}`;
+      next = `<button class="btn" onclick="playArrows('i${num + 1}')">Infinito ${num + 1} →</button>`;
+    } else {
+      const had = pr.ls?.[num] || 0, coinsWon = num <= 5 ? 3 : sp.boss ? 20 : 10;
+      b.set(ref('arrows', 'p-' + uid()), { lv: Math.max(pr.lv || 1, num + 1), ls: { [num]: Math.max(had, s) }, ...(G.expert && sp.hard ? { lx: { [num]: true } } : {}) }, { merge: true });
+      if (!had && pt?.hatchedAt) b.update(ref('pet', 'main'), { bonus: increment(coinsWon) });
+      msg = `<span class="ar-stars">${stars(s)}</span>${G.expert && sp.hard ? '<br>💀 ¡En modo experto!' : ''}<br>${n} flechas en ${fmtMs(ms)} · ${errTxt}${!had && pt?.hatchedAt ? ` · +${coinsWon} 🪙` : ''}`;
+      if (num === LEVELS) msg += `<br><b>🏆 ¡Completaste los ${LEVELS} niveles!</b><br><span class="small">Se abrió el modo infinito ♾️</span>`;
+      next = num < LEVELS ? `<button class="btn" onclick="playArrows('l${num + 1}')">${isBoss(num + 1) ? '👑 ' : ''}Nivel ${num + 1} →</button>` : `<button class="btn" onclick="playArrows('i1')">♾️ Infinito</button>`;
+      // Avisos solo en los momentos grandes (jefes y el final), para no llenar de notificaciones
+      if (!had && (sp.boss || num === LEVELS)) notify('arrows', { title: num === LEVELS ? `🏆 ${meForPartner()} completó los ${LEVELS} niveles de Flechas` : `👑 ${meForPartner()} venció al jefe del nivel ${num}${G.expert ? ' en modo experto 💀' : ''}`, body: `${n} flechas en ${fmtMs(ms)} · ${errTxt}`, url: './?open=arrows', tag: 'arrows-l' + num });
+      if (num === LEVELS) setTimeout(() => celebrate('hearts'), 600);
+    }
   }
   write(b.commit()); countStat('acts', sp.day ? 'arrows-day' : 'arrows');
   overlay(`<div style="font-size:46px">🎉</div><h2>${sp.day ? '¡Reto del día listo!' : `¡${esc(sp.title)} listo!`}</h2>
@@ -884,4 +922,4 @@ async function giftRewrap() {
 on('arrows profiles', () => { if ($('s-arrows').classList.contains('active') && !view) render(); });
 on('arrows', duelWatch);
 onShow('s-arrows', render);
-expose({ playArrows, arrowHint, arrowFit, arrowsContinue, restartArrows, closeArrows, arrowsExpert, arrowsLegend, duelInvite, duelAccept, duelDecline, duelCancel, duelEnter, duelGiveUp, unwrapGift, giftGive, giftSave, giftHide, giftRewrap });
+expose({ playArrows, arrowHint, arrowFit, arrowsContinue, restartArrows, closeArrows, arrowsExpert, arrowsTestLevel, arrowsLegend, duelInvite, duelAccept, duelDecline, duelCancel, duelEnter, duelGiveUp, unwrapGift, giftGive, giftSave, giftHide, giftRewrap });

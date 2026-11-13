@@ -40,7 +40,7 @@ function renderMore() {
     's-recipes': () => S.data.menu.length ? 'Recetas y menú semanal' : 'Más de 40 recetas', 's-map': () => plural(S.data.pins.length, 'lugar', 'lugares'),
     's-music': () => plural(S.data.songs.length, 'canción', 'canciones'), 's-pet': () => 'Vestir, tienda y juegos', 's-badges': () => `${bDone} de ${bTotal}`,
     's-game': () => 'Verdad o reto y más', 's-us': () => 'Tallas, gustos, ideas', 's-quiz': () => quizWaiting() ? `${esc(pn)} ya jugó` : 'Quiz de pareja',
-    's-bucket': () => `${bucketDone} de ${S.data.bucket.length} cumplidas`, 's-arrows': () => { const L = S.data.arrows.find(d => d.id === 'p-' + uid())?.level || 1; return L > 1 ? `Vas en el nivel ${L}` : 'Saca las flechas del tablero'; }, 's-summary': () => `Su ${today().getFullYear()} en números`,
+    's-bucket': () => `${bucketDone} de ${S.data.bucket.length} cumplidas`, 's-arrows': () => { const L = S.data.arrows.find(d => d.id === 'p-' + uid())?.lv || 1; return L > 90 ? '🏆 Los 90 niveles' : L > 1 ? `Vas en el nivel ${L} de 90` : 'Saca las flechas del tablero'; }, 's-summary': () => `Su ${today().getFullYear()} en números`,
   };
   const shown = menuOrder().filter(id => !inBar(id) && !hiddenInMore(id)), hidden = menuOrder().filter(id => !inBar(id) && hiddenInMore(id)).length;
   paint('s-more', `<div class="topbar"><h1>Más</h1><div class="row" style="gap:8px"><button class="icon-btn" aria-label="Buscar" onclick="openSearch()">${icon('search')}</button><button class="icon-btn" aria-label="Ajustes" onclick="go('s-settings')">${icon('gear')}</button></div></div>
