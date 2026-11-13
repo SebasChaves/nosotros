@@ -470,6 +470,10 @@ body[data-theme="light"] .tour { background: rgba(40, 20, 50, .35); }
 .map-box { height: 52vh; min-height: 300px; border-radius: 24px; overflow: hidden; border: 1px solid var(--line); background: var(--soft); z-index: 0; }
 .map-pin { width: 34px; height: 34px; border-radius: 50% 50% 50% 0; transform: rotate(-45deg); background: var(--grad); display: grid; place-items: center; box-shadow: 0 6px 14px -6px rgba(0,0,0,.6); border: 2px solid #fff; }
 .map-pin span { transform: rotate(45deg); font-size: 16px; line-height: 1; }
+.map-pin.photo { background: #fff; border-color: var(--g1); }
+.place-chip { display: flex; align-items: center; gap: 8px; padding: 8px 6px 8px 12px; border-radius: 14px; background: var(--soft); border: 1px solid var(--line); font-size: 14px; }
+.place-chip .grow { flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.place-link { display: block; padding: 0; margin-top: 6px; font-size: 13px; text-align: left; }
 .leaflet-popup-content-wrapper, .leaflet-popup-tip { background: var(--panel); color: var(--text); border: 1px solid var(--line); }
 .leaflet-popup-content { font-family: var(--font); font-size: 13px; }
 .leaflet-popup-content a { color: var(--g2); }

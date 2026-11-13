@@ -1,7 +1,9 @@
 {
-  "version": "22",
+  "version": "23",
   "notes": [
-    "Arreglo en iPhone: la barra de abajo ya no se sube ni queda una franja oscura en pantallas cortas",
-    "Arreglo en iPhone: el fondo de colores ya no se ve como un cuadro"
+    "Calendario: toca un plan para editarlo",
+    "Calendario: en Android, opción para pasar el plan al calendario de Samsung u otro",
+    "Ubicación en los momentos y en la foto del día: se toma sola de la foto si la trae, o búscala o usa «Dónde estoy»",
+    "Las fotos con ubicación aparecen en el mapa 📷"
   ]
 }

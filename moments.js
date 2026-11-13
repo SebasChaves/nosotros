@@ -3,6 +3,7 @@ import { writeBatch } from 'https://www.gstatic.com/firebasejs/11.0.2/firebase-f
 import { $, S, db, esc, icon, paint, on, onShow, expose, toast, openSheet, closeSheet, write, ref, newRef,
          loadPhotos, cachePhoto, compressImage, photoError, makeThumb, thumbId, parseDate, fmtDate, todayKey, nameOf, uid, ask } from './core.js';
 import { dailyHTML, myDailyDone, partnerDailyDone } from './daily.js';
+import { placeField, initPlace, getPlace, placeFromPhoto } from './location.js';
 
 let tab = 'timeline';
 function momTab(t) { tab = t; render(); }
@@ -24,6 +25,7 @@ function render() {
     if (y !== year) { html += `<div class="year grad-text">${y}</div>`; year = y; }
     html += `<div class="glass moment">${m.hasPhoto ? `<img data-thumb="${m.id}" alt="${esc(m.title)}" onclick="viewPhoto(this)">` : ''}
       <div class="body"><div class="title">${esc(m.title)}</div>${m.note ? `<div class="note">${esc(m.note)}</div>` : ''}
+      ${m.place ? `<button class="link place-link" onclick="showOnMap(${m.place.lat},${m.place.lng})">📍 ${esc(m.place.name)}</button>` : ''}
       <div class="row" style="margin-top:8px"><span class="tiny muted">${fmtDate(parseDate(m.date))} · ${esc(nameOf(m.by))}</span>
       <button class="del" aria-label="Borrar momento" onclick="delMoment('${m.id}')">${icon('trash')}</button></div></div></div>`;
   }
@@ -39,13 +41,16 @@ function openMoment() {
       <input type="file" accept="image/*" id="momentPhoto" hidden onchange="pickPhoto(this)"></label>
     <div><label class="f" for="momentTitle">¿Qué pasó?</label><input id="momentTitle" data-fresh maxlength="80" placeholder="Ej: Nuestro primer viaje juntos"></div>
     <div><label class="f" for="momentDate">Fecha</label><input type="date" id="momentDate" data-fresh value="${todayKey()}"></div>
+    ${placeField('momPlace')}
     <div><label class="f" for="momentNote">Nota (opcional)</label><textarea id="momentNote" data-fresh maxlength="600" placeholder="Lo que no quieren olvidar…"></textarea></div>
     <button class="btn" id="momentSave" onclick="saveMoment()">Guardar momento</button></div>`);
+  initPlace('momPlace');
 }
 async function pickPhoto(input) {
   const f = input.files[0]; input.value = '';
   if (!f) return;
   const btn = $('momentSave'); btn.disabled = true; btn.textContent = 'Preparando foto…';
+  placeFromPhoto('momPlace', f);
   try {
     pendingPhoto = await compressImage(f);
     const box = $('photoPick');
@@ -65,7 +70,7 @@ async function saveMoment() {
     batch.set(ref('photos', r.id), { data: pendingPhoto }); cachePhoto(r.id, pendingPhoto);
     if (thumb) { batch.set(ref('photos', thumbId(r.id)), { data: thumb }); cachePhoto(thumbId(r.id), thumb); }
   }
-  batch.set(r, { title, date, note: $('momentNote').value.trim(), hasPhoto: !!pendingPhoto, by: uid(), createdAt: Date.now() });
+  batch.set(r, { title, date, note: $('momentNote').value.trim(), hasPhoto: !!pendingPhoto, place: getPlace('momPlace'), by: uid(), createdAt: Date.now() });
   write(batch.commit());
   pendingPhoto = null; closeSheet(); toast('Momento guardado');
 }

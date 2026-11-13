@@ -1,11 +1,23 @@
 // Mapa de nosotros: pines de los lugares donde han estado. Mapa de OpenStreetMap con Leaflet (sin claves).
 import { setDoc, deleteDoc } from 'https://www.gstatic.com/firebasejs/11.0.2/firebase-firestore.js';
-import { $, S, esc, icon, paint, on, onShow, expose, toast, openSheet, closeSheet, write, ref, newRef, ask, celebrate,
+import { $, S, esc, icon, paint, on, onShow, expose, go, toast, openSheet, closeSheet, write, ref, newRef, ask, celebrate,
          todayKey, parseDate, fmtShort, nameOf, plural, uid } from './core.js';
 import { backBar } from './lists.js';
+import { myDailyDone } from './daily.js';
 
 export const PIN_KINDS = [['📍', 'Lugar'], ['💞', 'Especial'], ['✈️', 'Viaje'], ['🍽️', 'Restaurante'], ['📸', 'Momento'], ['🏨', 'Hospedaje'], ['🌋', 'Naturaleza']];
-let map = null, layer = null, leaflet = null, filter = '', picking = false, draft = null;
+let map = null, layer = null, leaflet = null, filter = '', picking = false, draft = null, flyNext = null;
+// Fotos con ubicación (momentos y fotos del día). La foto del día de la pareja de hoy no se muestra hasta subir la propia.
+const photoSpots = () => {
+  const out = [], tk = todayKey();
+  for (const m of S.data.moments) if (m.place && m.hasPhoto) out.push({ id: m.id, title: m.title, date: m.date, ...m.place });
+  for (const d of S.data.daily) for (const [who, e] of Object.entries(d)) {
+    if (who === 'id' || !e?.place) continue;
+    if (d.id === tk && who !== uid() && !myDailyDone()) continue;
+    out.push({ id: e.photo, title: e.caption || "Foto del día de ${nameOf(who)}", date: d.id, ...e.place });
+  }
+  return out;
+};
 const countries = () => [...new Set(S.data.pins.map(p => p.country).filter(Boolean))];
 
 function loadLeaflet() {
@@ -47,7 +59,7 @@ async function render() {
       map.on('click', e => { if (picking) { picking = false; usePoint(e.latlng.lat, e.latlng.lng); } });
       drawPins(true);
     } else drawPins(false);
-    setTimeout(() => map.invalidateSize(), 50);
+    setTimeout(() => { map.invalidateSize(); if (flyNext) { map.setView(flyNext, 15); flyNext = null; } }, 60);
   } catch { $('mapBox').innerHTML = '<p class="empty">No se pudo cargar el mapa. Revisa la conexión.</p>'; }
 }
 function drawPins(fit) {
@@ -59,10 +71,19 @@ function drawPins(fit) {
       .bindPopup(`<b>${esc(p.title)}</b><br>${p.date ? fmtShort(parseDate(p.date)) : ''}${p.note ? '<br>' + esc(p.note) : ''}<br><a href="#" onclick="delPin('${p.id}');return false">Quitar</a>`)
       .addTo(layer);
   }
-  if (fit && pins.length) map.fitBounds(pins.map(p => [p.lat, p.lng]), { padding: [40, 40], maxZoom: 13 });
+  const photos = !filter || filter === '📸' ? photoSpots() : [];
+  for (const p of photos) {
+    L.marker([p.lat, p.lng], { icon: L.divIcon({ className: '', html: '<div class="map-pin photo"><span>📷</span></div>', iconSize: [34, 34], iconAnchor: [17, 34] }) })
+      .bindPopup(`<b>${esc(p.title)}</b><br>${p.date ? fmtShort(parseDate(p.date)) : ''} · ${esc(p.name)}<br><a href="#" onclick="viewPhoto({src:'',dataset:{thumb:'${p.id}'}});return false">Ver foto</a>`)
+      .addTo(layer);
+  }
+  const all = [...pins, ...photos];
+  if (fit && all.length) map.fitBounds(all.map(p => [p.lat, p.lng]), { padding: [40, 40], maxZoom: 13 });
 }
 function flyPin(id) { const p = S.data.pins.find(x => x.id === id); if (p && map) { map.flyTo([p.lat, p.lng], 14); window.scrollTo({ top: 0, behavior: 'smooth' }); } }
 function pinFilter(k) { filter = k; render(); }
+// Abre el mapa centrado en un punto (p. ej. al tocar el lugar de un momento).
+function showOnMap(lat, lng) { flyNext = [lat, lng]; if (map && $('s-map').classList.contains('active')) { map.setView(flyNext, 15); flyNext = null; } else go('s-map'); }
 
 /* ---------- Agregar ---------- */
 function addPin() {
@@ -121,6 +142,6 @@ function savePin() {
 }
 async function delPin(id) { if (await ask('¿Quitar este lugar del mapa?')) { write(deleteDoc(ref('pins', id))); map?.closePopup(); } }
 
-on('pins', () => { if ($('mapBox')) render(); });
+on('pins moments daily', () => { if ($('mapBox') && $('s-map').classList.contains('active')) render(); });
 onShow('s-map', render);
-expose({ addPin, searchPlace, choosePlace, myLocation, pickOnMap, cancelPick, savePin, delPin, flyPin, pinFilter });
+expose({ showOnMap, addPin, searchPlace, choosePlace, myLocation, pickOnMap, cancelPick, savePin, delPin, flyPin, pinFilter });

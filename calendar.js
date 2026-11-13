@@ -1,7 +1,7 @@
 // Calendario compartido: planes de los dos más fechas especiales, mesiversarios y viajes.
-import { setDoc, deleteDoc } from 'https://www.gstatic.com/firebasejs/11.0.2/firebase-firestore.js';
+import { setDoc, updateDoc, deleteDoc } from 'https://www.gstatic.com/firebasejs/11.0.2/firebase-firestore.js';
 import { $, S, esc, icon, paint, on, onShow, expose, toast, openSheet, closeSheet, write, ref, newRef, loadPhotos,
-         parseDate, today, dayKey, todayKey, fmtDay, addMonths, nameOf, partnerUid, partnerName, avatar, uid, ask } from './core.js';
+         parseDate, today, dayKey, todayKey, fmtDay, addMonths, nameOf, partnerUid, partnerName, avatar, uid, ask, ANDROID } from './core.js';
 import { backBar } from './lists.js';
 
 const cap = s => s.charAt(0).toUpperCase() + s.slice(1);
@@ -76,7 +76,7 @@ function render() {
       <button class="link" onclick="openEvent('${sel}')">${icon('plus')} Agregar</button></div>
       <ul class="list" style="margin-top:6px">${items.length ? items.map(i => i.kind === 'plan' ? `<li>
         ${i.ev.who === 'ambos' || !i.ev.who ? `<span class="avatars">${avatar(uid(), 28)}${p ? avatar(p, 28) : ''}</span>` : avatar(i.ev.who, 28)}
-        <div class="txt">${esc(i.label)}<span class="sub">${i.ev.repeat && i.ev.repeat !== 'none' ? '↻ ' + repeatLabel(i.ev.repeat).toLowerCase() + ' · ' : ''}${i.time ? esc(i.time) + ' · ' : ''}${i.ev.who === 'ambos' || !i.ev.who ? 'Los dos' : esc(nameOf(i.ev.who))}${i.ev.note ? ' · ' + esc(i.ev.note) : ''}</span></div>
+        <div class="txt" role="button" tabindex="0" style="cursor:pointer" aria-label="Editar ${esc(i.label)}" onclick="openEvent(null,'${i.ev.id}')">${esc(i.label)}<span class="sub">${i.ev.repeat && i.ev.repeat !== 'none' ? '↻ ' + repeatLabel(i.ev.repeat).toLowerCase() + ' · ' : ''}${i.time ? esc(i.time) + ' · ' : ''}${i.ev.who === 'ambos' || !i.ev.who ? 'Los dos' : esc(nameOf(i.ev.who))}${i.ev.note ? ' · ' + esc(i.ev.note) : ''}</span></div>
         <button class="del" aria-label="Agregar a mi calendario" onclick="exportEvent('${i.ev.id}')">${icon('cal')}</button>
         <button class="del" aria-label="Borrar plan" onclick="delEvent('${i.ev.id}')">${icon('trash')}</button></li>`
         : `<li><div class="txt">${esc(i.label)}</div></li>`).join('')
@@ -87,31 +87,41 @@ function calMove(n) { const d = new Date(vy, vm + n, 1); vy = d.getFullYear(); v
 function calToday() { vy = today().getFullYear(); vm = today().getMonth(); sel = todayKey(); render(); }
 function calPick(k) { sel = k; const d = parseDate(k); if (d.getMonth() !== vm) { vy = d.getFullYear(); vm = d.getMonth(); } render(); }
 
-function openEvent(date) {
-  const p = partnerUid();
-  openSheet(`<div class="stack"><h2>Nuevo plan</h2>
-    <input id="evTitle" placeholder="Ej: Cena con mis papás" maxlength="70" aria-label="Plan">
-    <div class="grid2"><div><label class="f" for="evDate">Día</label><input type="date" id="evDate" value="${date || sel}"></div>
-      <div><label class="f" for="evTime">Hora (opcional)</label><input type="time" id="evTime"></div></div>
+let editing = null;
+// Sin id: plan nuevo. Con id: editar ese plan (tocándolo en la lista del día).
+function openEvent(date, id) {
+  const p = partnerUid(), ev = id ? S.data.events.find(e => e.id === id) : null;
+  editing = ev ? ev.id : null;
+  openSheet(`<div class="stack"><h2>${ev ? 'Editar plan' : 'Nuevo plan'}</h2>
+    <input id="evTitle" placeholder="Ej: Cena con mis papás" maxlength="70" aria-label="Plan" value="${esc(ev?.title || '')}">
+    <div class="grid2"><div><label class="f" for="evDate">Día</label><input type="date" id="evDate" value="${ev?.date || date || sel}"></div>
+      <div><label class="f" for="evTime">Hora (opcional)</label><input type="time" id="evTime" value="${ev?.time || ''}"></div></div>
     <div><label class="f" for="evWho">¿De quién?</label><select id="evWho"><option value="ambos">Los dos</option><option value="${uid()}">Solo yo</option>
       ${p ? `<option value="${p}">Solo ${esc(nameOf(p))}</option>` : ''}</select></div>
     <div class="grid2"><div><label class="f" for="evRepeat">¿Se repite?</label><select id="evRepeat" onchange="document.getElementById('evUntilBox').hidden=this.value==='none'">${REPEATS.map(([k, l]) => `<option value="${k}">${l}</option>`).join('')}</select></div>
       <div id="evUntilBox" hidden><label class="f" for="evUntil">Hasta (opcional)</label><input type="date" id="evUntil"></div></div>
     <input id="evNote" placeholder="Nota (opcional)" maxlength="120" aria-label="Nota">
-    <button class="btn" onclick="saveEvent()">Guardar plan</button></div>`);
+    <button class="btn" onclick="saveEvent()">${ev ? 'Guardar cambios' : 'Guardar plan'}</button>
+    ${ev ? `<div class="grid2"><button class="btn ghost" onclick="exportEvent('${ev.id}')">${icon('cal')} A mi calendario</button><button class="btn ghost danger" onclick="delEvent('${ev.id}')">${icon('trash')} Borrar</button></div>` : ''}</div>`);
+  if (ev) {
+    $('evWho').value = ev.who || 'ambos'; $('evRepeat').value = ev.repeat || 'none';
+    $('evUntilBox').hidden = (ev.repeat || 'none') === 'none'; $('evUntil').value = ev.until || ''; $('evNote').value = ev.note || '';
+  }
 }
 function saveEvent() {
   const title = $('evTitle').value.trim(), date = $('evDate').value;
   if (!title || !date) return toast('Pon el plan y el día');
-  write(setDoc(newRef('events'), { title, date, time: $('evTime').value || '', who: $('evWho').value, note: $('evNote').value.trim(),
-    repeat: $('evRepeat').value, until: $('evRepeat').value !== 'none' ? ($('evUntil').value || '') : '', by: uid(), createdAt: Date.now() }));
+  const data = { title, date, time: $('evTime').value || '', who: $('evWho').value, note: $('evNote').value.trim(),
+    repeat: $('evRepeat').value, until: $('evRepeat').value !== 'none' ? ($('evUntil').value || '') : '' };
+  if (editing && S.data.events.some(e => e.id === editing)) write(updateDoc(ref('events', editing), { ...data, editedBy: uid(), editedAt: Date.now() }));
+  else write(setDoc(newRef('events'), { ...data, by: uid(), createdAt: Date.now() }));
   sel = date; const d = parseDate(date); vy = d.getFullYear(); vm = d.getMonth();
-  closeSheet(); toast('Plan guardado');
+  closeSheet(); toast(editing ? 'Cambios guardados' : 'Plan guardado'); editing = null;
 }
 async function delEvent(id) {
   const ev = S.data.events.find(e => e.id === id);
   const rep = ev?.repeat && ev.repeat !== 'none';
-  if (await ask(rep ? '¿Borrar este plan y todas sus repeticiones para los dos?' : '¿Borrar este plan para los dos?')) write(deleteDoc(ref('events', id)));
+  if (await ask(rep ? '¿Borrar este plan y todas sus repeticiones para los dos?' : '¿Borrar este plan para los dos?')) { write(deleteDoc(ref('events', id))); closeSheet(); }
 }
 // Regla de repetición para el calendario del teléfono y Google
 const rrule = ev => {
@@ -136,10 +146,14 @@ function exportEvent(id) {
   const [a, b] = range(ev);
   const g = `https://calendar.google.com/calendar/render?action=TEMPLATE&text=${encodeURIComponent(ev.title)}&dates=${a}/${b}&details=${encodeURIComponent(ev.note || '')}${rrule(ev) ? '&recur=' + encodeURIComponent(rrule(ev)) : ''}`;
   openSheet(`<div class="stack"><h2>Agregar a mi calendario</h2><p class="small muted" style="margin:0">${esc(ev.title)} · ${esc(fmtDay(parseDate(ev.date)))}${ev.time ? ' · ' + esc(ev.time) : ''}</p>
-    <button class="btn" onclick="downloadIcs('${id}')">${icon('cal')} Calendario del iPhone</button>
-    <a class="btn ghost" href="${g}" target="_blank" rel="noopener" style="text-decoration:none">Google Calendar</a></div>`);
+    ${ANDROID
+      ? `<a class="btn" href="${g}" target="_blank" rel="noopener" style="text-decoration:none">${icon('cal')} Google Calendar</a>
+         <button class="btn ghost" onclick="downloadIcs('${id}')">Calendario de Samsung u otro</button>
+         <p class="tiny muted center" style="margin:0">Si usan el de Samsung con su cuenta de Google, el de Google también aparece ahí. La otra opción manda el plan al calendario que elijas (o lo descarga: ábrelo desde las notificaciones).</p>`
+      : `<button class="btn" onclick="downloadIcs('${id}')">${icon('cal')} Calendario del iPhone</button>
+         <a class="btn ghost" href="${g}" target="_blank" rel="noopener" style="text-decoration:none">Google Calendar</a>`}</div>`);
 }
-function downloadIcs(id) {
+async function downloadIcs(id) {
   const ev = S.data.events.find(e => e.id === id); if (!ev) return;
   const [a, b] = range(ev), allDay = !ev.time;
   const clean = s => String(s || '').replace(/[\\;,]/g, m => '\\' + m).replace(/\n/g, '\\n');
@@ -149,6 +163,14 @@ function downloadIcs(id) {
     `SUMMARY:${clean(ev.title)}`, rrule(ev), ev.note ? `DESCRIPTION:${clean(ev.note)}` : '', 'BEGIN:VALARM', 'TRIGGER:-PT1H', 'ACTION:DISPLAY',
     `DESCRIPTION:${clean(ev.title)}`, 'END:VALARM', 'END:VEVENT', 'END:VCALENDAR'].filter(Boolean).join('\r\n');
   const blob = new Blob([ics], { type: 'text/calendar' });
+  // En Android se intenta compartir el archivo (así se puede elegir el Calendario de Samsung); si no se puede, se descarga.
+  if (ANDROID && navigator.canShare) {
+    const file = new File([blob], 'plan.ics', { type: 'text/calendar' });
+    if (navigator.canShare({ files: [file] })) {
+      try { await navigator.share({ files: [file], title: ev.title }); closeSheet(); return; }
+      catch (e) { if (e.name === 'AbortError') return; }
+    }
+  }
   const url = URL.createObjectURL(blob);
   const link = document.createElement('a');
   link.href = url; link.download = 'plan.ics'; link.click();
