@@ -12,6 +12,7 @@ import { pinEnabled } from './lock.js';
 import { quizWaiting } from './quiz.js';
 import { homeLayout, HOME_CARDS, COUNTER_UNITS } from './home.js';
 import { isTester } from './testing.js';
+import { NOTIF_TYPES, pushConfigured, pushSupported, iosNeedsInstall, pushPermission, pushHere, subsOf, enablePush, disablePush, testPush } from './push.js';
 
 /* ---------- Más ---------- */
 function renderMore() {
@@ -75,6 +76,8 @@ function renderSettings() {
 
     ${homePrefsCard(prefs, p)}
 
+    ${notifCard(prefs, p)}
+
     <div class="glass stack"><span class="label">${icon('lock')} Bloqueo con PIN</span>
       <p class="small muted" style="margin:0">Opcional. Pide un código de 4 números al abrir la app en este teléfono (y si estuvo cerrada más de un minuto).</p>
       ${pinEnabled() ? `<div class="grid2"><button class="btn ghost small" style="width:100%" onclick="setupPin()">Cambiar PIN</button><button class="btn ghost small" style="width:100%" onclick="disablePin()">Desactivar</button></div>` : `<button class="btn ghost" onclick="setupPin()">Activar bloqueo con PIN</button>`}</div>
@@ -89,12 +92,33 @@ function renderSettings() {
         <button class="del" aria-label="Borrar" onclick="delIdea('${i.id}')">${icon('trash')}</button></li>`).join('') : '<li class="empty">Aún no agregan ideas propias</li>'}</ul></div>
 
     <div class="glass stack"><span class="label">Sesión</span><p class="small muted" style="margin:0">Entraste como ${esc(S.me.email)}</p>
-      <p class="tiny muted" style="margin:0">Futari guarda la hora, el modelo de teléfono, el navegador y la versión de la app cada vez que alguno de los dos la abre, para estadísticas de uso y para encontrar errores.</p>
+      <p class="tiny muted" style="margin:0">Futari guarda la hora, el modelo de teléfono, el navegador y la versión de la app cada vez que alguno de los dos la abre, para estadísticas de uso y para encontrar errores. Si activan las notificaciones, también guarda una dirección de cada teléfono (y si es iPhone o Android) para poder mandarle los avisos.</p>
       <button class="btn ghost" onclick="startTour()">Ver la guía otra vez</button>
       <button class="btn danger" onclick="logout()">Cerrar sesión</button></div>
     ${isTester() ? `<button class="btn ghost" onclick="go('s-admin')">${icon('gear')} Abrir administración</button>` : ''}`);
   loadPhotos($('s-settings'));
 }
+/* ---------- Notificaciones (push.js) ---------- */
+function notifCard(prefs, p) {
+  const n = prefs.notif || {}, mine = subsOf(uid()), theirs = p ? subsOf(p) : [];
+  let state;
+  if (!pushConfigured()) state = `<p class="small muted" style="margin:0">Falta conectar el servicio de avisos (ver docs/NOTIFICACIONES.md). Para configurarlo se necesitan los códigos de sus cuentas:</p>
+      <p class="tiny" style="margin:0;word-break:break-all;user-select:all">${[uid(), p].filter(Boolean).join(',')}</p>`;
+  else if (iosNeedsInstall()) state = `<p class="small muted" style="margin:0">En iPhone, primero instala Futari: en Safari toca <b>Compartir → Agregar a inicio</b> y ábrela desde ese ícono. Ahí podrás activarlas.</p>`;
+  else if (!pushSupported()) state = `<p class="small muted" style="margin:0">Este navegador no permite notificaciones. En Android, abre Futari con Chrome.</p>`;
+  else if (pushPermission() === 'denied') state = `<p class="small muted" style="margin:0">Las notificaciones están bloqueadas para Futari. Actívalas en los ajustes del teléfono (Notificaciones → Futari) y vuelve aquí.</p>`;
+  else if (pushHere) state = `<p class="small" style="margin:0">✅ Activadas en este teléfono</p>
+      <div class="grid2"><button class="btn ghost small" style="width:100%" onclick="testPush()">Probar</button><button class="btn ghost small" style="width:100%" onclick="disablePush()">Desactivar</button></div>`;
+  else state = `<button class="btn" onclick="enablePush()">🔔 Activar en este teléfono</button>`;
+  return `<div class="glass stack"><span class="label">${icon('bell')} Notificaciones</span>
+    <p class="small muted" style="margin:0">Te avisan cuando ${esc(p ? nameOf(p) : 'tu pareja')} te manda algo, aunque tengas Futari cerrada.</p>
+    ${state}
+    ${p ? `<p class="tiny muted" style="margin:0">${theirs.length ? `${esc(nameOf(p))} las tiene activadas (${plural(theirs.length, 'teléfono', 'teléfonos')}).` : `${esc(nameOf(p))} todavía no las activa: a su teléfono no le llegarán avisos.`}${mine.length && !pushHere ? ` Tú las tienes en ${plural(mine.length, 'otro teléfono', 'otros teléfonos')}.` : ''}</p>` : ''}
+    <span class="label" style="margin-top:6px">Qué avisos quieres recibir</span>
+    ${NOTIF_TYPES.map(([k, l]) => `<label class="check"><input type="checkbox" ${n[k] === false ? '' : 'checked'} onchange="setNotif('${k}', this.checked)"> ${l}</label>`).join('')}</div>`;
+}
+function setNotif(k, v) { savePrefs({ notif: { ...(profile(uid()).prefs?.notif || {}), [k]: v } }); }
+
 /* ---------- Tu Inicio: apodos, contador y tarjetas (solo para quien lo configura) ---------- */
 const savePrefs = patch => write(setDoc(ref('profiles', uid()), { prefs: patch }, { merge: true }));
 function homePrefsCard(prefs, p) {
@@ -276,8 +300,8 @@ function importData(input) {
 }
 
 on('groceries expenses trips places bucket quiz shows events pins songs menu notes moments thinks answers daily', renderMore);
-on('ideas profiles', () => { if ($('s-settings').classList.contains('active')) renderSettings(); });
+on('ideas profiles push', () => { if ($('s-settings').classList.contains('active')) renderSettings(); });
 onShow('s-settings', renderSettings);
 window.rerenderSettings = () => { if ($('s-settings').classList.contains('active')) renderSettings(); };
 onShow('s-more', renderMore);
-expose({ previewCustomAccent, setCustomAccent, saveNicks, setCounterUnit, saveCounter, toggleHomeCard, moveHomeCard, resetHome, saveSettings, setTheme, setAccent, pickAvatar, removeAvatar, pickBg, removeBg, delIdea, logout, exportData, importData });
+expose({ enablePush, disablePush, testPush, setNotif, previewCustomAccent, setCustomAccent, saveNicks, setCounterUnit, saveCounter, toggleHomeCard, moveHomeCard, resetHome, saveSettings, setTheme, setAccent, pickAvatar, removeAvatar, pickBg, removeBg, delIdea, logout, exportData, importData });

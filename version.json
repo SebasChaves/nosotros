@@ -1,12 +1,12 @@
 {
-  "version": "32",
+  "version": "33",
   "notes": [
-    "📸 Instantáneas: fotos rápidas para tu pareja, con texto encima si quieres. Duran 24 horas",
-    "Reaccionen con ❤️😂😍🥺🔥 o respondan con otra foto",
-    "Guarden en Momentos las que quieran conservar",
-    "Están en Inicio, en Momentos → Instantáneas y, en Android, manteniendo presionado el ícono de Futari"
+    "🔔 Ya casi: las notificaciones están en camino. Pronto podrán activarlas en Ajustes → Notificaciones"
   ],
   "history": [
+    { "version": "33", "notes": [
+      "🔔 Ya casi: las notificaciones están en camino. Pronto podrán activarlas en Ajustes → Notificaciones"
+    ] },
     { "version": "32", "notes": [
       "📸 Instantáneas: fotos rápidas para tu pareja, con texto encima si quieres. Duran 24 horas",
       "Reaccionen con ❤️😂😍🥺🔥 o respondan con otra foto",

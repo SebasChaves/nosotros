@@ -3,6 +3,7 @@ import { setDoc, updateDoc, deleteDoc } from 'https://www.gstatic.com/firebasejs
 import { $, S, esc, icon, paint, on, onShow, expose, toast, openSheet, closeSheet, write, ref, newRef, pick,
          fmtDate, fmtShort, nameOf, partnerName, myName, plural, uid, avatar, loadPhotos, ask, celebrate } from './core.js';
 import { COUPON_TEMPLATES } from './data.js';
+import { notify, meForPartner } from './push.js';
 
 let tab = 'notes';
 export const unreadNotes = () => S.data.notes.filter(n => n.fromUid !== uid() && !n.readAt).length;
@@ -48,6 +49,7 @@ function addNote() {
   const t = $('newNote').value.trim();
   if (!t) return toast('Escribe algo bonito primero');
   write(setDoc(newRef('notes'), { text: t, fromUid: uid(), fromName: myName(), createdAt: Date.now(), readAt: null }));
+  notify('notes', { title: `💌 ${meForPartner()} dejó una nota en el frasco`, body: 'Ábrela cuando quieras', url: './?open=notes', tag: 'notes' });
   $('newNote').value = ''; toast('Nota guardada en el frasco');
 }
 function drawNote() {
@@ -95,14 +97,22 @@ function useCouponTpl(i) { const [e, t] = COUPON_TEMPLATES[i]; $('couponEmoji').
 function addCoupon() {
   const text = $('couponText').value.trim();
   if (!text) return toast('Escribe el cupón');
-  write(setDoc(newRef('coupons'), { text, emoji: $('couponEmoji').value.trim() || '🎟️', fromUid: uid(), createdAt: Date.now(), seenAt: null, redeemedAt: null, doneAt: null }));
+  const emoji = $('couponEmoji').value.trim() || '🎟️';
+  write(setDoc(newRef('coupons'), { text, emoji, fromUid: uid(), createdAt: Date.now(), seenAt: null, redeemedAt: null, doneAt: null }));
+  notify('coupons', { title: `🎟️ ${meForPartner()} te regaló un cupón`, body: `${emoji} ${text}`, url: './?open=coupons', tag: 'coupons' });
   $('couponText').value = ''; toast(`Cupón regalado a ${partnerName()}`);
 }
 async function redeemCoupon(id) {
   if (!await ask('¿Canjear este cupón ahora?')) return;
   write(updateDoc(ref('coupons', id), { redeemedAt: Date.now(), seenAt: Date.now() })); toast('¡Canjeado!'); celebrate('hearts');
+  const c = S.data.coupons.find(x => x.id === id);
+  notify('coupons', { title: `🎟️ ${meForPartner()} canjeó tu cupón`, body: c ? `${c.emoji || ''} ${c.text}`.trim() : '', url: './?open=coupons', tag: 'coupon-' + id });
 }
-function fulfillCoupon(id) { write(updateDoc(ref('coupons', id), { doneAt: Date.now() })); toast('¡Cumplido!'); celebrate('hearts'); }
+function fulfillCoupon(id) {
+  write(updateDoc(ref('coupons', id), { doneAt: Date.now() })); toast('¡Cumplido!'); celebrate('hearts');
+  const c = S.data.coupons.find(x => x.id === id);
+  notify('coupons', { title: `✅ ${meForPartner()} cumplió el cupón`, body: c ? `${c.emoji || ''} ${c.text}`.trim() : '', url: './?open=coupons', tag: 'coupon-' + id });
+}
 async function delCoupon(id) { if (await ask('¿Borrar este cupón?')) write(deleteDoc(ref('coupons', id))); }
 function markCouponsSeen() {
   for (const c of S.data.coupons) if (c.fromUid !== uid() && !c.seenAt) write(updateDoc(ref('coupons', c.id), { seenAt: Date.now() }));

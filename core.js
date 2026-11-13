@@ -456,7 +456,7 @@ export const write = p => p.catch(err => {
 
 /* ================= Estado ================= */
 export const COLLECTIONS = ['bucket', 'ideas', 'notes', 'coupons', 'dates', 'moments', 'lists', 'answers',
-  'moods', 'challenges', 'groceries', 'expenses', 'places', 'trips', 'quiz', 'profiles', 'shows', 'events', 'cards', 'games', 'thinks', 'daily', 'pins', 'recipes', 'recipefav', 'menu', 'songs', 'reminders', 'snaps'];
+  'moods', 'challenges', 'groceries', 'expenses', 'places', 'trips', 'quiz', 'profiles', 'shows', 'events', 'cards', 'games', 'thinks', 'daily', 'pins', 'recipes', 'recipefav', 'menu', 'songs', 'reminders', 'snaps', 'push'];
 export const PRIVATE = ['gifts'];
 export const S = {
   me: null,

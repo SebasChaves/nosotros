@@ -2,8 +2,6 @@
 
 ## Pospuesto por el dueño (no lo hagas sin que lo pida)
 
-- **Notificaciones push.** Requieren el plan Blaze de Firebase (tarjeta) para Cloud Functions. Mientras tanto los
-  recordatorios se pueden pasar al calendario del teléfono con alarma (.ics).
 - **Blindar los registros de administración.** Hoy `visits` y `errors` están en `couples/nosotros/` y ambas cuentas
   podrían leerlos. La idea: moverlos fuera de `couples/` y limitar la lectura al uid del dueño con reglas.
 
@@ -20,7 +18,13 @@
 - Instantáneas (v32): acceso directo «Instantánea» del ícono en Android (puede tardar hasta un día en aparecer en la
   app instalada); en iPhone no existen esos accesos directos.
 
+- Notificaciones (v33): que lleguen con la app cerrada en los dos teléfonos, sonido, ícono pequeño en Android y que al
+  tocarlas abran la sección. Ver docs/NOTIFICACIONES.md.
+
 ## Ideas conversadas, no hechas
+
+- **Siguiente tanda (pedida por el dueño):** avisos programados (racha en peligro, recordatorios, cumpleaños) y luego
+  una **mascota** de los dos que crece con la racha. Esperar a que las notificaciones funcionen en los teléfonos.
 
 - Más accesos directos al mantener presionado el ícono (solo Android; `shortcuts` en `manifest.json`). Ya está
   «Mandar instantánea» (`./?snap`, v32). Hay maqueta (`accesos-directos-futari.html`). Widgets reales no son posibles en una app web.
@@ -40,6 +44,7 @@
 | iTunes Search API | portada y adelanto de 30 s de canciones | CORS abierto; artwork `100x100bb` → `600x600bb` |
 | noembed.com | (antes) datos de un enlace de canción | ya casi no se usa |
 | Google Fonts | Sora (texto) y Pacifico (logo "Futari") | |
+| Cloudflare Workers | entregar las notificaciones (`notificaciones/worker.js`) | cuenta gratis del dueño; ver docs/NOTIFICACIONES.md |
 | Airbnb, Booking, Google Flights, etc. | solo enlaces con la búsqueda armada (`booking.js`) | no hay API |
 
 ## Trampas conocidas (aprendidas a la mala)

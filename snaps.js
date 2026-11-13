@@ -5,6 +5,7 @@ import { writeBatch, updateDoc, deleteField } from 'https://www.gstatic.com/fire
 import { $, S, db, esc, icon, on, expose, toast, openSheet, closeSheet, write, ref, newRef, loadPhotos, cachePhoto, getPhoto,
          compressImage, photoError, makeThumb, thumbId, dayKey, nameOf, partnerUid, partnerName, plural, uid, ask, avatar,
          syncBack, openCamera, nativePick, ANDROID, IOS, celebrate } from './core.js';
+import { notify, meForPartner } from './push.js';
 
 const LIFE = 24 * 3600e3;
 export const REACTS = ['❤️', '😂', '😍', '🥺', '🔥'];
@@ -49,6 +50,8 @@ async function sendSnap() {
   if (replyTo && S.data.snaps.some(s => s.id === replyTo)) data.replyTo = replyTo;
   batch.set(r, data);
   write(batch.commit());
+  notify('snaps', { title: data.replyTo ? `📸 ${meForPartner()} te respondió con una foto` : `📸 ${meForPartner()} te mandó una instantánea`,
+    body: data.text || 'Tócala para verla 👀', url: './?open=snaps', tag: 'snaps' });
   pending = null; replyTo = null;
   closeSheet(); toast('Instantánea enviada 📸');
 }
@@ -115,6 +118,7 @@ function reactSnap(e) {
   const same = s.reacts?.[uid()]?.e === e;
   write(updateDoc(ref('snaps', s.id), { [`reacts.${uid()}`]: same ? deleteField() : { e, at: Date.now() } }));
   if (!same && e === '❤️') celebrate('hearts');
+  if (!same && s.by !== uid()) notify('reacts', { title: `${meForPartner()} reaccionó ${e} a tu instantánea`, body: s.text ? `«${s.text}»` : '', url: './?open=snaps', tag: 'react-' + s.id });
   navigator.vibrate?.(15);
 }
 function replySnap() { const s = list[idx]; closeSnaps(); newSnap(s?.id); }

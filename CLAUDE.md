@@ -16,6 +16,7 @@ Lee estos documentos antes de cambiar algo:
 | [docs/DATOS.md](docs/DATOS.md) | Firestore: colecciones, campos, fotos, reglas de seguridad |
 | [docs/PRUEBAS.md](docs/PRUEBAS.md) | Emulador local con dos cuentas de prueba; qué solo se puede probar en el teléfono |
 | [docs/PUBLICAR.md](docs/PUBLICAR.md) | Versiones, aviso de actualización, novedades y cómo publicar |
+| [docs/NOTIFICACIONES.md](docs/NOTIFICACIONES.md) | Avisos al teléfono: Worker de Cloudflare, cómo agregar un aviso, configuración |
 | [docs/PENDIENTES.md](docs/PENDIENTES.md) | Cosas pospuestas, ideas, servicios externos y trampas conocidas (iPhone/Android) |
 
 ## Reglas que no se rompen

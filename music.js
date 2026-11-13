@@ -4,6 +4,7 @@ import { setDoc, updateDoc, deleteDoc, writeBatch } from 'https://www.gstatic.co
 import { $, S, db, esc, icon, paint, on, onShow, expose, toast, openSheet, closeSheet, write, ref, newRef, ask, pick, celebrate, go,
          loadPhotos, cachePhoto, compressImage, photoError, todayKey, parseDate, fmtShort, nameOf, partnerUid, partnerName, uid } from './core.js';
 import { backBar } from './lists.js';
+import { notify, meForPartner } from './push.js';
 
 let who = 'all', editing = null, results = [], newCover = null, audio = null, playing = null;
 const service = url => /spotify/.test(url) ? ['Spotify', '#1DB954'] : /youtu/.test(url) ? ['YouTube', '#FF0033'] : /apple/.test(url) ? ['Apple Music', '#FA2D48'] : /deezer/.test(url) ? ['Deezer', '#A238FF'] : url ? ['Escuchar', 'var(--g1)'] : null;
@@ -153,7 +154,9 @@ function dedicateSong(id) {
   loadPhotos($('sheetBody'));
 }
 function saveDedication(id) {
-  write(updateDoc(ref('songs', id), { dedication: { by: uid(), to: partnerUid(), msg: $('dedMsg').value.trim(), at: Date.now(), seen: false } }));
+  const msg = $('dedMsg').value.trim(), s = S.data.songs.find(x => x.id === id);
+  write(updateDoc(ref('songs', id), { dedication: { by: uid(), to: partnerUid(), msg, at: Date.now(), seen: false } }));
+  notify('songs', { title: `🎵 ${meForPartner()} te dedicó una canción`, body: `${s?.title || ''}${s?.artist ? ' · ' + s.artist : ''}${msg ? ' — ' + msg : ''}`, url: './?open=songs', tag: 'songs' });
   closeSheet(); toast(`Le llegará en su pantalla de inicio`); celebrate('hearts');
 }
 // Desde la tarjeta Hoy: abre la playlist y marca la dedicatoria como vista.

@@ -46,6 +46,9 @@ for e in ana beto; do curl -s -X POST "http://127.0.0.1:9099/identitytoolkit.goo
 - Consola del navegador sin errores.
 - Para gestos (deslizar pestañas, arrastrar hojas) se pueden disparar `TouchEvent` desde la consola.
 - `history.back()` simula el botón atrás de Android.
+- Notificaciones: con `?emu` no se llama al Worker; los avisos que se mandarían quedan en `window.__pushLog` del que
+  manda. Para ver la tarjeta de Ajustes «configurada», responde `push-config.js` con una dirección y llave falsas
+  (`page.route`) y simula `Notification`/`PushManager` (el Chromium de pruebas no tiene servicio de push).
 - Cámara propia: lanza Chromium con `--use-fake-device-for-media-stream --use-fake-ui-for-media-stream` y permiso
   `camera` (da un video de prueba verde); con agente de usuario de Android o iPhone sale la elección cámara/galería.
 

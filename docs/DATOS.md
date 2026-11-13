@@ -37,6 +37,7 @@ Casi todos los docs llevan `by: uid` (quién lo creó) y `createdAt: ms`. Fechas
 | `trips` | viajes con itinerario, maleta, presupuesto y opciones de hospedaje/vuelo (`stays`, `flights` con votos) |
 | `events` | planes: `title, date, time, who 'ambos'|uid, note, repeat none/weekly/biweekly/monthly/yearly, until` |
 | `snaps` | instantáneas: `by, at (ms), text, replyTo?, seen{uid: ms}, reacts{uid: {e, at}}, reactSeen?, saved?(id del momento)` — foto en `photos/snap-<id>` (+ miniatura). Duran 24 h: al abrir la app, `snaps.js` borra las vencidas y sus fotos. «Guardar en Momentos» copia la foto a un momento (`fromSnap: true`) |
+| `push` | id = uid: `subs { <llave>: { endpoint, keys{p256dh,auth}, device, at } }` — un teléfono por elemento (docs/NOTIFICACIONES.md) |
 | `dates` | fechas especiales: `title, date, emoji, yearly, by, createdAt, editedBy?, editedAt?` — tipos en `DATE_KINDS` (`data.js`); se crean/editan con `openFecha` (`calendar.js`), desde el Calendario o Inicio → Fechas |
 | `shows` | `title, type movie|tv, year, tmdbId, poster, overview, providers[], status want|watching|seen, progress{s,e}, ratings, seenAt` |
 | `songs` | `title, artist, url, thumb, preview, apple, cover?(id en photos), why, date, ours, dedication?{by,to,msg,at,seen}` |

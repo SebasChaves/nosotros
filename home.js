@@ -13,6 +13,7 @@ import { myDailyDone, partnerDailyDone } from './daily.js';
 import { dueReminders, urgentReminders, whenTxt } from './reminders.js';
 import { songDedication } from './music.js';
 import { snapsCard } from './snaps.js';
+import { notify, meForPartner } from './push.js';
 
 /* ---------- Racha y "Pensando en ti" ---------- */
 // Un día cuenta para la racha si los dos hicieron algo: marcar ánimo, responder la pregunta o mandar un "pensando en ti".
@@ -32,9 +33,12 @@ export function bestStreak() {
   return best;
 }
 const thinksToday = who => S.data.thinks.find(x => x.id === todayKey())?.[who] || 0;
+let lastThinkPush = 0;
 function sendThink() {
   write(setDoc(ref('thinks', todayKey()), { [uid()]: increment(1) }, { merge: true }));
   celebrate('hearts');
+  // Aviso a la pareja: como mucho uno cada 10 minutos, para que no le lleguen veinte seguidos
+  if (Date.now() - lastThinkPush > 10 * 60e3) { lastThinkPush = Date.now(); notify('thinks', { title: `❤️ ${meForPartner()} está pensando en ti`, body: 'Mándale un corazón de vuelta', url: './?open=home', tag: 'thinks' }); }
 }
 // Aviso cuando llega un "pensando en ti" con la app abierta
 let lastPartnerThinks = null;
