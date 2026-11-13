@@ -16,7 +16,7 @@
 //   COUPLE_ID          (texto, opcional) por defecto nosotros
 // Ver docs/NOTIFICACIONES.md. Sin dependencias: se pega tal cual en el editor de Cloudflare.
 
-const WORKER_VERSION = 3; // súbelo al cambiar este archivo (la app lo muestra en el diagnóstico)
+const WORKER_VERSION = 4; // súbelo al cambiar este archivo (la app lo muestra en el diagnóstico)
 const enc = new TextEncoder();
 const b64u = buf => btoa(String.fromCharCode(...new Uint8Array(buf))).replace(/\+/g, '-').replace(/\//g, '_').replace(/=+$/, '');
 const unb64u = s => Uint8Array.from(atob(s.replace(/-/g, '+').replace(/_/g, '/') + '==='.slice((s.length + 3) % 4)), c => c.charCodeAt(0));
@@ -230,7 +230,8 @@ export async function runSchedule(env, when = Date.now(), { dryRun = false } = {
   if (!dryRun) {
     await Promise.all(out.map(async n => {
       const payload = enc.encode(JSON.stringify({ title: n.title.slice(0, 120), body: n.body.slice(0, 300), url: n.url, tag: n.tag.slice(0, 60) }));
-      await Promise.all(subsOf(n.to).map(s => sendPush(s, payload, env, 'normal').catch(e => console.error('push', e))));
+      // Prioridad alta: con 'normal' el iPhone y Android se guardan el aviso para ahorrar batería hasta que se usa el teléfono
+      await Promise.all(subsOf(n.to).map(s => sendPush(s, payload, env, 'high').catch(e => console.error('push', e))));
     }));
   }
   return out;

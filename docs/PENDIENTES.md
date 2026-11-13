@@ -21,6 +21,8 @@
 - Avisos programados (v35): los recordatorios ya llegan a su hora (confirmado). Falta ver el de las 20:00
   (racha/mascota) y los de fechas especiales. Las notificaciones normales se confirmaron en los dos teléfonos (v34).
   Ojo: un cambio en el Cron de Cloudflare puede tardar hasta 15 minutos en activarse.
+  Worker v4: los programados salían con prioridad «normal» y el teléfono los retrasaba hasta abrir la app; ahora «high».
+  Falta confirmar con la pareja que ya llegan con la app cerrada.
 
 ## Ideas conversadas, no hechas
 
