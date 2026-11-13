@@ -30,9 +30,11 @@ body[data-accent="bosque"]   { --g1: #4ADE80; --g2: #D9F99D; --g3: #14B8A6; --on
 * { box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
 [hidden] { display: none !important; }
 html, body { margin: 0; min-height: 100%; }
+html { background: var(--bg); }
 body { --grad: linear-gradient(100deg, var(--g1), var(--g2)); font-family: var(--font); background: var(--bg); color: var(--text); overscroll-behavior: none; -webkit-font-smoothing: antialiased; }
 #bgfx {
-  position: fixed; inset: 0; z-index: -1; pointer-events: none;
+  /* Se estira más allá del borde de abajo: en el iPhone (app instalada) el alto de la pantalla a veces no incluye la zona de la barrita de inicio y quedaba una franja oscura. */
+  position: fixed; top: 0; left: 0; right: 0; bottom: calc(-140px - env(safe-area-inset-bottom)); z-index: -1; pointer-events: none;
   background:
     radial-gradient(60vmax 60vmax at -10% -5%, color-mix(in srgb, var(--g1) 45%, transparent), transparent 60%),
     radial-gradient(55vmax 55vmax at 110% 35%, color-mix(in srgb, var(--g2) 28%, transparent), transparent 60%),
@@ -108,7 +110,10 @@ input, textarea, select {
 input::placeholder, textarea::placeholder { color: color-mix(in srgb, var(--muted) 75%, transparent); }
 select { appearance: none; -webkit-appearance: none; background-image: linear-gradient(45deg, transparent 50%, var(--muted) 50%), linear-gradient(135deg, var(--muted) 50%, transparent 50%); background-position: calc(100% - 18px) 21px, calc(100% - 13px) 21px; background-size: 5px 5px; background-repeat: no-repeat; padding-right: 32px; }
 textarea { resize: none; min-height: 90px; }
-input[type=checkbox] { width: 20px; height: 20px; min-height: 0; accent-color: var(--g1); }
+/* Casilla propia: la del sistema pinta el check negro sobre el color de acento */
+input[type=checkbox] { -webkit-appearance: none; appearance: none; width: 22px; height: 22px; min-height: 0; padding: 0; margin: 0; flex-shrink: 0; border-radius: 7px; border: 2px solid var(--line); background: var(--field); display: inline-grid; place-items: center; cursor: pointer; transition: background .15s, border-color .15s; }
+input[type=checkbox]:checked { background: var(--grad); border-color: transparent; }
+input[type=checkbox]:checked::after { content: ""; width: 5px; height: 10px; border: solid var(--on-grad); border-width: 0 2.5px 2.5px 0; transform: translateY(-1px) rotate(45deg); }
 /* En iPhone el campo de fecha se centra, cambia de alto y se sale del ancho: lo igualamos a los demás */
 input[type=date], input[type=time] { -webkit-appearance: none; appearance: none; display: block; min-width: 0; max-width: 100%; height: 48px; text-align: left; }
 input[type=date]::-webkit-date-and-time-value, input[type=time]::-webkit-date-and-time-value { text-align: left; margin: 0; }
@@ -186,10 +191,13 @@ li.done .check-btn, .check-btn.on { background: var(--grad); border-color: trans
 .cal button.today { border-color: color-mix(in srgb, var(--g1) 70%, transparent); }
 .cal button.sel { background: var(--grad); color: var(--on-grad); font-weight: 700; }
 .cal .dots { display: flex; gap: 2px; height: 5px; }
-.cal .dots i { width: 5px; height: 5px; border-radius: 50%; background: var(--g2); }
-.cal .dots i.plan { background: var(--g1); }
-.cal .dots i.trip { background: #7DD3FC; }
-.cal button.sel .dots i { background: var(--on-grad); }
+/* Colores fijos (no dependen del acento) para que siempre se distingan entre sí */
+.cal .dots i { width: 6px; height: 6px; border-radius: 50%; background: var(--c-date); }
+.cal .dots i.plan { background: var(--c-plan); }
+.cal .dots i.trip { background: var(--c-trip); }
+.cal button.sel .dots i { box-shadow: 0 0 0 1.5px var(--on-grad); }
+:root { --c-plan: #FF5C8A; --c-date: #FFC23D; --c-trip: #7C8CFF; }
+body[data-theme="light"] { --c-plan: #E8336A; --c-date: #D98A00; --c-trip: #4F5FE0; }
 .legend { display: flex; gap: 12px; flex-wrap: wrap; font-size: 11.5px; color: var(--muted); }
 .legend span { display: inline-flex; align-items: center; gap: 5px; }
 .legend i { width: 8px; height: 8px; border-radius: 50%; display: inline-block; }
@@ -284,6 +292,7 @@ li.done .check-btn, .check-btn.on { background: var(--grad); border-color: trans
 .sheet.show { display: flex; animation: fadein .2s; }
 @keyframes fadein { from { opacity: 0; } to { opacity: 1; } }
 .sheet .panel {
+  box-shadow: 0 160px 0 0 var(--panel); /* tapa cualquier franja debajo de la hoja en el iPhone */
   width: 100%; max-width: 560px; max-height: 88vh; overflow: auto; background: var(--panel); border: 1px solid var(--line); border-bottom: 0;
   border-radius: 28px 28px 0 0; padding: 22px 18px calc(env(safe-area-inset-bottom) + 22px); animation: up .25s ease;
 }
@@ -316,7 +325,10 @@ li.done .check-btn, .check-btn.on { background: var(--grad); border-color: trans
 .toast.show { opacity: 1; }
 .viewer { position: fixed; inset: 0; background: #000; z-index: 90; display: none; align-items: center; justify-content: center; }
 .viewer.show { display: flex; }
-.viewer img { max-width: 100%; max-height: 100%; }
+.viewer img { max-width: 100%; max-height: 100%; touch-action: none; }
+.viewer { touch-action: none; }
+.viewer-x { position: absolute; top: calc(env(safe-area-inset-top) + 12px); right: 14px; z-index: 1; width: 42px; height: 42px; border-radius: 50%; border: 0; background: rgba(255,255,255,.16); color: #fff; display: grid; place-items: center; cursor: pointer; backdrop-filter: blur(12px); -webkit-backdrop-filter: blur(12px); }
+.viewer-x .ic { width: 20px; height: 20px; }
 .offline { display: none; text-align: center; font-size: 12px; color: var(--muted); }
 body.is-offline .offline { display: block; }
 .beat { display: inline-block; animation: beat 1.4s infinite; }
@@ -326,7 +338,15 @@ body.is-offline .offline { display: block; }
 .dialog { position: fixed; inset: 0; z-index: 95; display: flex; align-items: center; justify-content: center; padding: 24px; background: rgba(5, 2, 8, .62); animation: fadein .15s; }
 .dialog .box { width: 100%; max-width: 340px; background: var(--panel); border: 1px solid var(--line); border-radius: 24px; padding: 22px 18px 18px; box-shadow: 0 30px 60px -20px rgba(0,0,0,.6); animation: pop .18s ease; }
 .dialog p { margin: 0 0 18px; font-size: 16px; line-height: 1.45; text-align: center; text-wrap: balance; }
-.dialog.out { opacity: 0; transition: opacity .15s; }
+.dialog.out { opacity: 0; transition: opacity .15s; pointer-events: none; }
+.dialog { -webkit-transform: translateZ(0); transform: translateZ(0); }
+.dialog button { touch-action: manipulation; cursor: pointer; }
+/* Aviso de versión nueva */
+.update-bar { position: fixed; left: 50%; top: calc(env(safe-area-inset-top) + 10px); transform: translateX(-50%); z-index: 85; width: calc(100% - 28px); max-width: 520px; display: flex; align-items: center; gap: 10px; padding: 10px 10px 10px 16px; border-radius: 18px; background: var(--panel); border: 1px solid var(--line); box-shadow: 0 18px 40px -18px rgba(0,0,0,.6); animation: drop .3s ease; font-size: 14px; }
+.update-bar .grow { flex: 1; min-width: 0; }
+.update-bar .x { background: none; border: 0; color: var(--muted); padding: 6px; cursor: pointer; display: grid; }
+@keyframes drop { from { transform: translate(-50%, -20px); opacity: 0; } to { transform: translateX(-50%); opacity: 1; } }
+.news li { margin: 4px 0; line-height: 1.45; }
 @keyframes pop { from { transform: scale(.94); opacity: 0; } to { transform: none; opacity: 1; } }
 
 /* ===== Modo claro (Ajustes → Tu estilo) ===== */

@@ -69,7 +69,7 @@ function render() {
           return `<button class="${c.getMonth() !== vm ? 'out' : ''} ${k === tk ? 'today' : ''} ${k === sel ? 'sel' : ''}" onclick="calPick('${k}')" aria-label="${fmtDay(c)}${its.length ? ', ' + its.length + ' cosas' : ''}">
             ${c.getDate()}<span class="dots">${its.slice(0, 3).map(i => `<i class="${i.kind}"></i>`).join('')}</span></button>`;
         }).join('')}</div>
-      <div class="legend"><span><i style="background:var(--g1)"></i>Planes</span><span><i style="background:var(--g2)"></i>Fechas especiales</span><span><i style="background:#7DD3FC"></i>Viajes</span></div>
+      <div class="legend"><span><i style="background:var(--c-plan)"></i>Planes</span><span><i style="background:var(--c-date)"></i>Fechas especiales</span><span><i style="background:var(--c-trip)"></i>Viajes</span></div>
       ${vy !== today().getFullYear() || vm !== today().getMonth() ? `<button class="link" onclick="calToday()">Ir a hoy</button>` : ''}
     </div>
     <div class="glass"><div class="row"><h2>${cap(fmtDay(parseDate(sel)))}</h2>

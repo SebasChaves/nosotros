@@ -30,17 +30,181 @@ export function ask(message, opts = {}) {
     el.innerHTML = `<div class="box" role="alertdialog" aria-modal="true" aria-labelledby="dlgMsg">
       <p id="dlgMsg">${esc(message)}</p>
       <div class="grid2"><button class="btn ghost" data-v="0">${esc(cancel)}</button><button class="btn ${danger ? 'danger' : ''}" data-v="1">${esc(ok)}</button></div></div>`;
-    const done = v => { document.removeEventListener('keydown', key, true); el.classList.add('out'); setTimeout(() => el.remove(), 160); prev?.focus?.({ preventScroll: true }); resolve(v); };
+    let closed = false;
+    const done = v => {
+      if (closed) return; closed = true;
+      document.removeEventListener('keydown', key, true); el.classList.add('out'); setTimeout(() => { el.remove(); syncBack(); }, 160);
+      prev?.focus?.({ preventScroll: true }); resolve(v);
+    };
     const key = e => { if (e.key === 'Escape') { e.preventDefault(); done(false); } if (e.key === 'Enter') { e.preventDefault(); done(true); } };
-    el.addEventListener('click', e => { const b = e.target.closest('button[data-v]'); if (b) done(b.dataset.v === '1'); else if (e.target === el) done(false); });
+    // Cada botón tiene su propio manejador (más confiable en iPhone que escuchar en el fondo).
+    el.querySelectorAll('button[data-v]').forEach(b => { b.onclick = e => { e.stopPropagation(); done(b.dataset.v === '1'); }; });
+    el.addEventListener('click', e => { if (e.target === el) done(false); });
     document.addEventListener('keydown', key, true);
     document.body.appendChild(el);
-    el.querySelector('button[data-v="1"]').focus({ preventScroll: true });
+    syncBack();
   });
 }
 
-export function openSheet(html) { $('sheetBody').innerHTML = html; $('sheet').classList.add('show'); }
-export function closeSheet() { $('sheet').classList.remove('show'); }
+export function openSheet(html) {
+  $('sheetBody').innerHTML = html;
+  const p = $('sheet').querySelector('.panel'); p.style.transform = p.style.transition = ''; p.scrollTop = 0;
+  $('sheet').classList.add('show'); syncBack();
+}
+export function closeSheet() { $('sheet').classList.remove('show'); syncBack(); }
+
+/* ================= Atrás (botón y gesto de Android) =================
+   Mientras haya algo que cerrar o una pantalla a la que volver, se deja una entrada en el historial.
+   Al tocar "atrás", el teléfono la consume y aquí se cierra lo de arriba o se vuelve una pantalla. */
+let guarded = false, silentPop = false;
+const topDialog = () => document.querySelector('.dialog:not(.out)');
+const overlayOpen = () => !!(topDialog() || $('viewer')?.classList.contains('show') || $('sheet')?.classList.contains('show') || document.querySelector('.tour'));
+function backTarget() {
+  const s = document.querySelector('.screen.active');
+  if (!s || s.id === 's-home') return null;
+  const b = s.querySelector('.topbar [aria-label="Volver"]');
+  if (b) return b;
+  return MAIN_SCREENS.has(s.id) ? 's-home' : null;
+}
+const canGoBack = () => document.body.classList.contains('in') && !$('lockScreen') && (overlayOpen() || !!backTarget());
+export function goBack() {
+  const d = topDialog();
+  if (d) return d.querySelector('button[data-v="0"]')?.click();
+  if ($('viewer').classList.contains('show')) return closeViewer();
+  if ($('sheet').classList.contains('show')) return closeSheet();
+  if (document.querySelector('.tour')) return;
+  const t = backTarget();
+  if (typeof t === 'string') go(t); else t?.click();
+}
+let syncT = null;
+export function syncBack() {
+  clearTimeout(syncT);
+  syncT = setTimeout(() => {
+    if (silentPop) return syncBack();
+    const need = canGoBack();
+    if (need && !guarded) { history.pushState({ futari: 1 }, ''); guarded = true; }
+    else if (!need && guarded) { guarded = false; silentPop = true; history.back(); }
+  }, 30);
+}
+addEventListener('popstate', () => {
+  if (silentPop) { silentPop = false; return; }
+  guarded = false;
+  goBack();
+  syncBack();
+});
+
+/* ================= Hoja de abajo: se cierra arrastrándola hacia abajo ================= */
+function sheetDrag() {
+  const sheet = $('sheet'), panel = sheet?.querySelector('.panel');
+  if (!panel) return;
+  let y0 = null, dy = 0, t0 = 0, dragging = false;
+  panel.addEventListener('touchstart', e => {
+    y0 = null;
+    if (e.touches.length !== 1 || panel.scrollTop > 0 || e.target.closest('.chips.scroll, .map-box, input[type=range]')) return;
+    y0 = e.touches[0].clientY; dy = 0; t0 = Date.now(); dragging = false;
+  }, { passive: true });
+  panel.addEventListener('touchmove', e => {
+    if (y0 == null) return;
+    dy = e.touches[0].clientY - y0;
+    if (!dragging) {
+      if (dy > 8 && panel.scrollTop <= 0) { dragging = true; panel.style.transition = 'none'; document.activeElement?.blur?.(); }
+      else { if (dy < -4) y0 = null; return; }
+    }
+    e.preventDefault();
+    panel.style.transform = `translateY(${Math.max(0, dy)}px)`;
+  }, { passive: false });
+  const end = () => {
+    if (y0 == null) return; y0 = null;
+    if (!dragging) return; dragging = false;
+    const fast = dy / Math.max(1, Date.now() - t0) > 0.6;
+    panel.style.transition = 'transform .22s ease';
+    if (dy > 120 || (fast && dy > 40)) { panel.style.transform = 'translateY(110%)'; setTimeout(closeSheet, 200); }
+    else panel.style.transform = '';
+  };
+  panel.addEventListener('touchend', end); panel.addEventListener('touchcancel', end);
+}
+
+/* ================= Visor de fotos: botón cerrar y deslizar hacia abajo ================= */
+export function closeViewer() { $('viewer').classList.remove('show'); $('viewerImg').style.transform = ''; syncBack(); }
+function viewerDrag() {
+  const v = $('viewer'), img = $('viewerImg');
+  if (!v) return;
+  let y0 = null, dy = 0;
+  v.addEventListener('touchstart', e => { y0 = e.touches.length === 1 ? e.touches[0].clientY : null; dy = 0; img.style.transition = 'none'; }, { passive: true });
+  v.addEventListener('touchmove', e => {
+    if (y0 == null) return;
+    dy = e.touches[0].clientY - y0; e.preventDefault();
+    img.style.transform = `translateY(${dy}px) scale(${1 - Math.min(Math.abs(dy), 300) / 1500})`;
+    v.style.background = `rgba(0,0,0,${1 - Math.min(Math.abs(dy), 300) / 450})`;
+  }, { passive: false });
+  v.addEventListener('touchend', () => {
+    if (y0 == null) return; y0 = null;
+    img.style.transition = 'transform .2s ease'; v.style.background = '';
+    if (Math.abs(dy) > 90) closeViewer(); else img.style.transform = '';
+  });
+}
+
+/* ================= Deslizar entre las pestañas principales ================= */
+const NO_SWIPE = 'input, textarea, select, .chips.scroll, .map-box, .leaflet-container, .noswipe, .lock';
+function hasHScroll(el) {
+  for (; el && el !== document.body; el = el.parentElement) {
+    if (el.scrollWidth > el.clientWidth + 2) { const o = getComputedStyle(el).overflowX; if (o === 'auto' || o === 'scroll') return true; }
+  }
+  return false;
+}
+let sw = null;
+document.addEventListener('touchstart', e => {
+  sw = null;
+  if (e.touches.length !== 1 || !document.body.classList.contains('in') || overlayOpen()) return;
+  const s = document.querySelector('.screen.active');
+  if (!s || !MAIN_SCREENS.has(s.id) || !e.target.closest?.('main') || e.target.closest(NO_SWIPE) || hasHScroll(e.target)) return;
+  const t = e.touches[0];
+  if (t.clientX < 22 || t.clientX > innerWidth - 22) return; // los bordes son del gesto "atrás" del teléfono
+  sw = { x: t.clientX, y: t.clientY, t: Date.now() };
+}, { passive: true });
+document.addEventListener('touchend', e => {
+  if (!sw) return;
+  const t = e.changedTouches[0], dx = t.clientX - sw.x, dy = t.clientY - sw.y, dt = Date.now() - sw.t; sw = null;
+  if (Math.abs(dx) < 70 || Math.abs(dx) < Math.abs(dy) * 1.8 || dt > 800 || overlayOpen()) return;
+  const cur = TAB_ORDER.indexOf(document.querySelector('.screen.active')?.dataset.tab);
+  const next = TAB_ORDER[cur + (dx < 0 ? 1 : -1)];
+  if (cur >= 0 && next) go('s-' + next);
+}, { passive: true });
+
+/* ================= Android: elegir entre cámara y galería =================
+   El selector nuevo de Android no ofrece la cámara, así que se pregunta antes de abrirlo. */
+export const ANDROID = /Android/i.test(navigator.userAgent);
+function chooseImageSource(input) {
+  const el = document.createElement('div');
+  el.className = 'dialog';
+  el.innerHTML = `<div class="box stack" role="dialog" aria-modal="true" aria-label="Agregar foto" style="gap:10px">
+    <button class="btn" data-src="camera">📷 Tomar foto</button><button class="btn ghost" data-src="gallery">🖼️ Elegir de la galería</button>
+    <button class="btn ghost" data-v="0">Cancelar</button></div>`;
+  const close = () => { el.classList.add('out'); setTimeout(() => { el.remove(); syncBack(); }, 160); };
+  el.querySelector('[data-v="0"]').onclick = close;
+  el.addEventListener('click', e => { if (e.target === el) close(); });
+  el.querySelectorAll('[data-src]').forEach(b => b.onclick = () => {
+    const tmp = document.createElement('input');
+    tmp.type = 'file'; tmp.accept = input.accept || 'image/*'; tmp.hidden = true; tmp.dataset.direct = '1';
+    if (b.dataset.src === 'camera') tmp.setAttribute('capture', 'environment');
+    tmp.onchange = () => {
+      const f = tmp.files[0]; tmp.remove(); if (!f) return;
+      const dt = new DataTransfer(); dt.items.add(f); input.files = dt.files;
+      input.dispatchEvent(new Event('change', { bubbles: true }));
+    };
+    document.body.appendChild(tmp); tmp.click(); close();
+  });
+  document.body.appendChild(el); syncBack();
+}
+if (ANDROID) document.addEventListener('click', e => {
+  const t = e.target;
+  const input = t.matches?.('input[type=file]') ? t : t.closest?.('label')?.querySelector('input[type=file]');
+  if (!input || !/image/.test(input.accept || '') || input.hasAttribute('capture') || input.dataset.direct) return;
+  e.preventDefault(); e.stopPropagation();
+  chooseImageSource(input);
+}, true);
+
+sheetDrag(); viewerDrag(); // los módulos corren cuando el HTML ya está listo
 
 // Repinta un contenedor sin perder lo que el usuario está escribiendo (valores y foco por id).
 export function paint(target, html) {
@@ -116,6 +280,7 @@ export function go(id) {
   placeTabPill();
   window.scrollTo(0, 0);
   showHooks[id]?.();
+  syncBack();
 }
 addEventListener('resize', () => placeTabPill());
 
@@ -254,25 +419,47 @@ export function loadPhotos(root) {
   root?.querySelectorAll('img[data-photo]:not([src]),img[data-thumb]:not([src])').forEach(img => photoIO ? photoIO.observe(img) : fillPhoto(img));
 }
 // Reduce la foto para que quepa en el plan gratis (máx. ~700 KB por foto).
-export async function compressImage(file, maxSide = 1280) {
+// Las fotos de cámaras de 50 a 200 megapíxeles (comunes en Android) se decodifican ya reducidas,
+// porque abrirlas completas puede agotar la memoria del navegador.
+async function decodeSmall(file, maxSide) {
+  if ('createImageBitmap' in window) {
+    try {
+      let bmp = await createImageBitmap(file, { resizeWidth: maxSide * 2, resizeQuality: 'high' });
+      if (bmp.height > bmp.width) { bmp.close?.(); bmp = await createImageBitmap(file, { resizeHeight: maxSide * 2, resizeQuality: 'high' }); }
+      return { src: bmp, w: bmp.width, h: bmp.height };
+    } catch {}
+  }
   const url = URL.createObjectURL(file);
   try {
     const img = await new Promise((ok, bad) => { const i = new Image(); i.onload = () => ok(i); i.onerror = bad; i.src = url; });
+    return { src: img, w: img.naturalWidth, h: img.naturalHeight, url };
+  } catch (e) { URL.revokeObjectURL(url); throw e; }
+}
+export async function compressImage(file, maxSide = 1280) {
+  let d;
+  try { d = await decodeSmall(file, maxSide); }
+  catch {
+    const heic = /hei[cf]/i.test(file.type) || /\.hei[cf]$/i.test(file.name || '');
+    throw new Error(heic ? 'heic' : 'decode');
+  }
+  try {
     let max = maxSide, q = 0.8, out;
     do {
-      const s = Math.min(1, max / Math.max(img.naturalWidth, img.naturalHeight));
+      const s = Math.min(1, max / Math.max(d.w, d.h));
       const c = document.createElement('canvas');
-      c.width = Math.round(img.naturalWidth * s); c.height = Math.round(img.naturalHeight * s);
-      c.getContext('2d').drawImage(img, 0, 0, c.width, c.height);
+      c.width = Math.round(d.w * s); c.height = Math.round(d.h * s);
+      c.getContext('2d').drawImage(d.src, 0, 0, c.width, c.height);
       out = c.toDataURL('image/jpeg', q);
       if (q > 0.5) q -= 0.1; else max = Math.round(max * 0.8);
     } while (out.length > 700000 && max > 300);
     return out;
-  } finally { URL.revokeObjectURL(url); }
+  } finally { if (d.url) URL.revokeObjectURL(d.url); d.src.close?.(); }
 }
+// Mensaje claro cuando una foto no se puede abrir.
+export const photoError = e => toast(e?.message === 'heic' ? 'Esa foto está en formato HEIF. Elige otra o cambia la cámara a JPG' : 'No se pudo abrir esa foto. Prueba con otra');
 // Abre la foto en grande: muestra la miniatura al instante y la cambia por la completa al cargar.
 export async function viewPhoto(img) {
-  $('viewerImg').src = img.src || ''; $('viewer').classList.add('show');
+  $('viewerImg').src = img.src || ''; $('viewer').classList.add('show'); syncBack();
   const id = img.dataset?.thumb;
   if (id) { const full = await getPhoto(id); if (full && $('viewer').classList.contains('show')) $('viewerImg').src = full; }
 }
@@ -310,4 +497,4 @@ export function animatePick(items, show, done) {
   tick();
 }
 
-expose({ closeSheet, go, viewPhoto });
+expose({ closeSheet, go, viewPhoto, closeViewer });

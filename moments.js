@@ -1,7 +1,7 @@
 // Momentos: línea de tiempo con fotos.
 import { writeBatch } from 'https://www.gstatic.com/firebasejs/11.0.2/firebase-firestore.js';
 import { $, S, db, esc, icon, paint, on, onShow, expose, toast, openSheet, closeSheet, write, ref, newRef,
-         loadPhotos, cachePhoto, compressImage, makeThumb, thumbId, parseDate, fmtDate, todayKey, nameOf, uid, ask } from './core.js';
+         loadPhotos, cachePhoto, compressImage, photoError, makeThumb, thumbId, parseDate, fmtDate, todayKey, nameOf, uid, ask } from './core.js';
 import { dailyHTML, myDailyDone, partnerDailyDone } from './daily.js';
 
 let tab = 'timeline';
@@ -52,7 +52,7 @@ async function pickPhoto(input) {
     box.querySelectorAll('svg,span').forEach(s => s.remove());
     box.querySelector('img')?.remove();
     const img = document.createElement('img'); img.src = pendingPhoto; img.alt = ''; box.prepend(img);
-  } catch { toast('No se pudo leer esa foto'); }
+  } catch (e) { photoError(e); }
   finally { btn.disabled = false; btn.textContent = 'Guardar momento'; }
 }
 async function saveMoment() {

@@ -114,7 +114,7 @@
 </nav>
 
 <div class="sheet" id="sheet" onclick="if(event.target===this)closeSheet()"><div class="panel"><div class="grabber"></div><div id="sheetBody"></div></div></div>
-<div class="viewer" id="viewer" onclick="this.classList.remove('show')"><img id="viewerImg" alt=""></div>
+<div class="viewer" id="viewer" onclick="closeViewer()" role="dialog" aria-label="Foto"><button class="viewer-x" aria-label="Cerrar foto" onclick="event.stopPropagation();closeViewer()"><svg class="ic"><use href="#i-x"/></svg></button><img id="viewerImg" alt=""></div>
 <div class="toast" id="toast" role="status"></div>
 
 <script type="module" src="app.js"></script>

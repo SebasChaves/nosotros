@@ -2,7 +2,7 @@
 import { setDoc, deleteDoc, writeBatch } from 'https://www.gstatic.com/firebasejs/11.0.2/firebase-firestore.js';
 import { signOut } from 'https://www.gstatic.com/firebasejs/11.0.2/firebase-auth.js';
 import { $, S, db, auth, esc, icon, paint, on, onShow, expose, toast, write, ref, privRef, coupleRef, go,
-         COLLECTIONS, PRIVATE, cachePhoto, forgetPhoto, compressImage, loadPhotos, parseDate, today, dayKey,
+         COLLECTIONS, PRIVATE, cachePhoto, forgetPhoto, compressImage, photoError, loadPhotos, parseDate, today, dayKey,
          fmtMoney, nameOf, partnerUid, partnerName, myName, profile, plural, uid, avatar, ask } from './core.js';
 import { ACCENTS, CURRENCIES } from './data.js';
 import { backBar, groceryPending } from './lists.js';
@@ -122,7 +122,7 @@ async function pickBg(input) {
     batch.set(ref('profiles', uid()), { prefs: { bg: true } }, { merge: true });
     cachePhoto(`bg-${uid()}`, data);
     write(batch.commit()); toast('Foto de fondo lista');
-  } catch { toast('No se pudo leer esa foto'); }
+  } catch (e) { photoError(e); }
 }
 async function pickAvatar(input) {
   const f = input.files[0]; input.value = ''; if (!f) return;
@@ -135,7 +135,7 @@ async function pickAvatar(input) {
     batch.set(ref('profiles', uid()), { avatar: id }, { merge: true });
     cachePhoto(id, data);
     write(batch.commit()); toast('Foto de perfil lista');
-  } catch { toast('No se pudo leer esa foto'); }
+  } catch (e) { photoError(e); }
 }
 function removeAvatar() {
   const old = profile(uid()).avatar; if (!old) return;

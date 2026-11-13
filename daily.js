@@ -1,6 +1,6 @@
 // Foto del día: cada uno sube una foto diaria. La de tu pareja de hoy se revela cuando subes la tuya.
 import { setDoc, writeBatch } from 'https://www.gstatic.com/firebasejs/11.0.2/firebase-firestore.js';
-import { $, S, db, esc, icon, expose, toast, openSheet, closeSheet, write, ref, cachePhoto, compressImage, makeThumb, thumbId,
+import { $, S, db, esc, icon, expose, toast, openSheet, closeSheet, write, ref, cachePhoto, compressImage, photoError, makeThumb, thumbId,
          today, dayKey, todayKey, parseDate, nameOf, partnerUid, partnerName, plural, uid, celebrate } from './core.js';
 
 export const dailyPhotoId = (day, who) => `d-${day}-${who}`;
@@ -41,7 +41,7 @@ const cap = s => s.charAt(0).toUpperCase() + s.slice(1);
 let pending = null;
 async function pickDaily(input) {
   const f = input.files[0]; input.value = ''; if (!f) return;
-  try { pending = await compressImage(f, 1080); } catch { return toast('No se pudo leer esa foto'); }
+  try { pending = await compressImage(f, 1080); } catch (e) { return photoError(e); }
   openSheet(`<div class="stack"><h2>Tu foto de hoy</h2><img src="${pending}" alt="" style="width:100%;max-height:50vh;object-fit:cover;border-radius:18px">
     <input id="dailyCap" placeholder="¿Qué están haciendo? (opcional)" maxlength="80" aria-label="Descripción">
     <button class="btn" id="dailyBtn" onclick="saveDaily()">Publicar</button></div>`);

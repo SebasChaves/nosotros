@@ -1,6 +1,6 @@
 // Guarda la app en caché para que funcione sin internet.
 // Sube el número de versión cada vez que cambies archivos.
-const CACHE = 'nosotros-v20';
+const CACHE = 'nosotros-v21';
 const FILES = ['./', './index.html', './styles.css', './app.js', './core.js', './data.js', './home.js', './decide.js',
   './love.js', './moments.js', './lists.js', './money.js', './places.js', './trips.js', './us.js', './quiz.js',
   './summary.js', './settings.js', './calendar.js', './shows.js', './tmdb-config.js', './games.js', './games-data.js', './booking.js', './search.js', './tour.js', './testing.js', './tracking.js', './admin.js', './recipes.js', './recipes-data.js', './daily.js', './map.js', './music.js', './badges.js', './lock.js', './firebase-config.js', './manifest.json', './icon-180.png', './icon-192.png', './icon-512.png'];
@@ -22,9 +22,11 @@ self.addEventListener('activate', e => {
 self.addEventListener('fetch', e => {
   const url = new URL(e.request.url);
   const mine = url.origin === self.location.origin || HOSTS.includes(url.hostname);
-  if (e.request.method !== 'GET' || !mine) return;
+  if (e.request.method !== 'GET' || !mine || url.pathname.endsWith('/version.json')) return;
+  // Los archivos de la app se piden "sin caché" del navegador (con revalidación) para que una versión nueva llegue al instante.
+  const own = url.origin === self.location.origin;
   e.respondWith(
-    fetch(e.request)
+    fetch(own ? new Request(url.href, { cache: 'no-cache', credentials: 'same-origin' }) : e.request)
       .then(res => {
         if (res.ok || res.type === 'opaque') { const copy = res.clone(); caches.open(CACHE).then(c => c.put(e.request, copy)); }
         return res;
