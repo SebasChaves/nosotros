@@ -188,6 +188,14 @@ const TIMED_MS = 5 * 60e3;
 const timedSpec = seed => { const N = sizeFor(270); return { key: 'tt', title: 'Contrarreloj', n: N, minLen: 2, maxLen: 5, seed, timed: true, mods: modsFor(['stones', 'ice'], N, 270) }; };
 const DUEL_SIZES = { rapido: [100, 'Rápido'], normal: [250, 'Normal'], largo: [450, 'Largo'] };
 const duelSpec = d => { const n0 = DUEL_SIZES[d.size]?.[0] || 250, N = sizeFor(n0); return { key: 'duel' + d.did, title: '⚔️ Duelo', n: N, minLen: 2, maxLen: 5, seed: d.seed, duel: d.did, mods: modsFor(['stones', 'ice'], N, n0) }; };
+// Zona de pruebas (solo el dueño): tableros chicos con un obstáculo, todos juntos, y los modos en versión corta.
+// No guardan nada (ni récords, ni monedas, ni partida a medias) ni mandan avisos.
+const testSpec = kind => {
+  const seed = Math.floor(Math.random() * 2 ** 31), all = kind === 'all' || kind === 'xp' || kind === 'duel', N = all ? 16 : 12, n0 = all ? 75 : 45;
+  const keys = kind === 'tt' ? ['stones', 'ice'] : all ? Object.keys(MODS_INFO) : [kind];
+  const title = kind === 'all' ? 'Prueba: todos' : kind === 'xp' ? 'Prueba experto' : kind === 'tt' ? 'Prueba contrarreloj' : kind === 'duel' ? 'Prueba duelo' : `Prueba: ${MODS_INFO[kind][1]}`;
+  return { key: 'test', title: '🧪 ' + title, n: N, minLen: 2, maxLen: 4, seed, test: kind, hard: kind === 'xp', timed: kind === 'tt', fake: kind === 'duel', mods: modsFor(keys, N, n0) };
+};
 const boardOf = spec => (spec.board ??= generate(spec));
 
 /* ---------- Datos ---------- */
@@ -224,6 +232,7 @@ function render() {
   const hsp = hardSpec(H), nm = newModAt(H);
   $('s-arrows').innerHTML = `${backBar('Flechas', 's-more', `<span class="pill">⭐ ${total}</span>`)}
     ${surprise ? `<div class="glass small" style="border-color:rgba(255,181,71,.5)">🔒 <b>Sorpresa:</b> solo tú lo ves. Cuando quieras regalarlo: Administración → Pruebas → 🎁 Sorpresa.</div>` : ''}
+    ${testCard()}
     ${duelCard()}
     <div class="glass stack ar-hero hard"><div class="ar-hero-ic">🔥</div><div class="stack" style="gap:2px;align-items:center"><span class="label">Difícil · nivel ${H}</span>
       <span class="tiny muted">Unas ${hardTarget(H)} flechas${Object.keys(hsp.mods).length ? ' · ' + modList(hsp.mods) : ''}${cont(hsp)}</span>
@@ -243,6 +252,14 @@ function render() {
     ${H > 1 ? `<div class="glass stack"><span class="label">🔥 Difíciles</span><div class="ar-levels">${Array.from({ length: H }, (_, i) => i + 1).reverse().map(n => lv(n, H, hs, 'h', hx)).join('')}</div></div>` : ''}
     <div class="glass stack"><span class="label">📖 Obstáculos</span>${Object.entries(MODS_INFO).map(([k, [e, t, txt]]) => `<p class="small" style="margin:0">${e} <b>${t}</b> <span class="tiny muted">(desde difícil ${MOD_FROM[k]})</span><br><span class="muted">${txt}</span></p>`).join('')}</div>
     <p class="tiny muted center" style="margin:0 8px">Toca una flecha: avanza hacia donde apunta y sale si nada la bloquea. Si choca pierdes una vida ❤️; cada ${LIFE_EVERY} flechas recuperas una. Con dos dedos acercas o alejas el tablero. Si sales, la partida queda guardada.</p>`;
+}
+function testCard() {
+  if (!isOwner()) return '';
+  const b = (k, label) => `<button class="btn ghost small" onclick="playArrows('t:${k}')">${label}</button>`;
+  return `<details class="glass stack ar-test"><summary class="label">🧪 Zona de pruebas · solo tú</summary>
+    <p class="tiny muted" style="margin:6px 0">Tableros chicos para ver cada cosa. No guardan récords, monedas ni partida, y no mandan avisos.</p>
+    <div class="grid3">${Object.entries(MODS_INFO).map(([k, [e, t]]) => b(k, `${e} ${t}`)).join('')}</div>
+    <div class="grid2" style="margin-top:8px">${b('all', '🎲 Todos juntos')}${b('xp', '💀 Experto')}${b('tt', '⏱️ Contrarreloj 1 min')}${b('duel', '⚔️ Duelo vs 🤖')}</div></details>`;
 }
 function arrowsExpert(v) { try { localStorage.setItem('futari-ar-expert', v ? '1' : '0'); } catch {} render(); }
 
@@ -338,6 +355,7 @@ function specOf(what) {
   if (what === 'day') return dailySpec();
   if (what === 'tt') return timedSpec(Math.floor(Math.random() * 2 ** 31));
   if (what === 'duel') { const d = duelDoc(); return d ? duelSpec(d) : null; }
+  if (String(what).startsWith('t:')) return isOwner() ? testSpec(what.slice(2)) : null;
   const m = /^([nh])(\d+)$/.exec(String(what)); if (!m) return levelSpec(myLevel());
   return m[1] === 'h' ? hardSpec(Number(m[2])) : levelSpec(Number(m[2]));
 }
@@ -361,11 +379,12 @@ function playArrows(what) {
 function newGame(spec, what) {
   const board = boardOf(spec), N = board.N, occ = new Int32Array(N * N).fill(-1);
   for (const a of board.list) for (const [x, y] of a.cells) occ[y * N + x] = a.id;
-  const xp = (spec.hard || spec.day) && expertOn();
+  const xp = spec.test === 'xp' || ((spec.hard || spec.day) && !spec.test && expertOn());
   const g = { spec, what, board, N, occ, gone: new Set(), lives: 3, errors: 0, hints: 0, paid: 0, elapsed: 0, t0: Date.now(), over: false,
-    cracked: new Set(), boom: new Set(), dir: {}, next: 1, expert: xp, noLives: !!(spec.timed || spec.duel), vis: null };
+    cracked: new Set(), boom: new Set(), dir: {}, next: 1, expert: xp, noLives: !!(spec.timed || spec.duel || spec.fake), vis: null };
   for (const a of board.list) if (a.rot) g.dir[a.id] = a.d0;
-  if (spec.timed) g.timed = { end: Date.now() + TIMED_MS, done: 0, boards: 0 };
+  if (spec.timed) g.timed = { end: Date.now() + (spec.test ? 60e3 : TIMED_MS), done: 0, boards: 0 };
+  if (spec.fake) g.fake = { n: 0, ms: 0 }; // rival simulado: avanza solo
   if (spec.duel) g.t0 = duelDoc()?.startAt || Date.now(); // en el duelo el reloj es el real desde que empezó
   return g;
 }
@@ -381,9 +400,13 @@ function tickClock() {
   if (!G || G.over || document.hidden) return;
   const t = $('arTime'); if (t) t.textContent = G.timed ? '⏱️ ' + fmtMs(timeLeft()) : fmtMs(elapsed());
   if (G.timed && timeLeft() <= 0) timeUp();
+  if (G.fake && G.fake.n < G.board.list.length && Math.random() < 0.6) {
+    G.fake.n = Math.min(G.board.list.length, G.fake.n + 1); if (G.fake.n === G.board.list.length) G.fake.ms = elapsed();
+    const o = $('arOpp'); if (o) { o.querySelector('i').style.width = (G.fake.n / G.board.list.length * 100) + '%'; o.querySelector('.n').textContent = G.fake.ms ? '¡terminó!' : `${G.fake.n}/${G.board.list.length}`; }
+  }
 }
 function save() {
-  if (!G || G.over || G.timed) return;
+  if (!G || G.over || G.timed || G.spec.test) return;
   try { localStorage.setItem(SAVE + G.spec.key, JSON.stringify({ total: G.board.list.length, removed: [...G.gone], lives: G.lives, errors: G.errors, hints: G.hints, paid: G.paid, elapsed: elapsed(),
     cracked: [...G.cracked], boom: [...G.boom], dir: G.dir, at: Date.now() })); } catch {}
 }
@@ -439,17 +462,17 @@ function boardSVG() {
   return `${stones}${portals}${board.list.filter(a => !G.gone.has(a.id)).map(arrowSVG).join('')}${board.list.map(chainSVG).join('')}`;
 }
 function paintGame() {
-  const W = G.N * C, sp = G.spec, hint = !G.expert && !sp.duel;
+  const W = G.N * C, sp = G.spec, hint = !G.expert && !sp.duel && !sp.fake;
   view.innerHTML = `<div class="ar-top"><button class="icon-btn" data-v="0" aria-label="Salir (se guarda)" onclick="closeArrows()">${icon('x')}</button>
       <div class="ar-title"><b>${G.expert ? '💀 ' : ''}${esc(sp.title)}</b><span class="tiny muted"><span id="arLeft"></span> · <span id="arTime"></span></span></div>
       ${Object.keys(sp.mods).length ? '<button class="icon-btn ar-help" aria-label="Obstáculos" onclick="arrowsLegend()">?</button>' : ''}
       <div class="ar-lives" id="arLives" aria-label="Vidas"></div></div>
     <div class="ar-prog"><i id="arProg"></i></div>
-    ${sp.duel ? `<div class="ar-opp" id="arOpp"><span>${esc(nameOf(partnerUid()))}</span><div><i></i></div><span class="n">0</span></div>` : ''}
+    ${sp.duel || sp.fake ? `<div class="ar-opp" id="arOpp"><span>${sp.fake ? '🤖 Rival' : esc(nameOf(partnerUid()))}</span><div><i></i></div><span class="n">0</span></div>` : ''}
     <div class="ar-vp" id="arVp"><div class="ar-world" id="arWorld" style="width:${W}px;height:${W}px;--c:${C}px">
       <svg width="${W}" height="${W}" viewBox="0 0 ${W} ${W}" id="arSvg">${boardSVG()}</svg></div></div>
     <div class="ar-bottom">${hint ? `<button class="btn ghost small" onclick="arrowHint()">💡 Pista${sp.day ? ' (+10 s)' : ''}</button>` : ''}<button class="btn ghost small" onclick="arrowFit()">⤢ Ver todo</button>
-      ${sp.duel ? '<button class="btn ghost small" onclick="duelGiveUp()">🏳️ Rendirme</button>' : sp.timed ? '' : '<button class="btn ghost small" onclick="restartArrows()">↺ Reiniciar</button>'}</div>`;
+      ${sp.fake ? '' : sp.duel ? '<button class="btn ghost small" onclick="duelGiveUp()">🏳️ Rendirme</button>' : sp.timed ? '' : '<button class="btn ghost small" onclick="restartArrows()">↺ Reiniciar</button>'}</div>`;
   updateFog(); updateHud(); tickClock(); setupCamera();
 }
 function updateHud() {
@@ -737,6 +760,8 @@ function timeUp() {
   if (!G?.timed || G.over) return;
   G.over = true; clearInterval(timer);
   const total = G.timed.done + G.gone.size, pr = progress(), best = pr.tt || 0, p = partnerUid(), theirs = p ? progress(p).tt || 0 : 0;
+  if (G.spec.test) { view.querySelector('.ar-bottom').innerHTML = ''; return overlay(`<div style="font-size:46px">⏱️</div><h2>¡Tiempo!</h2><p style="margin:0" class="center"><b style="font-size:28px">${total}</b> flechas en 1 minuto<br><span class="small muted">Prueba: no se guardó nada</span></p>
+    <div class="grid2"><button class="btn ghost" onclick="closeArrows()">Salir</button><button class="btn" onclick="playArrows('t:tt')">Otra vez</button></div>`); }
   if (total > best) write(setDoc(ref('arrows', 'p-' + uid()), { tt: total }, { merge: true }));
   if (total > best && total > theirs && theirs) notify('arrows', { title: `⏱️ ${meForPartner()} hizo ${total} flechas en 5 minutos`, body: `Te ganó tu récord de ${theirs}. ¿Lo recuperas?`, url: './?open=arrows', tag: 'arrows-tt' });
   markActive(); countStat('acts', 'arrows-tt');
@@ -750,7 +775,13 @@ function win() {
   G.over = true; clearInterval(timer); dropSave(G.spec.key);
   const ms = elapsed(), sp = G.spec, n = G.board.list.length, p = partnerUid(), pt = pet();
   const errTxt = `${G.errors} ${G.errors === 1 ? 'error' : 'errores'}${G.hints ? ` · ${G.hints} 💡` : ''}`;
-  celebrate(); navigator.vibrate?.([20, 40, 60]); markActive(); view.querySelector('.ar-bottom').innerHTML = '';
+  celebrate(); navigator.vibrate?.([20, 40, 60]); view.querySelector('.ar-bottom').innerHTML = '';
+  if (sp.test) {
+    const vs = sp.fake ? `<br>${G.fake.ms && G.fake.ms < ms ? '😅 El rival 🤖 terminó primero' : '🏆 ¡Le ganaste al rival 🤖!'}` : '';
+    return overlay(`<div style="font-size:46px">🧪</div><h2>¡Prueba lista!</h2><p style="margin:0" class="center">${n} flechas en ${fmtMs(ms)} · ${errTxt}${vs}<br><span class="small muted">No se guardó nada</span></p>
+      <div class="grid2"><button class="btn ghost" onclick="closeArrows()">Salir</button><button class="btn" onclick="playArrows('t:${sp.test}')">Otro tablero</button></div>`);
+  }
+  markActive();
   if (sp.duel) {
     G.duelEnd = { done: true, ms }; duelPush(true); countStat('acts', 'arrows-duel');
     overlay(`<div style="font-size:46px">⚔️</div><h2>¡Terminaste!</h2><p style="margin:0" class="center">${n} flechas en ${fmtMs(ms)} · ${errTxt}</p><p class="center ar-duel-res" style="margin:0">${duelResultTxt(duelDoc() || {})}</p>

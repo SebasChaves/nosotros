@@ -773,7 +773,7 @@ body:not([data-theme="light"]) .map-box .leaflet-tile-pane { filter: invert(1) h
 .ar-hero.hard { border-color: rgba(255, 110, 60, .5); background: linear-gradient(135deg, rgba(255, 90, 50, .14), var(--glass)); }
 .ar-bottom { display: flex; gap: 10px; }
 .ar-end { position: absolute; inset: 0; display: grid; place-items: center; background: rgba(0,0,0,.45); animation: fadein .2s; padding: 20px; }
-.ar-end-box { background: var(--panel); border: 1px solid var(--line); border-radius: 24px; padding: 22px; width: min(340px, 100%); display: flex; flex-direction: column; gap: 12px; align-items: stretch; text-align: center; animation: pop .25s; }
+.ar-end-box { max-height: calc(100% - 20px); overflow-y: auto; overscroll-behavior: contain; background: var(--panel); border: 1px solid var(--line); border-radius: 24px; padding: 22px; width: min(340px, 100%); display: flex; flex-direction: column; gap: 12px; align-items: stretch; text-align: center; animation: pop .25s; }
 .ar-end-box h2 { margin: 0; }
 .ar-stars { font-size: 30px; color: #FFB547; letter-spacing: 4px; }
 
@@ -845,3 +845,8 @@ body:not([data-theme="light"]) .map-box .leaflet-tile-pane { filter: invert(1) h
 .grid3 .btn { padding-left: 4px; padding-right: 4px; line-height: 1.2; }
 .dialog.ar-count { background: rgba(10,4,20,.85); }
 .dialog.ar-count b { font-size: 120px; color: #fff; animation: pop .25s; }
+.ar-test summary { cursor: pointer; list-style: none; }
+.ar-test summary::-webkit-details-marker { display: none; }
+.ar-test summary::after { content: ' ▾'; }
+.ar-test[open] summary::after { content: ' ▴'; }
+.ar-test .grid3 .btn { font-size: 12px; }
