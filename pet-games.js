@@ -33,7 +33,7 @@ export function playGame(id, petOpts, finish) {
     area.innerHTML = `<div class="g-end"><div class="g-big">${score}</div><p>puntos</p>
       ${r.record ? '<p class="g-rec">🏆 ¡Nuevo récord tuyo!</p>' : ''}
       <p class="g-small">Tu récord: <b>${r.mine ?? score}</b>${r.theirsName ? ` · ${esc(r.theirsName)}: <b>${r.theirs ?? 0}</b>` : ''}</p>
-      <p class="g-coins">${r.coins ? `+${r.coins} 🪙` : r.capped ? 'Hoy ya ganaste el máximo de monedas en juegos (30 🪙). ¡Igual cuenta el récord!' : 'Esta vez no alcanzó para monedas'}</p>
+      <p class="g-coins">${r.note ? esc(r.note) : r.coins ? `+${r.coins} 🪙` : r.capped ? 'Hoy ya ganaste el máximo de monedas en juegos (30 🪙). ¡Igual cuenta el récord!' : 'Esta vez no alcanzó para monedas'}</p>
       <div class="g-btns"><button class="btn" data-again>Otra vez</button><button class="btn ghost" data-out>Salir</button></div></div>`;
     area.querySelector('[data-again]').onclick = () => start();
     area.querySelector('[data-out]').onclick = close;

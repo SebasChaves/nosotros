@@ -1,10 +1,13 @@
 // Panel de administración (solo visible para TESTERS), en tres pestañas:
 //   Ingresos (por día, horas, teléfonos, datos, errores) · Estadísticas (uso, notificaciones, quién hace más) · Pruebas.
 import { query, where, orderBy, limit, getDocs, getCountFromServer, writeBatch } from 'https://www.gstatic.com/firebasejs/11.0.2/firebase-firestore.js';
-import { $, S, db, esc, icon, paint, onShow, expose, toast, ask, col, ref, avatar, loadPhotos, nameOf,
+import { $, S, db, esc, icon, paint, onShow, expose, toast, ask, col, ref, avatar, loadPhotos, nameOf, openSheet, celebrate,
          today, dayKey, todayKey, parseDate, fmtShort, fmtDay, plural, COLLECTIONS, uid, EMU } from './core.js';
 import { isTester, testerCard } from './testing.js';
 import { NOTIF_TYPES, pushHere } from './push.js';
+import { SPECIES, STAGES } from './pet.js';
+import { sceneSVG, petSVG, ITEMS, SLOTS } from './pet-art.js';
+import { GAMES, playGame } from './pet-games.js';
 
 let range = 14, selDay = null, visits = [], errors = [], usage = [], stats = [], photoCount = null, loading = false, tab = 'ingresos';
 const COLORS = ['var(--g1)', 'var(--g2)'];
@@ -136,8 +139,59 @@ function render() {
 }
 
 /* ---------- Pestaña Pruebas: notificaciones, herramientas y zona de pruebas ---------- */
+/* ---------- Mascota de pruebas: todo disponible, nada se guarda en Firebase ---------- */
+const lab = { species: '🐱', stage: 3, egg: false, ready: false, mood: 'feliz', time: 'dia', fed: true, wear: {}, best: {} };
+const labChips = (items, cur, fn) => `<div class="chips">${items.map(([v, l]) => `<button class="chip ${String(cur) === String(v) ? 'on' : ''}" onclick="${fn}('${v}')">${l}</button>`).join('')}</div>`;
+function labHTML() {
+  const stageVal = lab.egg ? (lab.ready ? 'listo' : 'huevo') : lab.stage;
+  const scene = sceneSVG({ species: lab.species, mood: lab.mood, stage: lab.stage, wear: lab.wear, egg: lab.egg, ready: lab.ready, fed: lab.fed, time: lab.time, label: 'Mascota de pruebas' }).replace('<svg ', '<svg class="pet-scene big" ');
+  return `<div class="glass stack" id="petLab" style="border-color:rgba(255,181,71,.45)"><span class="label">🧪 Mascota de pruebas</span>
+    <p class="tiny muted" style="margin:0">Solo para probar: todo está desbloqueado y nada se guarda (no toca la mascota de ustedes, sus monedas ni sus récords).</p>
+    <div class="pet-stage big">${scene}</div>
+    <span class="label">Animal</span>${labChips(SPECIES.map(([e, n]) => [e, `${e} ${n}`]), lab.species, 'labSpecies')}
+    <span class="label">Etapa</span>${labChips([['huevo', '🥚 Huevo'], ['listo', '🐣 Listo para nacer'], ...STAGES.slice(1).map(([, n], i) => [i + 1, n])], stageVal, 'labStage')}
+    <span class="label">Cara</span>${labChips([['feliz', '😊 Feliz'], ['hambre', '😋 Con hambre'], ['triste', '😢 Triste'], ['dormido', '😴 Dormido']], lab.mood, 'labMood')}
+    <span class="label">Hora</span>${labChips([['dia', '☀️ Día'], ['tarde', '🌇 Atardecer'], ['noche', '🌙 Noche']], lab.time, 'labTime')}
+    <span class="label">Platito</span>${labChips([['1', 'Lleno'], ['0', 'Vacío']], lab.fed ? '1' : '0', 'labFed')}
+    ${SLOTS.map(([slot, l]) => `<span class="label">${l}</span>${labChips([['', 'Nada'], ...ITEMS.filter(i => i.slot === slot).map(i => [i.id, i.name])], lab.wear[slot] || '', `labWear_${slot}`)}`).join('')}
+    <div class="grid2"><button class="btn ghost small" style="width:100%" onclick="labAll()">👗 Ponerle de todo</button><button class="btn ghost small" style="width:100%" onclick="labNone()">Quitarle todo</button>
+      <button class="btn ghost small" style="width:100%" onclick="labHatch()">🐣 Ver nacimiento</button><button class="btn ghost small" style="width:100%" onclick="labRandom()">🎲 Al azar</button></div>
+    <span class="label">Juegos (sin monedas ni récords reales)</span>
+    <div class="grid2">${GAMES.map(g => `<button class="btn ghost small" style="width:100%" onclick="labGame('${g.id}')">${g.icon} ${esc(g.name)}${lab.best[g.id] ? ` · ${lab.best[g.id]}` : ''}</button>`).join('')}</div></div>`;
+}
+const labDo = f => (...a) => { f(...a); render(); };
+const labSpecies = labDo(v => { lab.species = v; });
+const labStage = labDo(v => { lab.egg = v === 'huevo' || v === 'listo'; lab.ready = v === 'listo'; if (!lab.egg) lab.stage = Number(v); });
+const labMood = labDo(v => { lab.mood = v; });
+const labTime = labDo(v => { lab.time = v; });
+const labFed = labDo(v => { lab.fed = v === '1'; });
+const labWearFns = Object.fromEntries(SLOTS.map(([slot]) => [`labWear_${slot}`, labDo(v => { lab.wear = { ...lab.wear, [slot]: v || null }; })]));
+const labAll = labDo(() => { lab.wear = { head: 'corona', face: 'gafas', neck: 'bufanda', body: 'sueter', room: 'luces' }; });
+const labNone = labDo(() => { lab.wear = {}; });
+const labRandom = labDo(() => {
+  const pick = a => a[Math.floor(Math.random() * a.length)];
+  lab.species = pick(SPECIES)[0]; lab.egg = false; lab.stage = 1 + Math.floor(Math.random() * 5);
+  lab.mood = pick(['feliz', 'hambre', 'triste', 'dormido']); lab.time = pick(['dia', 'tarde', 'noche']);
+  lab.wear = Object.fromEntries(SLOTS.map(([slot]) => [slot, Math.random() < .6 ? pick(ITEMS.filter(i => i.slot === slot)).id : null]));
+});
+function labHatch() {
+  const [sp, name, art] = SPECIES[Math.floor(Math.random() * SPECIES.length)];
+  celebrate();
+  openSheet(`<div class="stack center"><svg viewBox="0 0 160 160" style="width:150px;height:150px;align-self:center" role="img" aria-label="${esc(name)}">${petSVG({ species: sp, mood: 'feliz', stage: 1 })}</svg>
+    <h2>¡Nació ${art} ${esc(name)}!</h2><p class="muted" style="margin:0">Así se ve al nacer (prueba: no se guarda nada).</p>
+    <button class="btn" onclick="closeSheet()">Listo</button></div>`);
+}
+function labGame(id) {
+  playGame(id, { species: lab.species, stage: Math.max(2, lab.egg ? 2 : lab.stage), wear: { ...lab.wear, room: null } }, score => {
+    const prev = lab.best[id] || 0; lab.best[id] = Math.max(prev, score);
+    const g = GAMES.find(x => x.id === id);
+    return { mine: lab.best[id], record: score > prev && prev > 0, note: `Modo prueba: en la versión real habría ganado ${Math.min(15, g.coins(score))} 🪙 (tope de 30 al día).` };
+  });
+}
+
 function testsHTML() {
-  return `<div class="glass stack"><span class="label">🔔 Notificaciones</span>
+  return `${labHTML()}
+    <div class="glass stack"><span class="label">🔔 Notificaciones</span>
       <p class="small muted" style="margin:0">${pushHere ? 'Activadas en este teléfono.' : 'No están activadas en este teléfono (Ajustes → Notificaciones).'}</p>
       <div class="grid2"><button class="btn ghost small" style="width:100%" onclick="testPush()">Probar aviso</button>
         <button class="btn ghost small" style="width:100%" onclick="diagnoseSchedule()">⏰ Avisos programados</button></div>
@@ -257,4 +311,4 @@ async function admForceUpdate() {
 }
 
 onShow('s-admin', () => { render(); load(); });
-expose({ admTab, admRange, admDay, admReload, admCsv, admPurge, admClearErrors, admForceUpdate });
+expose({ labSpecies, labStage, labMood, labTime, labFed, ...labWearFns, labAll, labNone, labRandom, labHatch, labGame, admTab, admRange, admDay, admReload, admCsv, admPurge, admClearErrors, admForceUpdate });
