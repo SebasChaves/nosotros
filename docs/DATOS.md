@@ -36,7 +36,7 @@ Casi todos los docs llevan `by: uid` (quién lo creó) y `createdAt: ms`. Fechas
 | `places` | restaurantes: `name, kind, price 0-4, loc?{name,lat,lng}, status 'want'|'been', ratings{uid:1-5}, visits[{date,note,by}]` |
 | `trips` | viajes con itinerario, maleta, presupuesto y opciones de hospedaje/vuelo (`stays`, `flights` con votos) |
 | `events` | planes: `title, date, time, who 'ambos'|uid, note, repeat none/weekly/biweekly/monthly/yearly, until` |
-| `dates` | fechas especiales: `title, date, emoji, yearly` |
+| `dates` | fechas especiales: `title, date, emoji, yearly, by, createdAt, editedBy?, editedAt?` — tipos en `DATE_KINDS` (`data.js`); se crean/editan con `openFecha` (`calendar.js`), desde el Calendario o Inicio → Fechas |
 | `shows` | `title, type movie|tv, year, tmdbId, poster, overview, providers[], status want|watching|seen, progress{s,e}, ratings, seenAt` |
 | `songs` | `title, artist, url, thumb, preview, apple, cover?(id en photos), why, date, ours, dedication?{by,to,msg,at,seen}` |
 | `reminders` | `text, date, time, for 'ambos'|uid, note, urgent, done, doneAt, doneBy` |

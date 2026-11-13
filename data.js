@@ -144,11 +144,17 @@ export const COUPON_TEMPLATES = [
 
 export const DATE_KINDS = [
   ['🎂', 'Cumpleaños'],
+  ['💍', 'Aniversario'],
+  ['💕', 'Fecha nuestra'],
+  ['🎄', 'Festivo'],
+  ['🎓', 'Logro'],
+  ['🕊️', 'En memoria'],
   ['✈️', 'Viaje'],
   ['🎉', 'Evento'],
-  ['💍', 'Aniversario'],
   ['📌', 'Otro'],
 ];
+// Tipos que normalmente se repiten cada año (se marca solo "Se repite cada año")
+export const YEARLY_KINDS = ['🎂', '💍', '💕', '🎄', '🕊️'];
 
 export const QUESTIONS = [
   '¿En qué momento supiste que te gustaba?',

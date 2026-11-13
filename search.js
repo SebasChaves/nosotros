@@ -16,7 +16,7 @@ function sources() {
   add('Cupones', '🎟️', D.coupons.map(c => ({ text: c.text, sub: c.doneAt ? 'Cumplido' : c.redeemedAt ? 'Canjeado' : 'Disponible', open: () => { go('s-love'); window.loveTab('coupons'); } })));
   add('Momentos', '📸', D.moments.map(m => ({ text: `${m.title} ${m.note || ''}`, label: m.title, sub: fmtShort(parseDate(m.date)), open: () => go('s-moments') })));
   add('Calendario', '📌', D.events.map(e => ({ text: `${e.title} ${e.note || ''}`, label: e.title, sub: fmtShort(parseDate(e.date)), open: () => { go('s-cal'); window.calPick(e.date); } })));
-  add('Fechas especiales', '🎂', D.dates.map(f => ({ text: f.title, sub: fmtShort(parseDate(f.date)), open: () => { go('s-home'); window.openFechas(); } })));
+  add('Fechas especiales', '🎂', D.dates.map(f => ({ text: f.title, sub: fmtShort(parseDate(f.date)), open: () => window.openFecha(null, f.id) })));
   add('Viajes', '✈️', D.trips.flatMap(t => [
     { text: `${t.name} ${t.dest || ''}`, label: t.name, sub: t.dest || '', open: () => window.openTrip(t.id) },
     ...(t.plan || []).map(p => ({ text: p.text, sub: `Itinerario · ${t.name}`, open: () => window.openTrip(t.id) })),

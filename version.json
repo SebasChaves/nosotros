@@ -1,9 +1,20 @@
 {
-  "version": "29",
+  "version": "30",
   "notes": [
-    "Tu estilo: 11 colores nuevos (Cereza, Rosa chicle, Coral, Durazno, Miel, Dorado, Menta, Cielo, Índigo, Uva y Plata) y la opción de elegir tu propio color"
+    "Fechas especiales desde el Calendario: toca «Agregar» y elige entre un plan o una fecha especial",
+    "Toca una fecha especial para editarla o borrarla (también desde Inicio → Fechas)",
+    "Nuevos tipos: 💕 Fecha nuestra, 🎄 Festivo, 🎓 Logro y 🕊️ En memoria",
+    "En el calendario se ve el emoji de cada fecha especial (🎂, 💍…)",
+    "Pasen una fecha especial al calendario del teléfono, cada año y con aviso el día antes"
   ],
   "history": [
+    { "version": "30", "notes": [
+      "Fechas especiales desde el Calendario: toca «Agregar» y elige entre un plan o una fecha especial",
+      "Toca una fecha especial para editarla o borrarla (también desde Inicio → Fechas)",
+      "Nuevos tipos: 💕 Fecha nuestra, 🎄 Festivo, 🎓 Logro y 🕊️ En memoria",
+      "En el calendario se ve el emoji de cada fecha especial (🎂, 💍…)",
+      "Pasen una fecha especial al calendario del teléfono, cada año y con aviso el día antes"
+    ] },
     { "version": "29", "notes": [
       "Tu estilo: 11 colores nuevos (Cereza, Rosa chicle, Coral, Durazno, Miel, Dorado, Menta, Cielo, Índigo, Uva y Plata) y la opción de elegir tu propio color"
     ] },

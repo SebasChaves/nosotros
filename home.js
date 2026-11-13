@@ -1,11 +1,11 @@
 // Inicio: contador, ánimo del día, pregunta del día, reto de la semana, próximas fechas y "un día como hoy".
-import { setDoc, deleteDoc, increment } from 'https://www.gstatic.com/firebasejs/11.0.2/firebase-firestore.js';
+import { setDoc, increment } from 'https://www.gstatic.com/firebasejs/11.0.2/firebase-firestore.js';
 import {
   $, S, esc, icon, paint, on, expose, toast, openSheet, closeSheet, write, ref, newRef, coupleRef, loadPhotos, profile,
   parseDate, today, daysBetween, fmtDate, fmtShort, dayKey, todayKey, whenText, addMonths, weekKey, epochDay, DAY,
   nameOf, partnerUid, partnerName, myName, plural, uid, avatar, ask, celebrate } from './core.js';
-import { QUESTIONS, MOODS, CHALLENGES, DATE_KINDS } from './data.js';
-import { itemsFor, nextEventDate } from './calendar.js';
+import { QUESTIONS, MOODS, CHALLENGES } from './data.js';
+import { itemsFor, nextEventDate, nextOccurrence } from './calendar.js';
 import { unreadNotes } from './love.js';
 import { listNeedsMyVote } from './decide.js';
 import { quizWaiting } from './quiz.js';
@@ -88,13 +88,6 @@ function todayCard() {
 }
 
 /* ---------- Fechas especiales ---------- */
-export function nextOccurrence(f) {
-  const d = parseDate(f.date), now = today();
-  if (!f.yearly) return d >= now ? d : null;
-  let n = new Date(now.getFullYear(), d.getMonth(), d.getDate());
-  if (n < now) n = new Date(now.getFullYear() + 1, d.getMonth(), d.getDate());
-  return n;
-}
 function fechaLabel(f, occ) {
   const years = occ.getFullYear() - parseDate(f.date).getFullYear();
   if (f.yearly && f.emoji === '🎂' && years > 0) return `${f.emoji} ${f.title} (cumple ${years})`;
@@ -131,27 +124,13 @@ function openFechas() {
     <h2>Fechas especiales</h2>
     <ul class="list">${items.length ? items.map(f => {
       const occ = nextOccurrence(f);
-      return `<li><div class="txt">${esc(f.emoji)} ${esc(f.title)}<span class="sub">${fmtDate(parseDate(f.date))}${f.yearly ? ' · cada año' : ''} · ${occ ? whenText(daysBetween(today(), occ)) : 'ya pasó'}</span></div>
+      return `<li><div class="txt" role="button" tabindex="0" style="cursor:pointer" aria-label="Editar ${esc(f.title)}" onclick="openFecha(null,'${f.id}')">${esc(f.emoji)} ${esc(f.title)}<span class="sub">${fmtDate(parseDate(f.date))}${f.yearly ? ' · cada año' : ''} · ${occ ? whenText(daysBetween(today(), occ)) : 'ya pasó'}</span></div>
         <button class="del" aria-label="Borrar" onclick="delFecha('${f.id}')">${icon('trash')}</button></li>`;
     }).join('') : '<li class="empty">Aún no hay fechas</li>'}</ul>
-    <h2 style="margin-top:6px">Agregar</h2>
-    <div class="grid2">
-      <select id="fechaKind" aria-label="Tipo" onchange="document.getElementById('fechaYearly').checked=['🎂','💍'].includes(this.value)">
-        ${DATE_KINDS.map(([e, l]) => `<option value="${e}">${e} ${l}</option>`).join('')}</select>
-      <input type="date" id="fechaDate" aria-label="Fecha">
-    </div>
-    <input id="fechaTitle" placeholder="Ej: Cumpleaños de mamá" maxlength="60" aria-label="Nombre">
-    <label class="check"><input type="checkbox" id="fechaYearly" checked> Se repite cada año</label>
-    <button class="btn" onclick="addFecha()">Guardar fecha</button>
+    <p class="tiny muted center" style="margin:0">Toca una fecha para editarla o pasarla al calendario del teléfono.</p>
+    <button class="btn" onclick="openFecha('${todayKey()}')">${icon('plus')} Agregar fecha</button>
   </div>`);
 }
-function addFecha() {
-  const title = $('fechaTitle').value.trim(), date = $('fechaDate').value;
-  if (!title || !date) return toast('Pon un nombre y una fecha');
-  write(setDoc(newRef('dates'), { title, date, emoji: $('fechaKind').value, yearly: $('fechaYearly').checked, by: uid() }));
-  closeSheet(); toast('Fecha guardada');
-}
-async function delFecha(id) { if (await ask('¿Borrar esta fecha?')) { write(deleteDoc(ref('dates', id))); closeSheet(); } }
 
 /* ---------- Pregunta del día ---------- */
 export const todayQuestion = () => QUESTIONS[epochDay() % QUESTIONS.length];
@@ -319,4 +298,4 @@ setInterval(() => {
 
 on('dates moments moods answers challenges trips profiles events thinks notes coupons lists quiz daily reminders songs', renderHome);
 on('thinks', checkIncomingThink);
-expose({ sendThink, openFechas, addFecha, delFecha, answerQuestion, openAnswers, setMood, skipChallenge, doneChallenge });
+expose({ sendThink, openFechas, answerQuestion, openAnswers, setMood, skipChallenge, doneChallenge });

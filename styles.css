@@ -193,7 +193,8 @@ li.done .check-btn, .check-btn.on { background: var(--grad); border-color: trans
 .cal button.out { color: color-mix(in srgb, var(--muted) 45%, transparent); }
 .cal button.today { border-color: color-mix(in srgb, var(--g1) 70%, transparent); }
 .cal button.sel { background: var(--grad); color: var(--on-grad); font-weight: 700; }
-.cal .dots { display: flex; gap: 2px; height: 5px; }
+.cal .dots { display: flex; align-items: center; gap: 2px; height: 11px; }
+.cal .dots b { font-size: 10px; line-height: 1; font-weight: normal; }
 /* Colores fijos (no dependen del acento) para que siempre se distingan entre sí */
 .cal .dots i { width: 6px; height: 6px; border-radius: 50%; background: var(--c-date); }
 .cal .dots i.plan { background: var(--c-plan); }
