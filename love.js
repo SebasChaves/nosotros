@@ -1,7 +1,7 @@
 // Detalles: frasco de notas y cupones canjeables.
 import { setDoc, updateDoc, deleteDoc } from 'https://www.gstatic.com/firebasejs/11.0.2/firebase-firestore.js';
 import { $, S, esc, icon, paint, on, onShow, expose, toast, openSheet, closeSheet, write, ref, newRef, pick,
-         fmtDate, fmtShort, nameOf, partnerName, myName, plural, uid, avatar, loadPhotos, ask, celebrate } from './core.js';
+         fmtDate, fmtShort, nameOf, partnerName, myName, plural, uid, avatar, loadPhotos, ask, celebrate, markActive } from './core.js';
 import { COUPON_TEMPLATES } from './data.js';
 import { notify, meForPartner } from './push.js';
 
@@ -49,6 +49,7 @@ function addNote() {
   const t = $('newNote').value.trim();
   if (!t) return toast('Escribe algo bonito primero');
   write(setDoc(newRef('notes'), { text: t, fromUid: uid(), fromName: myName(), createdAt: Date.now(), readAt: null }));
+  markActive();
   notify('notes', { title: `💌 ${meForPartner()} dejó una nota en el frasco`, body: 'Ábrela cuando quieras', url: './?open=notes', tag: 'notes' });
   $('newNote').value = ''; toast('Nota guardada en el frasco');
 }
@@ -99,6 +100,7 @@ function addCoupon() {
   if (!text) return toast('Escribe el cupón');
   const emoji = $('couponEmoji').value.trim() || '🎟️';
   write(setDoc(newRef('coupons'), { text, emoji, fromUid: uid(), createdAt: Date.now(), seenAt: null, redeemedAt: null, doneAt: null }));
+  markActive();
   notify('coupons', { title: `🎟️ ${meForPartner()} te regaló un cupón`, body: `${emoji} ${text}`, url: './?open=coupons', tag: 'coupons' });
   $('couponText').value = ''; toast(`Cupón regalado a ${partnerName()}`);
 }

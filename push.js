@@ -8,7 +8,9 @@ import { PUSH } from './push-config.js';
 
 // [tipo, nombre en Ajustes]. Cada uno elige cuáles recibe (prefs.notif[tipo] === false = apagado).
 export const NOTIF_TYPES = [['snaps', '📸 Instantáneas y respuestas'], ['reacts', '😍 Reacciones a tus instantáneas'], ['notes', '💌 Notas nuevas'],
-  ['thinks', '❤️ «Pensando en ti»'], ['songs', '🎵 Canciones dedicadas'], ['coupons', '🎟️ Cupones nuevos, canjeados y cumplidos']];
+  ['thinks', '❤️ «Pensando en ti»'], ['songs', '🎵 Canciones dedicadas'], ['coupons', '🎟️ Cupones nuevos, canjeados y cumplidos'],
+  // Programados: los manda el Worker solo (notificaciones/worker.js → scheduled)
+  ['streak', '🔥 Racha en peligro y mascota con hambre (en la noche)'], ['reminders', '🔔 Recordatorios del día'], ['dates', '🎂 Fechas especiales (el día antes y el mismo día)']];
 
 export const pushConfigured = () => !!(PUSH.url && PUSH.publicKey);
 export const pushSupported = () => 'serviceWorker' in navigator && 'PushManager' in window && 'Notification' in window;
@@ -116,6 +118,9 @@ const OPEN = {
   coupons: () => { go('s-love'); window.loveTab?.('coupons'); },
   songs: () => go('s-music'),
   home: () => go('s-home'),
+  pet: () => { go('s-home'); setTimeout(() => document.querySelector('.pet-card')?.scrollIntoView({ behavior: 'smooth', block: 'center' }), 300); },
+  reminders: () => go('s-reminders'),
+  cal: () => go('s-cal'),
 };
 // Espera a que estén cargados los datos y a que se quite el candado del PIN
 function openWhenReady(what) {

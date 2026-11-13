@@ -24,6 +24,7 @@ manifest.json   PWA (nombre, íconos, colores)
 | `moments.js`, `daily.js` | Momentos (línea de tiempo con fotos, galería) y Foto del día (la de la pareja se revela al subir la tuya) |
 | `love.js` | Detalles: frasco de notas y cupones canjeables |
 | `snaps.js` | Instantáneas: fotos rápidas de 24 h con texto, reacciones, respuesta y «Guardar en Momentos»; tarjeta de Inicio y pestaña en Momentos |
+| `pet.js` | Mascota: huevo que nace a los 3 días comidos y crece por etapas con los días de racha; triste si ayer no comió (no pierde lo crecido) |
 | `push.js` (+ `push-config.js`) | Notificaciones: activar en el teléfono, `notify()` a la pareja, preferencias y `?open=` al tocar un aviso (docs/NOTIFICACIONES.md) |
 | `settings.js` | Pantalla **Más** (mosaico de secciones) y **Ajustes** (nombre, fecha, moneda, acento, tema, avatar, fondo, PIN, respaldo) |
 | `lists.js` | Bucket list, súper y la función `backBar()` (barra superior con botón Volver) |

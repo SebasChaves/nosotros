@@ -594,3 +594,32 @@ body:not([data-theme="light"]) .map-box .leaflet-tile-pane { filter: invert(1) h
 .sv-reacts button.on { background: rgba(255,255,255,.9); transform: scale(1.12); }
 .sv-actions { display: flex; gap: 8px; }
 .sv-actions .btn { flex: 1; }
+
+/* Mascota (pet.js) */
+.pet-stage { position: relative; display: flex; flex-direction: column; align-items: center; justify-content: flex-end; min-height: 150px; width: 100%; padding: 8px 0 4px;
+  border: 0; border-radius: 20px; cursor: pointer; background: radial-gradient(70% 60% at 50% 85%, color-mix(in srgb, var(--g1) 22%, transparent), transparent 70%); color: inherit; }
+.pet-body { position: relative; line-height: 1; transform-origin: 50% 90%; transition: font-size .4s; }
+.pet-body.idle { animation: petIdle 3s ease-in-out infinite; }
+.pet-body.happy { animation: petHop 1.6s ease-in-out infinite; }
+.pet-body.sad { animation: petIdle 5s ease-in-out infinite; filter: saturate(.45) brightness(.9); }
+.pet-body.sleep { animation: petBreath 4s ease-in-out infinite; }
+.pet-body.wobble { animation: petWobble 1.1s ease-in-out infinite; }
+.pet-body.pet-pat { animation: petPat .5s ease; }
+.pet-body.cracking { animation: petPat .3s ease 3; }
+.pet-body i { position: absolute; font-style: normal; pointer-events: none; }
+.pet-crown { top: -.32em; left: 50%; transform: translateX(-50%); font-size: .42em; }
+.pet-z { top: -.2em; right: -.45em; font-size: .35em; animation: petZ 2.4s ease-in-out infinite; }
+.pet-tear { top: .35em; right: .05em; font-size: .25em; animation: petTear 2.2s ease-in infinite; }
+.pet-talk { min-height: 20px; margin-top: 6px; font-size: 13px; font-weight: 600; color: var(--text); }
+.pet-today { display: flex; justify-content: center; gap: 16px; font-size: 13px; color: var(--muted); }
+.pet-today .ok { color: var(--text); font-weight: 600; }
+.pet-bar { height: 8px; border-radius: 8px; background: var(--line); overflow: hidden; }
+.pet-bar i { display: block; height: 100%; border-radius: 8px; background: var(--grad); transition: width .6s; }
+@keyframes petIdle { 0%,100% { transform: translateY(0) rotate(0); } 50% { transform: translateY(-3px) rotate(-2deg); } }
+@keyframes petHop { 0%,100% { transform: translateY(0) scale(1); } 20% { transform: translateY(0) scale(1.06, .94); } 45% { transform: translateY(-14px) scale(.97, 1.04); } 70% { transform: translateY(0) scale(1.04, .96); } }
+@keyframes petBreath { 0%,100% { transform: scale(1); } 50% { transform: scale(1.04, .97); } }
+@keyframes petWobble { 0%,100% { transform: rotate(0); } 15% { transform: rotate(-9deg); } 30% { transform: rotate(8deg); } 45% { transform: rotate(-5deg); } 60% { transform: rotate(3deg); } }
+@keyframes petPat { 0% { transform: scale(1); } 40% { transform: scale(1.15, .88); } 100% { transform: scale(1); } }
+@keyframes petZ { 0% { opacity: 0; transform: translate(0, 0); } 30% { opacity: 1; } 100% { opacity: 0; transform: translate(8px, -14px); } }
+@keyframes petTear { 0% { opacity: 0; transform: translateY(0); } 20% { opacity: 1; } 100% { opacity: 0; transform: translateY(18px); } }
+@media (prefers-reduced-motion: reduce) { .pet-body { animation: none !important; } }

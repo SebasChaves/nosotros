@@ -1,11 +1,18 @@
 {
-  "version": "34",
+  "version": "35",
   "notes": [
-    "🔔 ¡Notificaciones! Les llega un aviso al teléfono cuando su pareja les manda una instantánea, una nota, un cupón, una canción o un «pensando en ti»",
-    "Actívenlas en Ajustes → Notificaciones y toquen «Probar» (en iPhone, abran Futari desde el ícono de la pantalla de inicio)",
-    "Elijan ahí qué avisos quieren recibir. Al tocar un aviso se abre Futari justo en lo que llegó"
+    "🥚 ¡Su mascota! Adopten un huevo en Inicio: nace y crece cada día que los dos hacen algo en Futari",
+    "Si un día se les olvida, se pone triste, pero nunca pierde lo que creció. Tóquenla para acariciarla",
+    "Avisos programados: en la noche si la mascota tiene hambre o la racha está en peligro, recordatorios del día y «mañana es el cumpleaños de…» (se eligen en Ajustes → Notificaciones)",
+    "Mandar una instantánea, una nota, un cupón o una canción ahora también cuenta para la racha"
   ],
   "history": [
+    { "version": "35", "notes": [
+      "🥚 ¡Su mascota! Adopten un huevo en Inicio: nace y crece cada día que los dos hacen algo en Futari",
+      "Si un día se les olvida, se pone triste, pero nunca pierde lo que creció. Tóquenla para acariciarla",
+      "Avisos programados: en la noche si la mascota tiene hambre o la racha está en peligro, recordatorios del día y «mañana es el cumpleaños de…» (se eligen en Ajustes → Notificaciones)",
+      "Mandar una instantánea, una nota, un cupón o una canción ahora también cuenta para la racha"
+    ] },
     { "version": "34", "notes": [
       "🔔 ¡Notificaciones! Les llega un aviso al teléfono cuando su pareja les manda una instantánea, una nota, un cupón, una canción o un «pensando en ti»",
       "Actívenlas en Ajustes → Notificaciones y toquen «Probar» (en iPhone, abran Futari desde el ícono de la pantalla de inicio)",

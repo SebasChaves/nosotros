@@ -456,7 +456,7 @@ export const write = p => p.catch(err => {
 
 /* ================= Estado ================= */
 export const COLLECTIONS = ['bucket', 'ideas', 'notes', 'coupons', 'dates', 'moments', 'lists', 'answers',
-  'moods', 'challenges', 'groceries', 'expenses', 'places', 'trips', 'quiz', 'profiles', 'shows', 'events', 'cards', 'games', 'thinks', 'daily', 'pins', 'recipes', 'recipefav', 'menu', 'songs', 'reminders', 'snaps', 'push'];
+  'moods', 'challenges', 'groceries', 'expenses', 'places', 'trips', 'quiz', 'profiles', 'shows', 'events', 'cards', 'games', 'thinks', 'daily', 'pins', 'recipes', 'recipefav', 'menu', 'songs', 'reminders', 'snaps', 'push', 'activity', 'pet'];
 export const PRIVATE = ['gifts'];
 export const S = {
   me: null,
@@ -465,6 +465,12 @@ export const S = {
   priv: Object.fromEntries(PRIVATE.map(c => [c, []])),
 };
 export const uid = () => S.me?.uid;
+// Marca que hoy hiciste algo en Futari (cuenta para la racha y para alimentar a la mascota). Una escritura al día.
+export function markActive() {
+  const k = todayKey();
+  if (!S.me || S.data.activity.find(x => x.id === k)?.[uid()]) return;
+  write(setDoc(ref('activity', k), { [uid()]: true }, { merge: true }));
+}
 // Si en Ajustes pusiste un apodo para tu pareja, en tu teléfono aparece con ese apodo en toda la app.
 export const nameOf = id => (id && id !== S.me?.uid && profile(S.me?.uid).prefs?.partnerNick) || S.settings.members?.[id]?.name || (id === S.me?.uid ? 'Tú' : 'Tu pareja');
 export const partnerUid = () => Object.keys(S.settings.members || {}).find(u => u !== S.me.uid);

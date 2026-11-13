@@ -4,7 +4,7 @@
 import { writeBatch, updateDoc, deleteField } from 'https://www.gstatic.com/firebasejs/11.0.2/firebase-firestore.js';
 import { $, S, db, esc, icon, on, expose, toast, openSheet, closeSheet, write, ref, newRef, loadPhotos, cachePhoto, getPhoto,
          compressImage, photoError, makeThumb, thumbId, dayKey, nameOf, partnerUid, partnerName, plural, uid, ask, avatar,
-         syncBack, openCamera, nativePick, ANDROID, IOS, celebrate } from './core.js';
+         syncBack, openCamera, nativePick, ANDROID, IOS, celebrate, markActive } from './core.js';
 import { notify, meForPartner } from './push.js';
 
 const LIFE = 24 * 3600e3;
@@ -49,7 +49,7 @@ async function sendSnap() {
   const data = { by: uid(), at: Date.now(), text: $('snapText').value.trim() };
   if (replyTo && S.data.snaps.some(s => s.id === replyTo)) data.replyTo = replyTo;
   batch.set(r, data);
-  write(batch.commit());
+  write(batch.commit()); markActive();
   notify('snaps', { title: data.replyTo ? `📸 ${meForPartner()} te respondió con una foto` : `📸 ${meForPartner()} te mandó una instantánea`,
     body: data.text || 'Tócala para verla 👀', url: './?open=snaps', tag: 'snaps' });
   pending = null; replyTo = null;

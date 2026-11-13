@@ -10,6 +10,10 @@
 //   ALLOWED_UIDS       (texto)   los dos uid de la pareja, separados por coma
 //   ALLOWED_ORIGINS    (texto, opcional) por defecto https://sebaschaves.github.io
 //   VAPID_SUBJECT      (texto, opcional) por defecto https://sebaschaves.github.io/nosotros/
+// Avisos programados (Cron Trigger "0 * * * *", una vez por hora):
+//   FIREBASE_SA        (secreto) el JSON de una cuenta de servicio de SOLO LECTURA (rol "Cloud Datastore Viewer")
+//   TIME_ZONE          (texto, opcional) por defecto America/Costa_Rica
+//   COUPLE_ID          (texto, opcional) por defecto nosotros
 // Ver docs/NOTIFICACIONES.md. Sin dependencias: se pega tal cual en el editor de Cloudflare.
 
 const enc = new TextEncoder();
@@ -26,7 +30,7 @@ export default {
     const json = (obj, status = 200) => new Response(JSON.stringify(obj), { status, headers: { ...cors, 'Content-Type': 'application/json' } });
     if (req.method === 'OPTIONS') return new Response(null, { status: 204, headers: cors });
     const url = new URL(req.url);
-    if (req.method === 'GET') return json({ ok: true, service: 'futari-push', ready: !!(env.VAPID_PUBLIC_KEY && env.VAPID_PRIVATE_KEY && env.FIREBASE_PROJECT_ID && env.ALLOWED_UIDS) });
+    if (req.method === 'GET') return json({ ok: true, service: 'futari-push', ready: !!(env.VAPID_PUBLIC_KEY && env.VAPID_PRIVATE_KEY && env.FIREBASE_PROJECT_ID && env.ALLOWED_UIDS), scheduled: !!env.FIREBASE_SA });
     if (req.method !== 'POST' || url.pathname !== '/notify') return json({ error: 'not-found' }, 404);
 
     // 1. ¿Quién pide? Sesión de Firebase válida y de la pareja
@@ -53,6 +57,10 @@ export default {
       } catch (e) { return { endpoint: s?.endpoint, status: 0, error: String(e.message || e) }; }
     }));
     return json({ results });
+  },
+  // Avisos programados: racha en peligro / mascota con hambre, recordatorios y fechas especiales
+  async scheduled(event, env, ctx) {
+    ctx.waitUntil(runSchedule(env, event.scheduledTime).catch(e => console.error('programados', e)));
   },
 };
 
@@ -122,3 +130,165 @@ export async function encryptPayload(sub, payload, fixed = {}) {
   const rs = new Uint8Array(4); new DataView(rs.buffer).setUint32(0, 4096);
   return concat(salt, rs, new Uint8Array([asPub.length]), asPub, cipher);
 }
+
+/* ---------- Avisos programados ---------- */
+// Lee Firestore con una cuenta de servicio de solo lectura y decide qué avisar según la hora local:
+//   20:00 racha en peligro / mascota con hambre (a quien todavía no ha hecho nada hoy)
+//   a la hora del recordatorio (o 8:00 si no tiene hora) los recordatorios de hoy
+//   8:00 «Hoy es…» y 9:00 «Mañana es…» para fechas especiales, aniversarios y mesiversarios
+// Devuelve la lista de avisos (sirve para las pruebas). La app usa la misma regla de racha que home.js.
+export async function runSchedule(env, when = Date.now(), { dryRun = false } = {}) {
+  if (!env.FIREBASE_SA) return [];
+  const tz = env.TIME_ZONE || 'America/Costa_Rica';
+  const local = d => Object.fromEntries(new Intl.DateTimeFormat('en-CA', { timeZone: tz, year: 'numeric', month: '2-digit', day: '2-digit', hour: '2-digit', hourCycle: 'h23' })
+    .formatToParts(d).map(p => [p.type, p.value]));
+  const L = local(new Date(when)), hour = Number(L.hour);
+  const today = `${L.year}-${L.month}-${L.day}`;
+  const shift = (key, n) => { const [y, m, d] = key.split('-').map(Number); const x = new Date(Date.UTC(y, m - 1, d + n)); return x.toISOString().slice(0, 10); };
+  const yesterday = shift(today, -1), tomorrow = shift(today, 1);
+  const STREAK_HOUR = 20, TODAY_HOUR = 8, TOMORROW_HOUR = 9;
+
+  const db = await firestoreReader(env);
+  const couple = await db.get('');
+  if (!couple) return [];
+  const members = Object.keys(couple.members || {}).filter(u => (env.ALLOWED_UIDS || '').split(',').map(x => x.trim()).includes(u));
+  if (!members.length) return [];
+  const [push, profiles] = await Promise.all([db.list('push'), db.list('profiles')]);
+  const subsOf = u => Object.values(push.find(d => d.id === u)?.subs || {});
+  const wants = (u, type) => profiles.find(d => d.id === u)?.prefs?.notif?.[type] !== false;
+  const nameFor = (to, who) => profiles.find(d => d.id === to)?.prefs?.partnerNick || couple.members[who]?.name || 'Tu pareja';
+  const out = [];
+  const add = (to, type, msg) => { if (subsOf(to).length && wants(to, type)) out.push({ to, type, ...msg }); };
+
+  // 1. Racha en peligro / mascota con hambre
+  if (hour === STREAK_HOUR && members.length === 2) {
+    // Los docs de cada día tienen como id la fecha: se piden por bloques de 30 días hacia atrás mientras siga la racha
+    const COLS = ['moods', 'answers', 'thinks', 'daily', 'activity'], days = {};
+    const load = async keys => {
+      const docs = await db.getMany(keys.flatMap(k => COLS.map(c => `${c}/${k}`)));
+      for (const [path, d] of Object.entries(docs)) { const [c, k] = path.split('/'); (days[k] ||= {})[c] = d; }
+    };
+    const did = (k, u) => { const x = days[k] || {}; return !!(x.moods?.[u] || x.answers?.answers?.[u] || x.thinks?.[u] || x.daily?.[u] || x.activity?.[u]); };
+    const both = k => members.every(u => did(k, u));
+    await load([today, ...Array.from({ length: 30 }, (_, i) => shift(yesterday, -i))]);
+    let streak = 0, k = yesterday;
+    while (streak < 3660) {
+      if (!(k in days) && !days[k]) { await load(Array.from({ length: 30 }, (_, i) => shift(k, -i))); days[k] ||= {}; }
+      if (!both(k)) break;
+      streak++; k = shift(k, -1);
+    }
+    const pet = await db.get('pet/main');
+    const species = { '🐱': 'gatito', '🐶': 'perrito', '🐰': 'conejito', '🦊': 'zorrito', '🐼': 'panda', '🐧': 'pingüino', '🐻': 'osito', '🐨': 'koala', '🐹': 'hámster', '🦦': 'nutria' };
+    const petName = pet ? (!pet.hatchedAt ? 'El huevo' : pet.name || `Su ${species[pet.species] || 'mascota'}`) : '';
+    for (const u of members) {
+      if (did(today, u)) continue;
+      const other = members.find(x => x !== u), otherDid = did(today, other);
+      if (!streak && !pet) continue; // no hay nada en juego
+      const title = pet ? `${pet.hatchedAt ? pet.species : '🥚'} ${petName} tiene hambre` : `🔥 Su racha de ${streak} ${streak === 1 ? 'día' : 'días'} se acaba hoy`;
+      const parts = [];
+      if (pet && streak) parts.push(`Llevan ${streak} ${streak === 1 ? 'día' : 'días'} seguidos.`);
+      parts.push(otherDid ? `${nameFor(u, other)} ya hizo lo suyo; solo faltas tú.` : 'Hagan algo hoy en Futari: un corazón, su ánimo o una instantánea.');
+      add(u, 'streak', { title, body: parts.join(' '), url: './?open=pet', tag: 'streak' });
+    }
+  }
+
+  // 2. Recordatorios de hoy (a su hora, o a las 8:00 si no tienen hora)
+  const reminders = await db.list('reminders');
+  for (const r of reminders) {
+    if (r.done || r.date !== today) continue;
+    const h = r.time ? Number(String(r.time).slice(0, 2)) : TODAY_HOUR;
+    if (h !== hour) continue;
+    const to = !r.for || r.for === 'ambos' ? members : members.filter(u => u === r.for);
+    for (const u of to) add(u, 'reminders', { title: `${r.urgent ? '🔴' : '🔔'} ${r.text}`, body: [r.time, r.note].filter(Boolean).join(' · ') || 'Recordatorio de hoy', url: './?open=reminders', tag: 'rem-' + r.id });
+  }
+
+  // 3. Fechas especiales, aniversarios y mesiversarios: hoy (8:00) y mañana (9:00)
+  if (hour === TODAY_HOUR || hour === TOMORROW_HOUR) {
+    const day = hour === TODAY_HOUR ? today : tomorrow, word = hour === TODAY_HOUR ? 'Hoy' : 'Mañana';
+    const [y, m, d] = day.split('-').map(Number);
+    const items = [];
+    for (const f of await db.list('dates')) {
+      if (!f.date) continue;
+      const [fy, fm, fd] = f.date.split('-').map(Number);
+      const hit = f.yearly ? fm === m && fd === d && y >= fy : f.date === day;
+      if (!hit) continue;
+      const years = y - fy;
+      const extra = f.yearly && years > 0 ? (f.emoji === '🎂' ? ` (cumple ${years})` : f.emoji === '💍' ? ` (${years} ${years === 1 ? 'año' : 'años'})` : '') : '';
+      items.push(`${f.emoji || '📌'} ${f.title}${extra}`);
+    }
+    if (couple.start) {
+      const [sy, sm, sd] = couple.start.split('-').map(Number);
+      const months = (y - sy) * 12 + (m - sm);
+      const lastDay = new Date(Date.UTC(y, m, 0)).getUTCDate();
+      if (months > 0 && Math.min(sd, lastDay) === d) items.push(months % 12 === 0 ? `💍 su aniversario #${months / 12}` : `🗓️ su mesiversario #${months}`);
+    }
+    for (const it of items) for (const u of members) add(u, 'dates', { title: `${word} es ${it}`, body: word === 'Mañana' ? '¿Ya tienen algo preparado? 💝' : '¡Que sea un gran día! 🎉', url: './?open=cal', tag: `date-${day}-${it}`.slice(0, 60) });
+  }
+
+  if (!dryRun) {
+    await Promise.all(out.map(async n => {
+      const payload = enc.encode(JSON.stringify({ title: n.title.slice(0, 120), body: n.body.slice(0, 300), url: n.url, tag: n.tag.slice(0, 60) }));
+      await Promise.all(subsOf(n.to).map(s => sendPush(s, payload, env, 'normal').catch(e => console.error('push', e))));
+    }));
+  }
+  return out;
+}
+
+// Lector de Firestore con la cuenta de servicio (token OAuth de Google firmado con su llave privada)
+async function firestoreReader(env) {
+  if (env.TEST_FIRESTORE) return restReader(`${env.TEST_FIRESTORE}/v1/projects/${env.FIREBASE_PROJECT_ID}/databases/(default)/documents/couples/${env.COUPLE_ID || 'nosotros'}`, { Authorization: 'Bearer owner' }); // solo pruebas con el emulador
+  const sa = typeof env.FIREBASE_SA === 'string' ? JSON.parse(env.FIREBASE_SA) : env.FIREBASE_SA;
+  const now = Math.floor(Date.now() / 1000);
+  const head = b64u(enc.encode(JSON.stringify({ alg: 'RS256', typ: 'JWT' })));
+  const claims = b64u(enc.encode(JSON.stringify({ iss: sa.client_email, scope: 'https://www.googleapis.com/auth/datastore', aud: 'https://oauth2.googleapis.com/token', iat: now, exp: now + 3600 })));
+  const pem = sa.private_key.replace(/-----[^-]+-----/g, '').replace(/\s+/g, '');
+  const key = await crypto.subtle.importKey('pkcs8', Uint8Array.from(atob(pem), c => c.charCodeAt(0)), { name: 'RSASSA-PKCS1-v1_5', hash: 'SHA-256' }, false, ['sign']);
+  const sig = b64u(await crypto.subtle.sign('RSASSA-PKCS1-v1_5', key, enc.encode(head + '.' + claims)));
+  const tr = await fetch('https://oauth2.googleapis.com/token', { method: 'POST', headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+    body: `grant_type=${encodeURIComponent('urn:ietf:params:oauth:grant-type:jwt-bearer')}&assertion=${head}.${claims}.${sig}` });
+  if (!tr.ok) throw new Error('token ' + tr.status + ' ' + await tr.text());
+  const { access_token } = await tr.json();
+  return restReader(`https://firestore.googleapis.com/v1/projects/${env.FIREBASE_PROJECT_ID || sa.project_id}/databases/(default)/documents/couples/${env.COUPLE_ID || 'nosotros'}`,
+    { Authorization: 'Bearer ' + access_token });
+}
+function restReader(base, auth) {
+  const docOf = d => ({ id: d.name.split('/').pop(), ...fields(d.fields || {}) });
+  const root = base.slice(0, base.indexOf('/documents/') + '/documents'.length), prefix = base.slice(base.indexOf('/projects/') + 1);
+  return {
+    // Varios documentos de una vez: { 'moods/2026-11-12': {...} } (los que no existen no aparecen)
+    async getMany(paths) {
+      const out = {};
+      for (let i = 0; i < paths.length; i += 300) {
+        const r = await fetch(root + ':batchGet', { method: 'POST', headers: { ...auth, 'Content-Type': 'application/json' },
+          body: JSON.stringify({ documents: paths.slice(i, i + 300).map(p => `${prefix}/${p}`) }) });
+        if (!r.ok) throw new Error('batchGet ' + r.status + ' ' + await r.text());
+        for (const x of await r.json()) if (x.found) out[x.found.name.slice(x.found.name.indexOf(prefix) + prefix.length + 1)] = fields(x.found.fields || {});
+      }
+      return out;
+    },
+    async get(path) {
+      const r = await fetch(base + (path ? '/' + path : ''), { headers: auth });
+      if (r.status === 404) return null;
+      if (!r.ok) throw new Error('get ' + path + ' ' + r.status);
+      return docOf(await r.json());
+    },
+    async list(col, { pageSize = 300 } = {}) {
+      const r = await fetch(`${base}/${col}?pageSize=${pageSize}`, { headers: auth });
+      if (!r.ok) throw new Error('list ' + col + ' ' + r.status);
+      return ((await r.json()).documents || []).map(docOf);
+    },
+  };
+}
+// Valores de Firestore (REST) → objetos normales
+function value(v) {
+  if ('stringValue' in v) return v.stringValue;
+  if ('integerValue' in v) return Number(v.integerValue);
+  if ('doubleValue' in v) return v.doubleValue;
+  if ('booleanValue' in v) return v.booleanValue;
+  if ('nullValue' in v) return null;
+  if ('timestampValue' in v) return v.timestampValue;
+  if ('mapValue' in v) return fields(v.mapValue.fields || {});
+  if ('arrayValue' in v) return (v.arrayValue.values || []).map(value);
+  return null;
+}
+function fields(f) { return Object.fromEntries(Object.entries(f).map(([k, v]) => [k, value(v)])); }

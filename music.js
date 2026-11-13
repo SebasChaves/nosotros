@@ -1,7 +1,7 @@
 // Su playlist: canciones que les recuerdan momentos, con portada, adelanto de 30 s, "nuestra canción" y dedicatorias.
 // Las portadas y los adelantos vienen de la búsqueda pública de Apple (iTunes Search, sin clave).
 import { setDoc, updateDoc, deleteDoc, writeBatch } from 'https://www.gstatic.com/firebasejs/11.0.2/firebase-firestore.js';
-import { $, S, db, esc, icon, paint, on, onShow, expose, toast, openSheet, closeSheet, write, ref, newRef, ask, pick, celebrate, go,
+import { $, S, db, esc, icon, paint, on, onShow, expose, toast, openSheet, closeSheet, write, ref, newRef, ask, pick, celebrate, go, markActive,
          loadPhotos, cachePhoto, compressImage, photoError, todayKey, parseDate, fmtShort, nameOf, partnerUid, partnerName, uid } from './core.js';
 import { backBar } from './lists.js';
 import { notify, meForPartner } from './push.js';
@@ -156,6 +156,7 @@ function dedicateSong(id) {
 function saveDedication(id) {
   const msg = $('dedMsg').value.trim(), s = S.data.songs.find(x => x.id === id);
   write(updateDoc(ref('songs', id), { dedication: { by: uid(), to: partnerUid(), msg, at: Date.now(), seen: false } }));
+  markActive();
   notify('songs', { title: `🎵 ${meForPartner()} te dedicó una canción`, body: `${s?.title || ''}${s?.artist ? ' · ' + s.artist : ''}${msg ? ' — ' + msg : ''}`, url: './?open=songs', tag: 'songs' });
   closeSheet(); toast(`Le llegará en su pantalla de inicio`); celebrate('hearts');
 }

@@ -13,12 +13,14 @@ import { myDailyDone, partnerDailyDone } from './daily.js';
 import { dueReminders, urgentReminders, whenTxt } from './reminders.js';
 import { songDedication } from './music.js';
 import { snapsCard } from './snaps.js';
+import { petCard } from './pet.js';
 import { notify, meForPartner } from './push.js';
 
 /* ---------- Racha y "Pensando en ti" ---------- */
-// Un día cuenta para la racha si los dos hicieron algo: marcar ánimo, responder la pregunta o mandar un "pensando en ti".
-const didSomething = (key, who) => !!(S.data.moods.find(x => x.id === key)?.[who] || S.data.answers.find(x => x.id === key)?.answers?.[who] || S.data.thinks.find(x => x.id === key)?.[who] || S.data.daily.find(x => x.id === key)?.[who]);
-const bothDid = key => { const p = partnerUid(); return !!p && didSomething(key, uid()) && didSomething(key, p); };
+// Un día cuenta para la racha si los dos hicieron algo: marcar ánimo, responder la pregunta, mandar un "pensando en ti",
+// subir la foto del día o (vía markActive) mandar una instantánea, nota, cupón o canción.
+export const didSomething = (key, who) => !!(S.data.moods.find(x => x.id === key)?.[who] || S.data.answers.find(x => x.id === key)?.answers?.[who] || S.data.thinks.find(x => x.id === key)?.[who] || S.data.daily.find(x => x.id === key)?.[who] || S.data.activity.find(x => x.id === key)?.[who]);
+export const bothDid = key => { const p = partnerUid(); return !!p && didSomething(key, uid()) && didSomething(key, p); };
 const prevDay = d => new Date(d.getFullYear(), d.getMonth(), d.getDate() - 1);
 export function streak() {
   let d = today(), n = 0;
@@ -27,7 +29,7 @@ export function streak() {
   return n;
 }
 export function bestStreak() {
-  const keys = [...new Set([...S.data.moods, ...S.data.answers, ...S.data.thinks].map(x => x.id))].filter(bothDid).sort();
+  const keys = [...new Set([...S.data.moods, ...S.data.answers, ...S.data.thinks, ...S.data.daily, ...S.data.activity].map(x => x.id))].filter(bothDid).sort();
   let best = 0, run = 0, prev = null;
   for (const k of keys) { run = prev && dayKey(new Date(parseDate(prev).getFullYear(), parseDate(prev).getMonth(), parseDate(prev).getDate() + 1)) === k ? run + 1 : 1; best = Math.max(best, run); prev = k; }
   return best;
@@ -238,7 +240,7 @@ function renderHome() {
   } else hero = counterCard();
   const up = upcoming().slice(0, 5);
   const cards = {
-    urgent: urgentCard, counter: () => hero, snaps: snapsCard, today: todayCard, memory: memoryCard, mood: moodCard, question: questionCard, challenge: challengeCard,
+    urgent: urgentCard, counter: () => hero, pet: petCard, snaps: snapsCard, today: todayCard, memory: memoryCard, mood: moodCard, question: questionCard, challenge: challengeCard,
     upcoming: () => `<div class="glass"><div class="row"><span class="label">${icon('cal')} Próximos momentos</span>
       <div class="row" style="gap:0"><button class="link" onclick="go('s-cal')">Calendario</button><button class="link" onclick="openFechas()">Fechas</button></div></div>
       <div style="margin-top:6px">${up.length ? up.map(m => `<div class="event"><div>${esc(m.label)}<div class="tiny muted">${fmtDate(m.date)}</div></div>
@@ -258,7 +260,7 @@ function renderHome() {
 }
 
 /* ---------- Personalización de Inicio ---------- */
-export const HOME_CARDS = [['urgent', '🔴 Recordatorios urgentes'], ['counter', '💞 Contador'], ['snaps', '📸 Instantáneas'], ['today', '📌 Hoy'], ['memory', '📸 Un día como hoy'],
+export const HOME_CARDS = [['urgent', '🔴 Recordatorios urgentes'], ['counter', '💞 Contador'], ['pet', '🥚 Su mascota'], ['snaps', '📸 Instantáneas'], ['today', '📌 Hoy'], ['memory', '📸 Un día como hoy'],
   ['mood', '🙂 ¿Cómo te sientes?'], ['question', '💬 Pregunta del día'], ['challenge', '🏆 Reto de la semana'], ['upcoming', '🗓️ Próximos momentos']];
 // [{ id, on }] en el orden elegido; las tarjetas nuevas que no estén guardadas se agregan visibles, detrás de la
 // tarjeta que tienen antes en HOME_CARDS (por ejemplo, Instantáneas queda debajo del contador).
@@ -307,6 +309,6 @@ setInterval(() => {
   const m = $('heroMin'); if (m) m.innerHTML = `<b>${mins % 60}</b>minutos`;
 }, 20000);
 
-on('dates moments moods answers challenges trips profiles events thinks notes coupons lists quiz daily reminders songs snaps', renderHome);
+on('dates moments moods answers challenges trips profiles events thinks notes coupons lists quiz daily reminders songs snaps activity pet', renderHome);
 on('thinks', checkIncomingThink);
 expose({ sendThink, openFechas, answerQuestion, openAnswers, setMood, skipChallenge, doneChallenge });

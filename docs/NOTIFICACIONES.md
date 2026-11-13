@@ -74,7 +74,34 @@ Si cambias las llaves, actualiza `push-config.js` y cada uno debe desactivar y v
 - Samsung: si no llegan, revisar Ajustes del teléfono → Aplicaciones → Chrome/Futari → Notificaciones, y que el ahorro
   de batería no esté cerrando Chrome.
 
-## Siguiente fase (pendiente)
+## Avisos programados (Cron del Worker)
 
-Avisos programados (racha en peligro, recordatorios, cumpleaños): un *Cron Trigger* del Worker que lea Firestore con
-una cuenta de servicio de Firebase (secreto en Cloudflare). La mascota dependerá de esto.
+Cada hora el Worker (`scheduled` → `runSchedule` en `notificaciones/worker.js`) lee Firestore con una **cuenta de servicio
+de solo lectura** y manda, según la hora de Costa Rica (`TIME_ZONE`):
+
+| Hora | Aviso | Tipo (Ajustes) |
+|---|---|---|
+| 20:00 | «🐱 Mochi tiene hambre» / «🔥 Su racha de N días se acaba hoy» a quien aún no hizo nada hoy (si hay racha o mascota) | `streak` |
+| la del recordatorio (o 8:00) | recordatorios 🔔 de hoy no hechos, a quien le toca | `reminders` |
+| 8:00 / 9:00 | «Hoy es…» / «Mañana es…»: fechas especiales, aniversarios y mesiversarios | `dates` |
+
+- La racha usa la misma regla que `home.js` (`didSomething`): `moods`, `answers`, `thinks`, `daily` y `activity`.
+  Si cambias esa regla, cámbiala también en el Worker.
+- El Worker no escribe nada en la base. Los teléfonos que ya no existen los limpia la app cuando manda un aviso.
+- Para cambiar horas o textos: edita `runSchedule` y vuelve a pegar el Worker en Cloudflare.
+- Prueba local: `runSchedule(env, fecha, { dryRun: true })` con `env.TEST_FIRESTORE = 'http://127.0.0.1:8080'`
+  (emulador) devuelve la lista de avisos sin mandarlos.
+
+### Configurarlo (una sola vez)
+
+1. **Cuenta de servicio de solo lectura.** En https://console.cloud.google.com, elige el proyecto `nosotros-app-2e254` →
+   *IAM y administración* → *Cuentas de servicio* → *Crear cuenta de servicio*. Nombre: `futari-avisos`. En
+   *Otorgar acceso*, rol **«Visualizador de Cloud Datastore»** (*Cloud Datastore Viewer*); nada más. → *Listo*.
+2. Abre la cuenta creada → pestaña *Claves* → *Agregar clave* → *Crear clave nueva* → **JSON**. Se descarga un archivo.
+3. En Cloudflare → `futari-push` → *Settings* → *Variables and Secrets* → *Add*: nombre `FIREBASE_SA`, tipo **Secret**,
+   valor = **todo** el contenido del archivo JSON (ábrelo con el Bloc de notas y copia todo). Después borra el archivo
+   descargado.
+4. Pega la versión nueva de `notificaciones/worker.js` en *Edit code* → *Deploy*.
+5. *Settings* → *Triggers* (o *Trigger Events*) → *Cron Triggers* → *Add* → `0 * * * *` (cada hora) → guardar.
+6. Abre la dirección del Worker: debe decir `"scheduled":true`.
+

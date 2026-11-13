@@ -18,13 +18,12 @@
 - Instantáneas (v32): acceso directo «Instantánea» del ícono en Android (puede tardar hasta un día en aparecer en la
   app instalada); en iPhone no existen esos accesos directos.
 
-- Notificaciones (v33): que lleguen con la app cerrada en los dos teléfonos, sonido, ícono pequeño en Android y que al
-  tocarlas abran la sección. Ver docs/NOTIFICACIONES.md.
+- Avisos programados (v35): que llegue el de las 20:00 (racha/mascota), recordatorios y fechas. Las notificaciones
+  normales ya se confirmaron en los dos teléfonos (v34).
 
 ## Ideas conversadas, no hechas
 
-- **Siguiente tanda (pedida por el dueño):** avisos programados (racha en peligro, recordatorios, cumpleaños) y luego
-  una **mascota** de los dos que crece con la racha. Esperar a que las notificaciones funcionen en los teléfonos.
+- Mascota: accesorios que se desbloquean con logros, más especies, que el otro vea cuando la acariciaste.
 
 - Más accesos directos al mantener presionado el ícono (solo Android; `shortcuts` en `manifest.json`). Ya está
   «Mandar instantánea» (`./?snap`, v32). Hay maqueta (`accesos-directos-futari.html`). Widgets reales no son posibles en una app web.
