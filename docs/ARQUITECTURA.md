@@ -89,7 +89,8 @@ por defecto Decidir, Momentos y Detalles). `setBar()` la dibuja (copia en localS
 dicen qué hay. Se puede deslizar el dedo entre las pestañas de la barra. La pestaña marcada de una pantalla se deduce de su
 botón Volver (`tabOf`): por eso toda subpantalla usa `backBar(título, pantallaPadre)`. Una sección puesta en la barra
 esconde su Volver (`.screen.in-bar`, CSS). Decidir/Momentos/Detalles usan `mainTop(id, título)`, que les pone Volver
-(a Más) solo cuando no están en la barra. Si agregas una sección nueva, súmala a `SECTIONS` y a `SUB` en `renderMore`. Para esconder una sección o un tipo de aviso a
+(a Más) solo cuando no están en la barra. Si agregas una sección nueva, súmala a `SECTIONS` y a `SUB` en `renderMore`. Administración (`s-admin`) también es una sección de `SECTIONS` con `gates['s-admin'] = isTester` (testing.js):
+solo los TESTERS la ven en Más y pueden ponerla en la barra. Para esconder una sección o un tipo de aviso a
 alguien, registra `gates['s-xxx']` / `gates['notif:tipo']` (ver `arrows.js`): la barra, Más, el buscador y Ajustes lo respetan.
 
 **Atrás (Android):** `syncBack()` deja una entrada en el historial mientras haya algo que cerrar o una pantalla a la

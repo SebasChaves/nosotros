@@ -3,11 +3,13 @@
 import { getDocs, writeBatch, deleteField, terminate, query, where } from 'https://www.gstatic.com/firebasejs/11.0.2/firebase-firestore.js';
 import { signOut } from 'https://www.gstatic.com/firebasejs/11.0.2/firebase-auth.js';
 import { $, S, db, auth, EMU, esc, icon, expose, toast, openSheet, closeSheet, ask, col, ref, privCol, coupleRef,
-         COLLECTIONS, PRIVATE, profile, uid } from './core.js';
+         COLLECTIONS, PRIVATE, profile, uid, gates } from './core.js';
 
 // Identificador interno de Firebase (no el correo, para no publicarlo en GitHub).
 const TESTERS = ['sYhgiWepc8bsJ1lo5gKKVqVGDvp2'];
 export const isTester = () => EMU || TESTERS.includes(uid());
+// Administración solo aparece en Más, en el buscador y en «Tu menú» para los TESTERS
+gates['s-admin'] = isTester;
 
 export const testerCard = () => !isTester() ? '' : `
   <div class="glass stack" style="border-color:rgba(255,92,120,.4)"><span class="label">🧪 Zona de pruebas · solo tú la ves</span>
