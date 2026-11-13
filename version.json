@@ -1,15 +1,7 @@
 {
-  "version": "21",
+  "version": "22",
   "notes": [
-    "Aviso cuando hay una versión nueva, con un botón para actualizar",
-    "Botón atrás de Android: cierra ventanas y fotos, y vuelve a la pantalla anterior",
-    "Deslizar el dedo a los lados para cambiar de pestaña",
-    "Las ventanas de abajo se cierran arrastrándolas hacia abajo",
-    "Las fotos abiertas tienen botón para cerrar y se cierran deslizando hacia abajo",
-    "En Android se puede elegir entre tomar foto con la cámara o elegir de la galería",
-    "Se pueden subir fotos muy pesadas en Android",
-    "Al volver a la app en Android ya no se repite toda la carga",
-    "Los datos se refrescan solos al volver a la app",
-    "Arreglos: margen oscuro abajo, casillas, colores del calendario y ventanas de confirmación"
+    "Arreglo en iPhone: la barra de abajo ya no se sube ni queda una franja oscura en pantallas cortas",
+    "Arreglo en iPhone: el fondo de colores ya no se ve como un cuadro"
   ]
 }
