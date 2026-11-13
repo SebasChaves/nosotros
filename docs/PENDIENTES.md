@@ -29,8 +29,9 @@
   secciones en la pantalla más angosta, deslizar entre pestañas personalizadas y el gesto atrás de Android.
   El resumen semanal del Worker (domingo) todavía no cuenta antojos; solo la hoja de la app.
 - v42 **Sorpresa Flechas** (no mencionarla en novedades ni a la pareja): escondida hasta que el dueño la regale desde
-  Administración → Pruebas → 🎁 Sorpresa. Probar en el teléfono el tacto del tablero 9×9 (niveles altos) y la animación
-  del regalo. Cuando se regale, se puede anotar aquí y en novedades si quieren.
+  Administración → Pruebas → 🎁 Sorpresa. Probar en el teléfono (v43, tableros de hasta 700 flechas): pellizcar para acercar/alejar,
+  arrastrar sin sacar flechas por error, que tocar con el dedo atine a la flecha, fluidez con 700 flechas en el
+  Samsung, que la partida siga guardada al cerrar la app, y la animación del regalo. Cuando se regale, se puede anotar aquí y en novedades si quieren.
 
 ## Ideas conversadas, no hechas
 

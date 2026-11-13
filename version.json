@@ -1,7 +1,8 @@
 {
-  "version": "42",
+  "version": "43",
   "notes": [],
   "history": [
+    { "version": "43", "notes": [] },
     { "version": "42", "notes": [] },
     { "version": "41", "notes": [
       "🍓 Nuevo: Antojos. Pide lo que se te antoje (😌 cuando se pueda o 🔥 ¡ya!, con aviso llamativo). Tu pareja lo cumple, puede mandar foto y la mascota gana 10 🪙",
