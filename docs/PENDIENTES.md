@@ -18,18 +18,18 @@
 - Instantáneas (v32): acceso directo «Instantánea» del ícono en Android (puede tardar hasta un día en aparecer en la
   app instalada); en iPhone no existen esos accesos directos.
 
-- Avisos programados (v35): los recordatorios ya llegan a su hora (confirmado). Falta ver el de las 20:00
-  (racha/mascota) y los de fechas especiales. Las notificaciones normales se confirmaron en los dos teléfonos (v34).
+- Avisos programados: confirmado en los dos teléfonos (recordatorios a su hora con la app cerrada y el teléfono bloqueado,
+  desde el Worker v4 con prioridad alta). Worker v5 pegado en Cloudflare (resumen del domingo). Falta ver llegar el de las
+  20:00 (racha/mascota), fechas especiales y el primer resumen del domingo.
   Ojo: un cambio en el Cron de Cloudflare puede tardar hasta 15 minutos en activarse.
-  Worker v4: los programados salían con prioridad «normal» y el teléfono los retrasaba hasta abrir la app; ahora «high».
-  Falta confirmar con la pareja que ya llegan con la app cerrada.
+- Mascota (v38): probar en los teléfonos los juegos con el dedo (Atrapa y Salta) y que se vea fluido.
+- v40: que la guía «Lo nuevo» salga una sola vez en cada teléfono; aviso del resumen el domingo 19:00 (Worker v5).
 
 ## Ideas conversadas, no hechas
 
-- Mascota: más ropa y detalles en la tienda, más juegos, que el otro vea cuando la acariciaste o le compraste algo (aviso),
-  ropa por temporada (Navidad, San Valentín).
-- Mascota (v38): probar en los teléfonos los juegos con el dedo (Atrapa y Salta) y que se vea fluido.
-- v40: que la guía «Lo nuevo» salga una sola vez en cada teléfono; aviso del resumen el domingo 19:00 (Worker v5).
+- Mascota: más ropa y detalles en la tienda, más juegos, que el otro vea cuando la acariciaste, ropa por temporada
+  (Navidad, San Valentín). Juego de a dos (récord en pareja).
+- Cartas «Ábrelo cuando…» (algunas bloqueadas hasta una fecha) y cápsula del tiempo.
 
 - Más accesos directos al mantener presionado el ícono (solo Android; `shortcuts` en `manifest.json`). Ya está
   «Mandar instantánea» (`./?snap`, v32). Hay maqueta (`accesos-directos-futari.html`). Widgets reales no son posibles en una app web.
