@@ -104,7 +104,9 @@ En Android, al tocar cualquier `<input type=file accept="image/*">` se pregunta 
 ## Estilos (`styles.css`)
 
 - Variables: `--bg --panel --glass --line --text --muted --g1 --g2 --g3 --grad --on-grad --soft --field`.
-  El color de acento cambia con `body[data-accent]` (aurora, oceano, atardecer, lavanda, bosque). **No uses colores fijos
+  Los colores de acento están en `ACCENTS` (`data.js`, 16 opciones) y `applyAccent()` (`settings.js`) los pone como
+  variables en `<body>`; "custom" arma la paleta desde un color con `accentFromColor()`. Se copian a localStorage para
+  pintarlos antes de que cargue la app (script al inicio de `index.html`). **No uses colores fijos
   para cosas que deben contrastar con el acento** salvo a propósito (ej. el calendario usa `--c-plan/--c-date/--c-trip`).
 - Clases base: `.glass` (tarjeta), `.stack`, `.row`, `.grid2`, `.btn` (+ `.ghost .small .danger`), `.chip`/`.chips`
   (`.scroll` = fila deslizable), `.seg` (pestañas internas), `.list` con `li`, `.check-btn`, `.del` (botón ícono

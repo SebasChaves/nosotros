@@ -308,10 +308,32 @@ export const LIKE_FIELDS = [
   ['alergias', 'Alergias o cosas que no le gustan'], ['otros', 'Otras cosas que le encantan'],
 ];
 
+// [clave, nombre, color 1, color 2 (degradado), color 3 (luces del fondo), color del texto sobre el degradado]
 export const ACCENTS = [
-  ['aurora', 'Aurora', '#FF5C8A', '#FFB547'],
-  ['atardecer', 'Atardecer', '#FF6A3D', '#FFD166'],
-  ['lavanda', 'Lavanda', '#C084FC', '#F9A8D4'],
-  ['oceano', 'Océano', '#2DD4BF', '#7DD3FC'],
-  ['bosque', 'Bosque', '#4ADE80', '#D9F99D'],
+  ['aurora', 'Aurora', '#FF5C8A', '#FFB547', '#7B5CFF', '#26101A'],
+  ['atardecer', 'Atardecer', '#FF6A3D', '#FFD166', '#FF3D6E', '#2A1104'],
+  ['lavanda', 'Lavanda', '#C084FC', '#F9A8D4', '#818CF8', '#1F0B2E'],
+  ['oceano', 'Océano', '#2DD4BF', '#7DD3FC', '#6366F1', '#04222A'],
+  ['bosque', 'Bosque', '#4ADE80', '#D9F99D', '#14B8A6', '#0A2414'],
+  ['cereza', 'Cereza', '#E11D48', '#FB7185', '#9F1239', '#FFFFFF'],
+  ['rosa', 'Rosa chicle', '#F472B6', '#FBCFE8', '#C084FC', '#2E0A1E'],
+  ['coral', 'Coral', '#FF7A7A', '#FFC2A8', '#E85D9E', '#2A0E0E'],
+  ['durazno', 'Durazno', '#FF9F6B', '#FFD8A8', '#FF6B9A', '#2A1406'],
+  ['miel', 'Miel', '#F59E0B', '#FDE68A', '#F97316', '#291A02'],
+  ['dorado', 'Dorado', '#D4A373', '#FAEDCD', '#B08968', '#2A1C0E'],
+  ['menta', 'Menta', '#34D399', '#A7F3D0', '#22D3EE', '#03251A'],
+  ['cielo', 'Cielo', '#38BDF8', '#A5B4FC', '#818CF8', '#04202E'],
+  ['indigo', 'Índigo', '#6366F1', '#A78BFA', '#EC4899', '#FFFFFF'],
+  ['uva', 'Uva', '#9333EA', '#DB2777', '#6366F1', '#FFFFFF'],
+  ['plata', 'Plata', '#94A3B8', '#E2E8F0', '#64748B', '#0F172A'],
 ];
+// Color propio: a partir de uno se arman los otros (mismo tono corrido) y el color del texto según qué tan claro es.
+export function accentFromColor(hex) {
+  const n = parseInt((hex || '#FF5C8A').slice(1), 16), r = (n >> 16 & 255) / 255, g = (n >> 8 & 255) / 255, b = (n & 255) / 255;
+  const mx = Math.max(r, g, b), mn = Math.min(r, g, b), l = (mx + mn) / 2, d = mx - mn;
+  const s = d ? d / (1 - Math.abs(2 * l - 1)) : 0;
+  let h = !d ? 0 : mx === r ? ((g - b) / d) % 6 : mx === g ? (b - r) / d + 2 : (r - g) / d + 4; h = (h * 60 + 360) % 360;
+  const hsl = (hh, ss, ll) => `hsl(${Math.round((hh + 360) % 360)} ${Math.round(Math.min(1, ss) * 100)}% ${Math.round(Math.min(.92, Math.max(.2, ll)) * 100)}%)`;
+  const lum = 0.2126 * r ** 2.2 + 0.7152 * g ** 2.2 + 0.0722 * b ** 2.2;
+  return [hex, hsl(h + 30, s * .95, l + .14), hsl(h - 45, s, l - .05), lum > 0.3 ? '#1A1020' : '#FFFFFF'];
+}

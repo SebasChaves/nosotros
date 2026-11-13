@@ -17,7 +17,7 @@
 <title>Futari</title>
 </head>
 <body class="loading" data-accent="aurora">
-<script>try { const a = localStorage.getItem('nosotros-accent'); if (a) document.body.dataset.accent = a; let th = localStorage.getItem('nosotros-theme') || 'dark'; if (th === 'auto') th = matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light'; document.body.dataset.theme = th; } catch {}</script>
+<script>try { const a = localStorage.getItem('nosotros-accent'); if (a) document.body.dataset.accent = a; const v = JSON.parse(localStorage.getItem('futari-accent-vars') || 'null'); if (v) for (const k in v) document.body.style.setProperty(k, v[k]); let th = localStorage.getItem('nosotros-theme') || 'dark'; if (th === 'auto') th = matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light'; document.body.dataset.theme = th; } catch {}</script>
 <div id="bgfx"></div>
 
 <!-- Íconos -->

@@ -527,3 +527,8 @@ body:not([data-theme="light"]) .map-box .leaflet-tile-pane { filter: invert(1) h
 .home-cards li { padding: 8px 0; gap: 10px; }
 .home-cards .del { font-size: 12px; width: 34px; height: 34px; border-radius: 10px; background: var(--soft); color: var(--text); }
 .home-cards .del:disabled { opacity: .3; }
+.swatch-custom { position: relative; width: 48px; height: 48px; border-radius: 16px; border: 2px solid transparent; cursor: pointer; display: grid; place-items: center; overflow: hidden; background: conic-gradient(#FF5C8A, #FFB547, #FDE68A, #4ADE80, #38BDF8, #818CF8, #C084FC, #FF5C8A); }
+.swatch-custom.on { border-color: var(--text); }
+.swatch-custom span { font-size: 22px; font-weight: 700; color: #fff; text-shadow: 0 1px 4px rgba(0,0,0,.5); }
+.swatch-custom input { position: absolute; inset: 0; width: 100%; height: 100%; opacity: 0; cursor: pointer; border: 0; padding: 0; min-height: 0; }
+.swatches button, .swatch-custom { width: 44px; height: 44px; border-radius: 14px; }

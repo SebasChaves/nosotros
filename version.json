@@ -1,11 +1,12 @@
 {
-  "version": "28",
+  "version": "29",
   "notes": [
-    "Ajustes → Tu Inicio: elige qué tarjetas ves en Inicio y en qué orden",
-      "Apodos: cómo te saluda la app y cómo aparece tu pareja en tu teléfono",
-      "Contador a tu manera: en días, semanas, meses u horas, y desde la fecha que quieras (por ejemplo, cuando se conocieron)"
+    "Tu estilo: 11 colores nuevos (Cereza, Rosa chicle, Coral, Durazno, Miel, Dorado, Menta, Cielo, Índigo, Uva y Plata) y la opción de elegir tu propio color"
   ],
   "history": [
+    { "version": "29", "notes": [
+      "Tu estilo: 11 colores nuevos (Cereza, Rosa chicle, Coral, Durazno, Miel, Dorado, Menta, Cielo, Índigo, Uva y Plata) y la opción de elegir tu propio color"
+    ] },
     { "version": "28", "notes": [
       "Ajustes → Tu Inicio: elige qué tarjetas ves en Inicio y en qué orden",
       "Apodos: cómo te saluda la app y cómo aparece tu pareja en tu teléfono",

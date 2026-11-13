@@ -4,7 +4,7 @@ import { signOut } from 'https://www.gstatic.com/firebasejs/11.0.2/firebase-auth
 import { $, S, db, auth, esc, icon, paint, on, onShow, expose, toast, write, ref, privRef, coupleRef, go,
          COLLECTIONS, PRIVATE, cachePhoto, forgetPhoto, compressImage, photoError, loadPhotos, parseDate, today, dayKey,
          fmtMoney, nameOf, partnerUid, partnerName, myName, profile, plural, uid, avatar, ask } from './core.js';
-import { ACCENTS, CURRENCIES } from './data.js';
+import { ACCENTS, CURRENCIES, accentFromColor } from './data.js';
 import { backBar, groceryPending } from './lists.js';
 import { balance } from './money.js';
 import { badgeCount } from './badges.js';
@@ -62,7 +62,10 @@ function renderSettings() {
 
     <div class="glass stack"><span class="label">${icon('spark')} Tu estilo</span>
       <p class="small muted" style="margin:0">Solo cambia cómo se ve la app en tu teléfono.</p>
-      <div class="swatches">${ACCENTS.map(([k, l, a, b]) => `<button class="${accent === k ? 'on' : ''}" style="background:linear-gradient(135deg,${a},${b})" aria-label="${l}" title="${l}" onclick="setAccent('${k}')"></button>`).join('')}</div>
+      <div class="swatches">${ACCENTS.map(([k, l, a, b]) => `<button class="${accent === k ? 'on' : ''}" style="background:linear-gradient(135deg,${a},${b})" aria-label="${l}" title="${l}" onclick="setAccent('${k}')"></button>`).join('')}
+        <label class="swatch-custom ${accent === 'custom' ? 'on' : ''}" title="Elegir mi color" aria-label="Elegir mi color"${accent === 'custom' ? ` style="background:linear-gradient(135deg,${esc(prefs.customAccent || '#FF5C8A')},${accentFromColor(prefs.customAccent)[1]})"` : ''}>
+          <span>${accent === 'custom' ? '' : '+'}</span><input type="color" value="${esc(prefs.customAccent || '#FF5C8A')}" oninput="previewCustomAccent(this.value)" onchange="setCustomAccent(this.value)"></label></div>
+      <p class="tiny muted" style="margin:0">${esc((ACCENTS.find(x => x[0] === accent) || [, 'Tu color'])[1])} · toca el último cuadro para elegir tu propio color.</p>
       <span class="label" style="margin-top:6px">Apariencia</span>
       <div class="seg">${[['dark', 'Oscuro'], ['light', 'Claro'], ['auto', 'Automático']].map(([k, l]) => `<button class="${(prefs.theme || 'dark') === k ? 'on' : ''}" onclick="setTheme('${k}')">${l}</button>`).join('')}</div>
       <span class="label" style="margin-top:6px">Foto de fondo del contador</span>
@@ -99,8 +102,8 @@ function homePrefsCard(prefs, p) {
   return `<div class="glass stack"><span class="label">${icon('heart')} Tu Inicio</span>
     <p class="small muted" style="margin:0">Solo cambia lo que ves tú.</p>
     <span class="label" style="margin-top:4px">Apodos</span>
-    <div><label class="f" for="nickMe">¿Cómo te saluda la app?</label><input id="nickMe" maxlength="24" placeholder="${esc(myName() || 'Tu nombre')}" value="${esc(prefs.myNick || '')}"></div>
-    ${p ? `<div><label class="f" for="nickPartner">¿Cómo aparece ${esc(S.settings.members?.[p]?.name || 'tu pareja')} en tu app?</label><input id="nickPartner" maxlength="24" placeholder="Ej: Mi amor, Bebé, Gordo…" value="${esc(prefs.partnerNick || '')}"></div>` : ''}
+    <div><label class="f" for="nickMe">¿Cómo te saluda la app?</label><input id="nickMe" data-fresh maxlength="24" placeholder="${esc(myName() || 'Tu nombre')}" value="${esc(prefs.myNick || '')}"></div>
+    ${p ? `<div><label class="f" for="nickPartner">¿Cómo aparece ${esc(S.settings.members?.[p]?.name || 'tu pareja')} en tu app?</label><input id="nickPartner" data-fresh maxlength="24" placeholder="Ej: Mi amor, Bebé, Gordo…" value="${esc(prefs.partnerNick || '')}"></div>` : ''}
     <button class="btn ghost small" onclick="saveNicks()">Guardar apodos</button>
 
     <span class="label" style="margin-top:8px">Contador</span>
@@ -109,8 +112,8 @@ function homePrefsCard(prefs, p) {
       <option value="start" ${!custom ? 'selected' : ''}>El día que empezaron${S.settings.start ? ` (${fmtShortYear(S.settings.start)})` : ''}</option>
       <option value="custom" ${custom ? 'selected' : ''}>Otra fecha</option></select></div>
     <div id="cntCustom" class="stack" style="gap:10px" ${custom ? '' : 'hidden'}>
-      <div class="grid2"><div><label class="f" for="cntDate">Fecha</label><input type="date" id="cntDate" value="${esc(c.date || '')}"></div>
-        <div><label class="f" for="cntLabel">Texto</label><input id="cntLabel" maxlength="40" placeholder="desde que nos conocimos" value="${esc(c.label || '')}"></div></div>
+      <div class="grid2"><div><label class="f" for="cntDate">Fecha</label><input type="date" id="cntDate" data-fresh value="${esc(c.date || '')}"></div>
+        <div><label class="f" for="cntLabel">Texto</label><input id="cntLabel" data-fresh maxlength="40" placeholder="desde que nos conocimos" value="${esc(c.label || '')}"></div></div>
       <p class="tiny muted" style="margin:0">Se lee así: "120 días <i>desde que nos conocimos</i>".</p></div>
     <button class="btn ghost small" onclick="saveCounter()">Guardar contador</button>
 
@@ -146,10 +149,16 @@ function saveSettings() {
   write(setDoc(coupleRef, { start, currency: $('setCurrency').value, members: { [uid()]: { name, joined } } }, { merge: true }));
   toast('Guardado');
 }
-export function applyAccent(a) {
+// Aplica los colores de acento como variables CSS en <body>. Se guardan también en el teléfono para pintarlos
+// antes de que cargue la app (ver el script al inicio de index.html).
+export function applyAccent(a, custom) {
   if (!a) return;
+  const c = a === 'custom' ? accentFromColor(custom) : ACCENTS.find(x => x[0] === a)?.slice(2);
+  if (!c) return;
   document.body.dataset.accent = a;
-  try { localStorage.setItem('nosotros-accent', a); } catch {}
+  const vars = { '--g1': c[0], '--g2': c[1], '--g3': c[2], '--on-grad': c[3] };
+  for (const [k, v] of Object.entries(vars)) document.body.style.setProperty(k, v);
+  try { localStorage.setItem('nosotros-accent', a); localStorage.setItem('futari-accent-vars', JSON.stringify(vars)); } catch {}
 }
 // Tema claro u oscuro; "auto" sigue al teléfono.
 const darkMQ = matchMedia('(prefers-color-scheme: dark)');
@@ -163,6 +172,9 @@ export function applyTheme(th) {
 darkMQ.addEventListener?.('change', () => { if ((localStorage.getItem('nosotros-theme') || 'dark') === 'auto') applyTheme('auto'); });
 function setTheme(th) { applyTheme(th); write(setDoc(ref('profiles', uid()), { prefs: { theme: th } }, { merge: true })); }
 function setAccent(a) { applyAccent(a); write(setDoc(ref('profiles', uid()), { prefs: { accent: a } }, { merge: true })); }
+// Mientras se mueve el selector se ve en vivo; al soltarlo se guarda.
+function previewCustomAccent(hex) { applyAccent('custom', hex); }
+function setCustomAccent(hex) { applyAccent('custom', hex); write(setDoc(ref('profiles', uid()), { prefs: { accent: 'custom', customAccent: hex } }, { merge: true })); }
 async function pickBg(input) {
   const f = input.files[0]; input.value = ''; if (!f) return;
   try {
@@ -268,4 +280,4 @@ on('ideas profiles', () => { if ($('s-settings').classList.contains('active')) r
 onShow('s-settings', renderSettings);
 window.rerenderSettings = () => { if ($('s-settings').classList.contains('active')) renderSettings(); };
 onShow('s-more', renderMore);
-expose({ saveNicks, setCounterUnit, saveCounter, toggleHomeCard, moveHomeCard, resetHome, saveSettings, setTheme, setAccent, pickAvatar, removeAvatar, pickBg, removeBg, delIdea, logout, exportData, importData });
+expose({ previewCustomAccent, setCustomAccent, saveNicks, setCounterUnit, saveCounter, toggleHomeCard, moveHomeCard, resetHome, saveSettings, setTheme, setAccent, pickAvatar, removeAvatar, pickBg, removeBg, delIdea, logout, exportData, importData });
