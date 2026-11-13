@@ -10,7 +10,7 @@
 //   ALLOWED_UIDS       (texto)   los dos uid de la pareja, separados por coma
 //   ALLOWED_ORIGINS    (texto, opcional) por defecto https://sebaschaves.github.io
 //   VAPID_SUBJECT      (texto, opcional) por defecto https://sebaschaves.github.io/nosotros/
-// Avisos programados (Cron Trigger "0 * * * *", una vez por hora):
+// Avisos programados (Cron Trigger "* * * * *", cada minuto):
 //   FIREBASE_SA        (secreto) el JSON de una cuenta de servicio de SOLO LECTURA (rol "Cloud Datastore Viewer")
 //   TIME_ZONE          (texto, opcional) por defecto America/Costa_Rica
 //   COUPLE_ID          (texto, opcional) por defecto nosotros
@@ -132,23 +132,27 @@ export async function encryptPayload(sub, payload, fixed = {}) {
 }
 
 /* ---------- Avisos programados ---------- */
-// Lee Firestore con una cuenta de servicio de solo lectura y decide qué avisar según la hora local:
+// Corre cada minuto. Lee Firestore con una cuenta de servicio de solo lectura y decide qué avisar según la hora local:
+//   al minuto exacto del recordatorio (o 8:00 si no tiene hora) los recordatorios de hoy
 //   20:00 racha en peligro / mascota con hambre (a quien todavía no ha hecho nada hoy)
-//   a la hora del recordatorio (o 8:00 si no tiene hora) los recordatorios de hoy
 //   8:00 «Hoy es…» y 9:00 «Mañana es…» para fechas especiales, aniversarios y mesiversarios
+// Para gastar pocas lecturas: cada minuto solo consulta los recordatorios de hoy; el resto se lee solo si hay algo que mandar.
 // Devuelve la lista de avisos (sirve para las pruebas). La app usa la misma regla de racha que home.js.
 export async function runSchedule(env, when = Date.now(), { dryRun = false } = {}) {
   if (!env.FIREBASE_SA) return [];
   const tz = env.TIME_ZONE || 'America/Costa_Rica';
-  const local = d => Object.fromEntries(new Intl.DateTimeFormat('en-CA', { timeZone: tz, year: 'numeric', month: '2-digit', day: '2-digit', hour: '2-digit', hourCycle: 'h23' })
+  const local = d => Object.fromEntries(new Intl.DateTimeFormat('en-CA', { timeZone: tz, year: 'numeric', month: '2-digit', day: '2-digit', hour: '2-digit', minute: '2-digit', hourCycle: 'h23' })
     .formatToParts(d).map(p => [p.type, p.value]));
-  const L = local(new Date(when)), hour = Number(L.hour);
+  const L = local(new Date(when)), hour = Number(L.hour), onTheHour = L.minute === '00', hhmm = `${L.hour}:${L.minute}`;
   const today = `${L.year}-${L.month}-${L.day}`;
   const shift = (key, n) => { const [y, m, d] = key.split('-').map(Number); const x = new Date(Date.UTC(y, m - 1, d + n)); return x.toISOString().slice(0, 10); };
   const yesterday = shift(today, -1), tomorrow = shift(today, 1);
   const STREAK_HOUR = 20, TODAY_HOUR = 8, TOMORROW_HOUR = 9;
 
   const db = await firestoreReader(env);
+  // Recordatorios de hoy que tocan en este minuto (los que no tienen hora, a las 8:00)
+  const due = (await db.query('reminders', 'date', today)).filter(r => !r.done && (r.time ? String(r.time).slice(0, 5) === hhmm : onTheHour && hour === TODAY_HOUR));
+  if (!due.length && !onTheHour) return [];
   const couple = await db.get('');
   if (!couple) return [];
   const members = Object.keys(couple.members || {}).filter(u => (env.ALLOWED_UIDS || '').split(',').map(x => x.trim()).includes(u));
@@ -161,7 +165,7 @@ export async function runSchedule(env, when = Date.now(), { dryRun = false } = {
   const add = (to, type, msg) => { if (subsOf(to).length && wants(to, type)) out.push({ to, type, ...msg }); };
 
   // 1. Racha en peligro / mascota con hambre
-  if (hour === STREAK_HOUR && members.length === 2) {
+  if (onTheHour && hour === STREAK_HOUR && members.length === 2) {
     // Los docs de cada día tienen como id la fecha: se piden por bloques de 30 días hacia atrás mientras siga la racha
     const COLS = ['moods', 'answers', 'thinks', 'daily', 'activity'], days = {};
     const load = async keys => {
@@ -192,18 +196,14 @@ export async function runSchedule(env, when = Date.now(), { dryRun = false } = {
     }
   }
 
-  // 2. Recordatorios de hoy (a su hora, o a las 8:00 si no tienen hora)
-  const reminders = await db.list('reminders');
-  for (const r of reminders) {
-    if (r.done || r.date !== today) continue;
-    const h = r.time ? Number(String(r.time).slice(0, 2)) : TODAY_HOUR;
-    if (h !== hour) continue;
+  // 2. Recordatorios de hoy, al minuto exacto
+  for (const r of due) {
     const to = !r.for || r.for === 'ambos' ? members : members.filter(u => u === r.for);
     for (const u of to) add(u, 'reminders', { title: `${r.urgent ? '🔴' : '🔔'} ${r.text}`, body: [r.time, r.note].filter(Boolean).join(' · ') || 'Recordatorio de hoy', url: './?open=reminders', tag: 'rem-' + r.id });
   }
 
   // 3. Fechas especiales, aniversarios y mesiversarios: hoy (8:00) y mañana (9:00)
-  if (hour === TODAY_HOUR || hour === TOMORROW_HOUR) {
+  if (onTheHour && (hour === TODAY_HOUR || hour === TOMORROW_HOUR)) {
     const day = hour === TODAY_HOUR ? today : tomorrow, word = hour === TODAY_HOUR ? 'Hoy' : 'Mañana';
     const [y, m, d] = day.split('-').map(Number);
     const items = [];
@@ -235,9 +235,13 @@ export async function runSchedule(env, when = Date.now(), { dryRun = false } = {
 }
 
 // Lector de Firestore con la cuenta de servicio (token OAuth de Google firmado con su llave privada)
+let saToken = null, saTokenUntil = 0;
 async function firestoreReader(env) {
   if (env.TEST_FIRESTORE) return restReader(`${env.TEST_FIRESTORE}/v1/projects/${env.FIREBASE_PROJECT_ID}/databases/(default)/documents/couples/${env.COUPLE_ID || 'nosotros'}`, { Authorization: 'Bearer owner' }); // solo pruebas con el emulador
   const sa = typeof env.FIREBASE_SA === 'string' ? JSON.parse(env.FIREBASE_SA) : env.FIREBASE_SA;
+  const reader = token => restReader(`https://firestore.googleapis.com/v1/projects/${env.FIREBASE_PROJECT_ID || sa.project_id}/databases/(default)/documents/couples/${env.COUPLE_ID || 'nosotros'}`,
+    { Authorization: 'Bearer ' + token });
+  if (saToken && Date.now() < saTokenUntil) return reader(saToken); // el token de Google dura 1 hora
   const now = Math.floor(Date.now() / 1000);
   const head = b64u(enc.encode(JSON.stringify({ alg: 'RS256', typ: 'JWT' })));
   const claims = b64u(enc.encode(JSON.stringify({ iss: sa.client_email, scope: 'https://www.googleapis.com/auth/datastore', aud: 'https://oauth2.googleapis.com/token', iat: now, exp: now + 3600 })));
@@ -248,13 +252,20 @@ async function firestoreReader(env) {
     body: `grant_type=${encodeURIComponent('urn:ietf:params:oauth:grant-type:jwt-bearer')}&assertion=${head}.${claims}.${sig}` });
   if (!tr.ok) throw new Error('token ' + tr.status + ' ' + await tr.text());
   const { access_token } = await tr.json();
-  return restReader(`https://firestore.googleapis.com/v1/projects/${env.FIREBASE_PROJECT_ID || sa.project_id}/databases/(default)/documents/couples/${env.COUPLE_ID || 'nosotros'}`,
-    { Authorization: 'Bearer ' + access_token });
+  saToken = access_token; saTokenUntil = Date.now() + 50 * 60e3;
+  return reader(access_token);
 }
 function restReader(base, auth) {
   const docOf = d => ({ id: d.name.split('/').pop(), ...fields(d.fields || {}) });
   const root = base.slice(0, base.indexOf('/documents/') + '/documents'.length), prefix = base.slice(base.indexOf('/projects/') + 1);
   return {
+    // Documentos de una colección con campo == valor (solo se cobran los que coinciden)
+    async query(col, field, eq) {
+      const r = await fetch(base + ':runQuery', { method: 'POST', headers: { ...auth, 'Content-Type': 'application/json' },
+        body: JSON.stringify({ structuredQuery: { from: [{ collectionId: col }], where: { fieldFilter: { field: { fieldPath: field }, op: 'EQUAL', value: { stringValue: eq } } } } }) });
+      if (!r.ok) throw new Error('query ' + col + ' ' + r.status + ' ' + await r.text());
+      return (await r.json()).filter(x => x.document).map(x => docOf(x.document));
+    },
     // Varios documentos de una vez: { 'moods/2026-11-12': {...} } (los que no existen no aparecen)
     async getMany(paths) {
       const out = {};

@@ -76,17 +76,19 @@ Si cambias las llaves, actualiza `push-config.js` y cada uno debe desactivar y v
 
 ## Avisos programados (Cron del Worker)
 
-Cada hora el Worker (`scheduled` → `runSchedule` en `notificaciones/worker.js`) lee Firestore con una **cuenta de servicio
+Cada minuto el Worker (`scheduled` → `runSchedule` en `notificaciones/worker.js`) lee Firestore con una **cuenta de servicio
 de solo lectura** y manda, según la hora de Costa Rica (`TIME_ZONE`):
 
 | Hora | Aviso | Tipo (Ajustes) |
 |---|---|---|
 | 20:00 | «🐱 Mochi tiene hambre» / «🔥 Su racha de N días se acaba hoy» a quien aún no hizo nada hoy (si hay racha o mascota) | `streak` |
-| la del recordatorio (o 8:00) | recordatorios 🔔 de hoy no hechos, a quien le toca | `reminders` |
+| el minuto exacto del recordatorio (o 8:00) | recordatorios 🔔 de hoy no hechos, a quien le toca | `reminders` |
 | 8:00 / 9:00 | «Hoy es…» / «Mañana es…»: fechas especiales, aniversarios y mesiversarios | `dates` |
 
 - La racha usa la misma regla que `home.js` (`didSomething`): `moods`, `answers`, `thinks`, `daily` y `activity`.
   Si cambias esa regla, cámbiala también en el Worker.
+- Para gastar pocas lecturas del plan gratis, cada minuto solo consulta los recordatorios de hoy (`date == hoy`); lo demás
+  (pareja, teléfonos, racha, fechas) se lee solo en punto o cuando hay un recordatorio que mandar. Unas 1.500 lecturas al día.
 - El Worker no escribe nada en la base. Los teléfonos que ya no existen los limpia la app cuando manda un aviso.
 - Para cambiar horas o textos: edita `runSchedule` y vuelve a pegar el Worker en Cloudflare.
 - Prueba local: `runSchedule(env, fecha, { dryRun: true })` con `env.TEST_FIRESTORE = 'http://127.0.0.1:8080'`
@@ -102,6 +104,6 @@ de solo lectura** y manda, según la hora de Costa Rica (`TIME_ZONE`):
    valor = **todo** el contenido del archivo JSON (ábrelo con el Bloc de notas y copia todo). Después borra el archivo
    descargado.
 4. Pega la versión nueva de `notificaciones/worker.js` en *Edit code* → *Deploy*.
-5. *Settings* → *Triggers* (o *Trigger Events*) → *Cron Triggers* → *Add* → `0 * * * *` (cada hora) → guardar.
+5. *Settings* → *Triggers* (o *Trigger Events*) → *Cron Triggers* → *Add* → `* * * * *` (cada minuto) → guardar.
 6. Abre la dirección del Worker: debe decir `"scheduled":true`.
 
