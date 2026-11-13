@@ -2,7 +2,8 @@
 // avanza hacia donde apunta y sale si nada la bloquea; si choca, regresa y se pierde una vida (3, y cada 50 flechas sacadas
 // se recupera una; sin vidas se puede seguir pagando monedas de la mascota). Tableros de 16 a 700 flechas con zoom.
 // - 90 niveles (1–5 para aprender, después de 300 a 700 flechas, jefes cada 10, obstáculos: MODS_INFO) y modo infinito,
-//   🧊 Cubo: 30 niveles en 3D (y los niveles 15, 35, 55 y 75 de la escalera son cubos),
+//   🧊 Figuras: 30 niveles en 3D hechos de cubitos (cubo, caja, torre, L, escalera, cruz, dona, al azar);
+//   los niveles 15, 35, 55 y 75 de la escalera también son figuras,
 //   Reto del día (el mismo para los dos; crece en la semana), Contrarreloj (5 min) y Duelo en vivo (arrows/duel).
 //   💀 Modo experto (por teléfono): sin pistas, sin recuperar vidas ni pagar para seguir.
 //   Todo sale de una semilla: el mismo nivel es igual en los dos teléfonos. La partida a medias se guarda en el teléfono.
@@ -115,61 +116,112 @@ export function generate(spec) {
   return { list, base, portalTo, portals, stones, N };
 }
 
-/* ---------- Cubo ----------
-   6 caras de N×N. Cada flecha avanza solo dentro de la cara de su punta y sale por la arista (el camino es hasta el borde
-   de esa cara). Los cuerpos sí pueden doblar aristas: la cola queda en otra cara y estorba a las flechas de esa cara.
-   Casilla global k = cara·N² + y·N + x; una flecha guarda cells [[x, y, cara]…] de la cola a la punta y d (dirección en su cara). */
-// Caras del cubo [0,1]³ (y hacia arriba): normal n, esquina o (arriba-izquierda vista desde afuera), u = derecha, v = abajo
+/* ---------- Figuras de cubitos (el cubo es la figura de un solo cubito) ----------
+   La figura es una lista de cubitos [x, y, z] (y hacia arriba). Cada cara de cubito que da al aire es un «panel» de N×N
+   casillas. Casilla = [x, y, panel]; índice global = panel·N² + y·N + x.
+   Al avanzar y salirse de un panel hay tres casos:
+     · plano: el cubito vecino sigue en el mismo plano → se pasa a su panel (las caras grandes son varios paneles);
+     · arista (hacia afuera): no hay nada → se dobla a la otra cara del mismo cubito;
+     · rincón (hacia adentro): hay un cubito delante y arriba → se sube por esa pared.
+   Una flecha sale si su camino (derecho, cruzando paneles planos) llega a una arista; si llega a un rincón choca con la
+   pared y por ahí nunca sale. Los cuerpos sí pueden doblar aristas y rincones. */
+// Orientación de cada tipo de cara de un cubito [0,1]³: normal n, esquina o (arriba-izquierda vista desde afuera), u derecha, v abajo
 export const FACES = [
-  { n: [0, 0, 1], o: [0, 1, 1], u: [1, 0, 0], v: [0, -1, 0] },   // 0 frente
-  { n: [1, 0, 0], o: [1, 1, 1], u: [0, 0, -1], v: [0, -1, 0] },  // 1 derecha
-  { n: [0, 0, -1], o: [1, 1, 0], u: [-1, 0, 0], v: [0, -1, 0] }, // 2 atrás
-  { n: [-1, 0, 0], o: [0, 1, 0], u: [0, 0, 1], v: [0, -1, 0] },  // 3 izquierda
-  { n: [0, 1, 0], o: [0, 1, 0], u: [1, 0, 0], v: [0, 0, 1] },    // 4 arriba
-  { n: [0, -1, 0], o: [0, 0, 1], u: [1, 0, 0], v: [0, 0, -1] },  // 5 abajo
+  { n: [0, 0, 1], o: [0, 1, 1], u: [1, 0, 0], v: [0, -1, 0] },
+  { n: [1, 0, 0], o: [1, 1, 1], u: [0, 0, -1], v: [0, -1, 0] },
+  { n: [0, 0, -1], o: [1, 1, 0], u: [-1, 0, 0], v: [0, -1, 0] },
+  { n: [-1, 0, 0], o: [0, 1, 0], u: [0, 0, 1], v: [0, -1, 0] },
+  { n: [0, 1, 0], o: [0, 1, 0], u: [1, 0, 0], v: [0, 0, 1] },
+  { n: [0, -1, 0], o: [0, 0, 1], u: [1, 0, 0], v: [0, 0, -1] },
 ];
 const dot = (a, b) => a[0] * b[0] + a[1] * b[1] + a[2] * b[2];
 const add = (a, b, s = 1) => [a[0] + b[0] * s, a[1] + b[1] * s, a[2] + b[2] * s];
+const neg = a => a.map(c => -c);
 const cross = (a, b) => [a[1] * b[2] - a[2] * b[1], a[2] * b[0] - a[0] * b[2], a[0] * b[1] - a[1] * b[0]];
-const eq = (a, b) => a[0] === b[0] && a[1] === b[1] && a[2] === b[2];
-export const cubeCenter = (N, [x, y, f]) => { const F = FACES[f]; return add(add(F.o, F.u, (x + 0.5) / N), F.v, (y + 0.5) / N); };
-const dirVec = (f, d) => { const F = FACES[f]; return d === 0 ? F.v.map(c => -c) : d === 1 ? F.u : d === 2 ? F.v : F.u.map(c => -c); };
-// Un paso desde una casilla en la dirección w (vector 3D): dentro de la cara o doblando la arista
-export function cubeStep(N, [x, y, f], w) {
-  const F = FACES[f], nx = x + dot(w, F.u), ny = y + dot(w, F.v);
-  if (nx >= 0 && ny >= 0 && nx < N && ny < N) return { c: [nx, ny, f], w };
-  const f2 = FACES.findIndex(G => eq(G.n, w)), G = FACES[f2];
-  const p = add(add(cubeCenter(N, [x, y, f]), w, 0.5 / N), F.n, -0.5 / N), q = add(p, G.o, -1);
-  return { c: [Math.floor(dot(q, G.u) * N + 1e-9), Math.floor(dot(q, G.v) * N + 1e-9), f2], w: F.n.map(c => -c) };
+const faceOf = n => FACES.findIndex(F => F.n[0] === n[0] && F.n[1] === n[1] && F.n[2] === n[2]);
+// Figuras (cubitos). «rara» se arma al azar con la semilla.
+export const SHAPES = {
+  cubo: { e: '🧊', name: 'Cubo', v: [[0, 0, 0]] },
+  caja: { e: '📦', name: 'Caja', v: [[0, 0, 0], [1, 0, 0]] },
+  cajon: { e: '📦', name: 'Cajón', v: [[0, 0, 0], [1, 0, 0], [2, 0, 0], [0, 0, 1], [1, 0, 1], [2, 0, 1]] },
+  torre: { e: '🗼', name: 'Torre', v: [[0, 0, 0], [0, 1, 0], [0, 2, 0]] },
+  ele: { e: '🔠', name: 'L', v: [[0, 0, 0], [1, 0, 0], [0, 1, 0]] },
+  escalera: { e: '🪜', name: 'Escalera', v: [[0, 0, 0], [1, 0, 0], [2, 0, 0], [1, 1, 0], [2, 1, 0], [2, 2, 0]] },
+  cruz: { e: '➕', name: 'Cruz', v: [[0, 0, 0], [1, 0, 0], [-1, 0, 0], [0, 0, 1], [0, 0, -1]] },
+  dona: { e: '🍩', name: 'Dona', v: [[0, 0, 0], [1, 0, 0], [2, 0, 0], [0, 0, 1], [2, 0, 1], [0, 0, 2], [1, 0, 2], [2, 0, 2]] },
+  rara: { e: '🎲', name: 'Figura rara', v: null },
+};
+export function randomShape(R, size) {
+  const vox = [[0, 0, 0]], has = new Set(['0,0,0']), D = [[1, 0, 0], [-1, 0, 0], [0, 1, 0], [0, -1, 0], [0, 0, 1], [0, 0, -1]];
+  for (let t = 0; vox.length < size && t < 500; t++) {
+    const b = vox[Math.floor(R() * vox.length)], d = D[Math.floor(R() * 6)], c = add(b, d), k = c.join();
+    if (has.has(k) || Math.abs(c[1]) > 2) continue;
+    has.add(k); vox.push(c);
+  }
+  return vox;
 }
-export function generateCube(spec) {
-  const { seed, n: N, minLen = 2, maxLen = 4, mods = {} } = spec, M = N * N;
-  const R = rng(seed), base = new Int8Array(6 * M), occ = new Int32Array(6 * M).fill(-1), cover = new Float64Array(6 * M).fill(-Infinity), list = [], stones = [];
-  const K = ([x, y, f]) => f * M + y * N + x;
-  for (let i = 0; i < (mods.stones || 0); i++) for (let t = 0; t < 200; t++) { const k = Math.floor(R() * 6 * M); if (!base[k]) { base[k] = STONE; stones.push(k); break; } }
-  // Camino de una punta: dentro de su cara hasta el borde; null si hay una piedra
-  const rayOf = ([x, y, f], d) => { const [dx, dy] = DIRS[d], out = []; for (x += dx, y += dy; x >= 0 && y >= 0 && x < N && y < N; x += dx, y += dy) { const k = f * M + y * N + x; if (base[k] === STONE) return null; out.push(k); } return out; };
-  const idx = [...Array(6 * M).keys()];
+export function buildSurface(vox) {
+  const has = new Set(vox.map(v => v.join())), panels = [], index = {};
+  for (const v of vox) FACES.forEach((F, f) => {
+    if (has.has(add(v, F.n).join())) return;
+    index[v.join() + '|' + f] = panels.length;
+    panels.push({ v, f, n: F.n, u: F.u, vv: F.v, o: add(v, F.o) });
+  });
+  return { has, panels, index };
+}
+export const cellCenter = (S, N, [x, y, p]) => { const P = S.panels[p]; return add(add(P.o, P.u, (x + 0.5) / N), P.vv, (y + 0.5) / N); };
+const dirVec = (P, d) => d === 0 ? neg(P.vv) : d === 1 ? P.u : d === 2 ? P.vv : neg(P.u);
+function cellAt(S, N, p, pt) { const P = S.panels[p], q = add(pt, P.o, -1); return [Math.floor(dot(q, P.u) * N + 1e-6), Math.floor(dot(q, P.vv) * N + 1e-6), p]; }
+// Un paso en dirección w: { c, w, kind: 'in' | 'flat' | 'edge' | 'corner' }
+export function shapeStep(S, N, c, w) {
+  const [x, y, p] = c, P = S.panels[p], nx = x + dot(w, P.u), ny = y + dot(w, P.vv);
+  if (nx >= 0 && ny >= 0 && nx < N && ny < N) return { c: [nx, ny, p], w, kind: 'in' };
+  const e = add(cellCenter(S, N, c), w, 0.5 / N), A = add(P.v, w), B = add(A, P.n);
+  if (S.has.has(B.join())) { const q = S.index[B.join() + '|' + faceOf(neg(w))]; return { c: cellAt(S, N, q, add(e, P.n, 0.5 / N)), w: P.n, kind: 'corner' }; }
+  if (S.has.has(A.join())) { const q = S.index[A.join() + '|' + faceOf(P.n)]; return { c: cellAt(S, N, q, add(e, w, 0.5 / N)), w, kind: 'flat' }; }
+  const q = S.index[P.v.join() + '|' + faceOf(w)]; return { c: cellAt(S, N, q, add(e, P.n, -0.5 / N)), w: neg(P.n), kind: 'edge' };
+}
+// Camino de una punta: derecho cruzando paneles planos hasta una arista. null si choca con una pared (rincón) o una piedra.
+export function rayCells(S, N, base, c, d) {
+  const M = N * N, out = []; let w = dirVec(S.panels[c[2]], d), cur = c;
+  for (let i = 0; i < 4 * N * 8; i++) {
+    const st = shapeStep(S, N, cur, w);
+    if (st.kind === 'edge') return out;
+    if (st.kind === 'corner') return null;
+    const k = st.c[2] * M + st.c[1] * N + st.c[0];
+    if (base[k] === STONE) return null;
+    out.push(k); cur = st.c;
+  }
+  return null;
+}
+export function generateShape(spec) {
+  const { seed, n: N, minLen = 2, maxLen = 4, mods = {} } = spec, M = N * N, R = rng(seed);
+  const vox = spec.vox || (SHAPES[spec.shape]?.v ?? randomShape(R, spec.rare || 6));
+  const S = buildSurface(vox), P = S.panels.length;
+  const base = new Int8Array(P * M), occ = new Int32Array(P * M).fill(-1), cover = new Float64Array(P * M).fill(-Infinity), list = [], stones = [];
+  const K = ([x, y, p]) => p * M + y * N + x;
+  for (let i = 0; i < (mods.stones || 0); i++) for (let t = 0; t < 200; t++) { const k = Math.floor(R() * P * M); if (!base[k]) { base[k] = STONE; stones.push(k); break; } }
+  const idx = [...Array(P * M).keys()];
   for (let pass = 0; pass < 6; pass++) {
     for (let i = idx.length - 1; i > 0; i--) { const j = Math.floor(R() * (i + 1)); [idx[i], idx[j]] = [idx[j], idx[i]]; }
     for (const k of idx) {
       if (occ[k] >= 0 || base[k]) continue;
-      const f = Math.floor(k / M), y = Math.floor((k % M) / N), x = k % N;
+      const p = Math.floor(k / M), y = Math.floor((k % M) / N), x = k % N, head = [x, y, p];
       for (const d of [0, 1, 2, 3].sort(() => R() - 0.5)) {
-        const rc = rayOf([x, y, f], d); if (!rc) continue;
+        const rc = rayCells(S, N, base, head, d); if (!rc || rc.includes(k)) continue;
         const ray = new Set(rc); let hi = Infinity;
         for (const rk of rc) if (occ[rk] >= 0) hi = Math.min(hi, list[occ[rk]].o);
         let lo = cover[k];
         if (!(lo < hi)) continue;
         const want = minLen + Math.floor(Math.pow(R(), 1.2) * (maxLen - minLen + 1));
-        const cells = [[x, y, f]], used = new Set([k]);
-        let cur = [x, y, f], w = dirVec(f, d).map(c => -c); // el cuerpo crece hacia atrás
+        const cells = [head], used = new Set([k]);
+        let cur = head, w = neg(dirVec(S.panels[p], d));
         while (cells.length < want) {
-          const n = FACES[cur[2]].n, side = cross(n, w), s = R() < 0.5 ? 1 : -1;
+          const n = S.panels[cur[2]].n, side = cross(n, w), s = R() < 0.5 ? 1 : -1;
           const opts = cells.length === 1 ? [w] : R() < 0.4 ? [side.map(c => c * s), w, side.map(c => -c * s)] : [w, side.map(c => c * s), side.map(c => -c * s)];
           let moved = false;
           for (const o of opts) {
-            const st = cubeStep(N, cur, o), nk = K(st.c);
+            const st = shapeStep(S, N, cur, o), nk = K(st.c);
             if (base[nk] || occ[nk] >= 0 || used.has(nk) || ray.has(nk) || !(Math.max(lo, cover[nk]) < hi)) continue;
             lo = Math.max(lo, cover[nk]); cells.push(st.c); used.add(nk); cur = st.c; w = st.w; moved = true; break;
           }
@@ -180,15 +232,15 @@ export function generateCube(spec) {
         const id = list.length; cells.reverse();
         for (const c of cells) occ[K(c)] = id;
         for (const rk of ray) cover[rk] = Math.max(cover[rk], o);
-        list.push({ id, cells, d, o, f, c: COLORS[Math.floor(R() * COLORS.length)] });
+        list.push({ id, cells, d, o, ray: rc, c: COLORS[Math.floor(R() * COLORS.length)] });
         break;
       }
     }
   }
-  const rayArrows = a => { const s = new Set(); for (const k of rayOf(a.cells[a.cells.length - 1], a.d) || []) if (occ[k] >= 0) s.add(occ[k]); return s; };
-  const dist = (a, b) => { const p = cubeCenter(N, a.cells[a.cells.length - 1]), q = cubeCenter(N, b.cells[b.cells.length - 1]); return Math.hypot(p[0] - q[0], p[1] - q[1], p[2] - q[2]) * N; };
+  const rayArrows = a => { const s = new Set(); for (const k of a.ray) if (occ[k] >= 0) s.add(occ[k]); return s; };
+  const dist = (a, b) => { const p = cellCenter(S, N, a.cells[a.cells.length - 1]), q = cellCenter(S, N, b.cells[b.cells.length - 1]); return Math.hypot(p[0] - q[0], p[1] - q[1], p[2] - q[2]) * N; };
   decorate(list, R, mods, rayArrows, dist, N);
-  return { cube: true, list, base, stones, portals: [], portalTo: {}, N, M };
+  return { cube: true, shape: S, vox, list, base, stones, portals: [], portalTo: {}, N, M };
 }
 // Obstáculos que dependen del orden de solución (igual para el tablero plano y el cubo)
 export function decorate(list, R, mods, rayArrows, dist, N) {
@@ -274,17 +326,25 @@ export function levelMods(L) {
 export const CUBE_LEVELS = 30, CUBES_IN_LADDER = new Set([15, 35, 55, 75]);
 const CUBE_OK = ['stones', 'ice', 'locks', 'nums', 'bombs', 'chains']; // en el cubo no hay giratorias, portales ni niebla
 const CUBE_FROM = { stones: 4, ice: 7, locks: 11, nums: 15, bombs: 19, chains: 23 };
-const cubeSize = arrows => Math.max(4, Math.min(18, Math.ceil(Math.sqrt(arrows / 1.8)))); // ~0,3 flechas por casilla × 6 caras
-export const cubeLevelSize = L => 4 + Math.round((L - 1) * 10 / (CUBE_LEVELS - 1)); // 4×4 por cara → 14×14
+// Escalera de Figuras (30): empieza con cubos y van apareciendo las demás formas. Jefes 👑 en 10, 20 y 30.
+const FIG_PLAN = ['cubo', 'cubo', 'cubo', 'cubo', 'cubo', 'caja', 'caja', 'torre', 'ele', 'cubo', 'cajon', 'torre', 'ele', 'escalera', 'cruz',
+  'caja', 'dona', 'escalera', 'rara', 'cruz', 'ele', 'dona', 'rara', 'torre', 'escalera', 'rara', 'cruz', 'dona', 'rara', 'rara'];
+export const figTarget = L => L <= 5 ? 38 + (L - 1) * 10 : Math.round((100 + (L - 6) * 14) * (L % 10 === 0 ? 1.2 : 1));
+// Lado de cada panel para llegar a esas flechas (~0,32 flechas por casilla)
+const panelSize = (vox, arrows) => clamp(Math.round(Math.sqrt(arrows / (buildSurface(vox).panels.length * 0.32))), 3, 14);
+const voxOf = (shape, key, size) => SHAPES[shape].v || randomShape(rng(hash('fig-' + key)), size);
 export function cubeSpec(L) {
-  const N = cubeLevelSize(L), R = rng(hash('cubo-mods-' + L)), boss = L % 10 === 0, mods = [];
+  const R = rng(hash('cubo-mods-' + L)), boss = L % 10 === 0, mods = [], shape = FIG_PLAN[L - 1], vox = voxOf(shape, L, 6 + Math.floor(L / 8)), n0 = figTarget(L), N = panelSize(vox, n0);
   if (L >= CUBE_FROM.stones && (R() < 0.5 || boss)) mods.push('stones');
   const fresh = Object.entries(CUBE_FROM).find(([k, f]) => f === L && k !== 'stones')?.[0], extra = fresh ? [fresh] : [];
   for (const k of Object.keys(CUBE_FROM).filter(k => k !== 'stones' && CUBE_FROM[k] < L).sort(() => R() - 0.5)) if (extra.length < (boss ? 3 : 2) && R() < (boss ? 0.7 : 0.3)) extra.push(k);
-  return { key: 'c' + L, cubeL: L, num: L, cube: true, boss, title: `🧊 ${boss ? '👑 ' : ''}Cubo ${L}`, n: N, minLen: 2, maxLen: N <= 5 ? 3 : 4, seed: hash('cubo-' + L), hard: L >= 6, mods: modsFor([...mods, ...extra], N, 6 * N * N * 0.3) };
+  const sh = SHAPES[shape];
+  return { key: 'c' + L, cubeL: L, num: L, cube: true, boss, shape, vox, title: `${sh.e} ${boss ? '👑 ' : ''}${sh.name} · figura ${L}`, n: N, minLen: 2, maxLen: N <= 4 ? 3 : 4, seed: hash('cubo-' + L), hard: L >= 6, mods: modsFor([...mods, ...extra], N, n0) };
 }
+// En la escalera de 90, los niveles 15, 35, 55 y 75 son figuras
+const LADDER_SHAPES = { 15: 'cajon', 35: 'ele', 55: 'cruz', 75: 'dona' };
 export const levelSpec = L => {
-  if (CUBES_IN_LADDER.has(L)) { const n0 = levelTarget(L), N = cubeSize(n0); return { key: 'l' + L, num: L, cube: true, title: `🧊 Nivel ${L}`, n: N, minLen: 2, maxLen: 4, seed: hash('nivel-' + L), hard: true, mods: modsFor(levelMods(L).filter(k => CUBE_OK.includes(k)), N, n0) }; }
+  if (CUBES_IN_LADDER.has(L)) { const shape = LADDER_SHAPES[L], vox = SHAPES[shape].v, n0 = levelTarget(L), N = panelSize(vox, n0); return { key: 'l' + L, num: L, cube: true, shape, vox, title: `${SHAPES[shape].e} Nivel ${L}`, n: N, minLen: 2, maxLen: 4, seed: hash('nivel-' + L), hard: true, mods: modsFor(levelMods(L).filter(k => CUBE_OK.includes(k)), N, n0) }; }
   if (L <= 5) { const N = L <= 3 ? 9 : 10; return { key: 'l' + L, num: L, title: 'Nivel ' + L, n: N, minLen: 2, maxLen: L <= 3 ? 3 : 4, seed: hash('nivel-' + L), mods: {} }; }
   const n0 = levelTarget(L), N = sizeFor(n0);
   return { key: 'l' + L, num: L, title: `${isBoss(L) ? '👑 ' : ''}Nivel ${L}`, n: N, minLen: 2, maxLen: 5, seed: hash('nivel-' + L), hard: true, boss: isBoss(L), mods: modsFor(levelMods(L), N, n0) };
@@ -303,7 +363,8 @@ const duelSpec = d => { const n0 = DUEL_SIZES[d.size]?.[0] || 250, N = sizeFor(n
 // Zona de pruebas (solo el dueño): tableros chicos con un obstáculo, todos juntos, y los modos en versión corta.
 // No guardan nada (ni récords, ni monedas, ni partida a medias) ni mandan avisos.
 const testSpec = kind => {
-  if (kind === 'cube') return { key: 'test', title: '🧪 Prueba: cubo', n: 6, minLen: 2, maxLen: 4, seed: Math.floor(Math.random() * 2 ** 31), test: kind, cube: true, mods: modsFor(['stones', 'locks', 'ice'], 6, 60) };
+  if (kind === 'cube' || kind.startsWith('fig-')) { const shape = kind === 'cube' ? 'cubo' : kind.slice(4), seed = Math.floor(Math.random() * 2 ** 31), vox = SHAPES[shape].v || randomShape(rng(seed), 7), N = panelSize(vox, 90);
+    return { key: 'test', title: `🧪 ${SHAPES[shape].e} ${SHAPES[shape].name}`, n: N, minLen: 2, maxLen: 3, seed, test: kind, cube: true, shape, vox, mods: modsFor(['stones'], N, 90) }; }
   if (/^cv\d+$/.test(kind)) { const sp = cubeSpec(clamp(Number(kind.slice(2)), 1, CUBE_LEVELS)); return { ...sp, cubeL: 0, key: 'test', title: '🧪 ' + sp.title, test: kind }; }
   if (/^lv\d+$/.test(kind)) { const L = clamp(Number(kind.slice(2)), 1, LEVELS), sp = levelSpec(L); return { ...sp, key: 'test', title: '🧪 ' + sp.title, test: kind }; }
   const seed = Math.floor(Math.random() * 2 ** 31), all = kind === 'all' || kind === 'xp' || kind === 'duel', N = all ? 16 : 12, n0 = all ? 75 : 45;
@@ -311,7 +372,7 @@ const testSpec = kind => {
   const title = kind === 'all' ? 'Prueba: todos' : kind === 'xp' ? 'Prueba experto' : kind === 'tt' ? 'Prueba contrarreloj' : kind === 'duel' ? 'Prueba duelo' : `Prueba: ${MODS_INFO[kind][1]}`;
   return { key: 'test', title: '🧪 ' + title, n: N, minLen: 2, maxLen: 4, seed, test: kind, hard: kind === 'xp', timed: kind === 'tt', fake: kind === 'duel', mods: modsFor(keys, N, n0) };
 };
-const boardOf = spec => (spec.board ??= spec.cube ? generateCube(spec) : generate(spec));
+const boardOf = spec => (spec.board ??= spec.cube ? generateShape(spec) : generate(spec));
 
 /* ---------- Datos ---------- */
 const progress = (id = uid()) => S.data.arrows.find(d => d.id === 'p-' + id) || {};
@@ -373,11 +434,11 @@ function render() {
 }
 function cubeCard() {
   const V = myCube(), cs = progress().cs || {}, done = V > CUBE_LEVELS, cur = cubeSpec(Math.min(V, CUBE_LEVELS));
-  const btn = n => n > V ? `<button disabled aria-label="Cubo ${n} bloqueado"><b>${n}</b><small>${n % 10 === 0 ? '👑' : '🔒'}</small></button>`
-    : `<button class="${n === V ? 'cur' : ''}${n % 10 === 0 ? ' boss' : ''}" onclick="playArrows('c${n}')" aria-label="Cubo ${n}"><b>${n}</b><small>${cs[n] ? stars(cs[n]) : n === V ? 'nuevo' : n % 10 === 0 ? '👑' : ''}</small></button>`;
-  return `<div class="glass stack ar-cubecard"><div class="row"><span class="label">🧊 Cubo · ${done ? `¡los ${CUBE_LEVELS} completos! 🏆` : `nivel ${V} de ${CUBE_LEVELS}`}</span>
+  const btn = n => n > V ? `<button disabled aria-label="Figura ${n} bloqueada"><b>${n}</b><small>${n % 10 === 0 ? '👑' : SHAPES[FIG_PLAN[n - 1]].e}</small></button>`
+    : `<button class="${n === V ? 'cur' : ''}${n % 10 === 0 ? ' boss' : ''}" onclick="playArrows('c${n}')" aria-label="Figura ${n}"><b>${n}</b><small>${cs[n] ? stars(cs[n]) : n === V ? 'nuevo' : n % 10 === 0 ? '👑' : SHAPES[FIG_PLAN[n - 1]].e}</small></button>`;
+  return `<div class="glass stack ar-cubecard"><div class="row"><span class="label">🧊 Figuras · ${done ? `¡las ${CUBE_LEVELS} completas! 🏆` : `nivel ${V} de ${CUBE_LEVELS}`}</span>
       ${done ? '' : `<button class="btn small" onclick="playArrows('c${V}')">${loadSave(cur.key) ? 'Continuar' : 'Jugar'}</button>`}</div>
-    <p class="tiny muted" style="margin:0">Flechas en las 6 caras de un cubo: arrastra para girarlo. Cada flecha sale por la arista de su cara; algunas tienen el cuerpo doblado sobre otra cara y la estorban.${done ? '' : ` Este: ${cur.n}×${cur.n} por cara${Object.keys(cur.mods).length ? ' · ' + Object.keys(cur.mods).map(k => MODS_INFO[k][0]).join(' ') : ''}.`}</p>
+    <p class="tiny muted" style="margin:0">Figuras en 3D hechas de cubitos: arrastra para girarlas. Cada flecha sale por una arista; en los rincones choca con la pared. Algunas tienen el cuerpo doblado sobre otra cara y la estorban.${done ? '' : ` Esta: ${SHAPES[cur.shape].e} ${SHAPES[cur.shape].name}, ~${figTarget(Math.min(V, CUBE_LEVELS))} flechas${Object.keys(cur.mods).length ? ' · ' + Object.keys(cur.mods).map(k => MODS_INFO[k][0]).join(' ') : ''}.`}</p>
     <div class="ar-levels">${Array.from({ length: CUBE_LEVELS }, (_, i) => btn(i + 1)).join('')}</div></div>`;
 }
 function testCard() {
@@ -386,11 +447,13 @@ function testCard() {
   return `<details class="glass stack ar-test"><summary class="label">🧪 Zona de pruebas · solo tú</summary>
     <p class="tiny muted" style="margin:6px 0">Tableros chicos para ver cada cosa. No guardan récords, monedas ni partida, y no mandan avisos.</p>
     <div class="grid3">${Object.entries(MODS_INFO).map(([k, [e, t]]) => b(k, `${e} ${t}`)).join('')}</div>
-    <div class="add-row" style="margin-top:8px"><input id="arTestLv" type="number" min="1" max="${LEVELS}" inputmode="numeric" placeholder="Ir al nivel (1-${LEVELS})" aria-label="Nivel a probar" onkeydown="if(event.key==='Enter')arrowsTestLevel()"><button class="btn small" onclick="arrowsTestLevel()">Nivel</button><button class="btn small" onclick="arrowsTestCube()">🧊 Cubo</button></div>
-    <p class="tiny muted" style="margin:0">Escribe un número y elige: nivel (1-${LEVELS}) o cubo (1-${CUBE_LEVELS}). Se ve tal cual, sin desbloquearlo ni guardarlo.</p>
-    <div class="grid2" style="margin-top:8px">${b('all', '🎲 Todos juntos')}${b('xp', '💀 Experto')}${b('tt', '⏱️ Contrarreloj 1 min')}${b('duel', '⚔️ Duelo vs 🤖')}${b('cube', '🧊 Cubo chico')}</div></details>`;
+    <div class="add-row" style="margin-top:8px"><input id="arTestLv" type="number" min="1" max="${LEVELS}" inputmode="numeric" placeholder="Ir al nivel (1-${LEVELS})" aria-label="Nivel a probar" onkeydown="if(event.key==='Enter')arrowsTestLevel()"><button class="btn small" onclick="arrowsTestLevel()">Nivel</button><button class="btn small" onclick="arrowsTestCube()">🧊 Figura</button></div>
+    <p class="tiny muted" style="margin:0">Escribe un número y elige: nivel (1-${LEVELS}) o figura (1-${CUBE_LEVELS}). Se ve tal cual, sin desbloquearlo ni guardarlo.</p>
+    <div class="grid2" style="margin-top:8px">${b('all', '🎲 Todos juntos')}${b('xp', '💀 Experto')}${b('tt', '⏱️ Contrarreloj 1 min')}${b('duel', '⚔️ Duelo vs 🤖')}</div>
+    <p class="tiny muted" style="margin:8px 0 4px">Figuras chicas (~90 flechas):</p>
+    <div class="grid3">${Object.entries(SHAPES).map(([k, x]) => b('fig-' + k, `${x.e} ${x.name}`)).join('')}</div></details>`;
 }
-function arrowsTestCube() { const n = Number($('arTestLv')?.value); if (!(n >= 1 && n <= CUBE_LEVELS)) return toast(`Escribe un cubo del 1 al ${CUBE_LEVELS}`); playArrows('t:cv' + n); }
+function arrowsTestCube() { const n = Number($('arTestLv')?.value); if (!(n >= 1 && n <= CUBE_LEVELS)) return toast(`Escribe una figura del 1 al ${CUBE_LEVELS}`); playArrows('t:cv' + n); }
 function arrowsTestLevel() { const n = Number($('arTestLv')?.value); if (!(n >= 1 && n <= LEVELS)) return toast(`Escribe un nivel del 1 al ${LEVELS}`); playArrows('t:lv' + n); }
 function arrowsExpert(v) { try { localStorage.setItem('futari-ar-expert', v ? '1' : '0'); } catch {} render(); }
 
@@ -607,7 +670,7 @@ function paintGame() {
     ${sp.duel || sp.fake ? `<div class="ar-opp" id="arOpp"><span>${sp.fake ? '🤖 Rival' : esc(nameOf(partnerUid()))}</span><div><i></i></div><span class="n">0</span></div>` : ''}
     ${G.board.cube ? cubeHTML() : `<div class="ar-vp" id="arVp"><div class="ar-world" id="arWorld" style="width:${W}px;height:${W}px;--c:${C}px">
       <svg width="${W}" height="${W}" viewBox="0 0 ${W} ${W}" id="arSvg">${boardSVG()}</svg></div></div>`}
-    <div class="ar-bottom">${hint ? `<button class="btn ghost small" onclick="arrowHint()">💡 Pista${sp.day ? ' (+10 s)' : ''}</button>` : ''}<button class="btn ghost small" onclick="arrowFit()">⤢ Ver todo</button>
+    <div class="ar-bottom">${hint ? `<button class="btn ghost small" onclick="arrowHint()">💡 Pista${sp.day ? ' (+10 s)' : ''}</button>` : ''}<button class="btn ghost small" onclick="arrowFit()">⤢ Ver todo</button>${G.board.cube && G.board.vox.length > 1 ? '<button class="btn ghost small" id="arXray" onclick="arrowsXray()">👁️</button>' : ''}
       ${sp.fake ? '' : sp.duel ? '<button class="btn ghost small" onclick="duelGiveUp()">🏳️ Rendirme</button>' : sp.timed ? '' : '<button class="btn ghost small" onclick="restartArrows()">↺ Reiniciar</button>'}</div>`;
   updateFog(); updateHud(); tickClock(); G.board.cube ? setupCube() : setupCamera();
 }
@@ -643,62 +706,76 @@ const fogged = a => !!G.vis && !a.cells.some(([x, y]) => G.vis[y * G.N + x]);
 /* ---------- Cubo 3D: una SVG por cara puesta con matrix3d; se gira arrastrando ---------- */
 const add3 = (a, b, s = 1) => [a[0] + b[0] * s, a[1] + b[1] * s, a[2] + b[2] * s];
 const dot3 = (a, b) => a[0] * b[0] + a[1] * b[1] + a[2] * b[2];
-// Trazos de una flecha por cara (en px de cada cara); al doblar una arista el trazo sigue en la cara vecina
+// Trazos de una flecha por panel (en px de cada panel); al doblar una arista o un rincón el trazo sigue en el panel vecino
 function cubePieces(a) {
-  const N = G.N, W = N * C, out = {}, cells = a.cells;
-  const loc = (f, p3) => { const F = FACES[f], q = add3(p3, F.o, -1); return [dot3(q, F.u) * W, dot3(q, F.v) * W]; };
-  let curF = cells[0][2], cur = [ctr(cells[0])];
+  const N = G.N, W = N * C, S = G.board.shape, out = {}, cells = a.cells;
+  const loc = (p, p3) => { const P = S.panels[p], q = add3(p3, P.o, -1); return [dot3(q, P.u) * W, dot3(q, P.vv) * W]; };
+  let curP = cells[0][2], cur = [ctr(cells[0])];
   for (let i = 1; i < cells.length; i++) {
     const c = cells[i], pc = cells[i - 1];
     if (c[2] === pc[2]) { cur.push(ctr(c)); continue; }
-    const e3 = add3(cubeCenter(N, pc), FACES[c[2]].n, 0.5 / N);
-    cur.push(loc(pc[2], e3)); (out[curF] ||= []).push(cur); curF = c[2]; cur = [loc(c[2], e3), ctr(c)];
+    // Punto del borde entre las dos casillas: avanzando en w desde la primera (w = dirección del paso)
+    const c1 = cellCenter(S, N, pc), c2 = cellCenter(S, N, c), n1 = S.panels[pc[2]].n, n2 = S.panels[c[2]].n, dlt = add3(c2, c1, -1);
+    const same = n1[0] === n2[0] && n1[1] === n2[1] && n1[2] === n2[2];
+    const w = same ? dlt.map(v => Math.round(v * N)) : dot3(n2, dlt) > 0 ? n2 : n2.map(v => -v);
+    const e3 = add3(c1, w, 0.5 / N);
+    cur.push(loc(pc[2], e3)); (out[curP] ||= []).push(cur); curP = c[2]; cur = [loc(c[2], e3), ctr(c)];
   }
   const [dx, dy] = DIRS[a.d], h = cur[cur.length - 1]; cur[cur.length - 1] = [h[0] + dx * C * 0.08, h[1] + dy * C * 0.08];
-  (out[curF] ||= []).push(cur);
+  (out[curP] ||= []).push(cur);
   return out;
 }
 const multiD = lines => lines.map(ptsD).join('');
 function cubeArrowSVG(a) {
-  const ice = a.ice && !G.cracked.has(a.id), hf = headCell(a)[2], parts = cubePieces(a), out = {};
-  for (const [f, lines] of Object.entries(parts)) {
-    const d = multiD(lines), head = Number(f) === hf;
-    out[f] = `<g ${head ? `id="ag${a.id}"` : ''} data-a="${a.id}" class="${ice ? 'ice' : ''}" style="color:${a.c}">${ice ? `<path class="ib" d="${d}" stroke-width="${C * 0.66}"/>` : ''}<path class="ht" d="${d}" stroke-width="${C * 0.95}"/><path class="ab" d="${d}" stroke-width="${C * 0.3}"/>${head ? `<path class="ah" d="${headD(a)}"/>${badgesSVG(a)}` : ''}</g>`;
+  const ice = a.ice && !G.cracked.has(a.id), hp = headCell(a)[2], parts = cubePieces(a), out = {};
+  for (const [p, lines] of Object.entries(parts)) {
+    const d = multiD(lines), head = Number(p) === hp;
+    out[p] = `<g ${head ? `id="ag${a.id}"` : ''} data-a="${a.id}" data-p="${p}" class="${ice ? 'ice' : ''}" style="color:${a.c}">${ice ? `<path class="ib" d="${d}" stroke-width="${C * 0.66}"/>` : ''}<path class="ht" d="${d}" stroke-width="${C * 0.95}"/><path class="ab" d="${d}" stroke-width="${C * 0.3}"/>${head ? `<path class="ah" d="${headD(a)}"/>${badgesSVG(a)}` : ''}</g>`;
   }
   return out;
 }
+// Centro y tamaño de la figura (en cubitos)
+function shapeBox() {
+  const V = G.board.vox, mn = [0, 1, 2].map(i => Math.min(...V.map(v => v[i]))), mx = [0, 1, 2].map(i => Math.max(...V.map(v => v[i])) + 1);
+  return { c: mn.map((m, i) => (m + mx[i]) / 2), size: Math.max(...mx.map((m, i) => m - mn[i])) };
+}
 function cubeHTML() {
-  const N = G.N, M = N * N, W = N * C, faces = Array.from({ length: 6 }, () => '');
-  for (const k of G.board.stones) { const f = Math.floor(k / M), x = (k % M) % N * C, y = Math.floor((k % M) / N) * C;
-    faces[f] += `<rect class="stone" x="${x + C * 0.1}" y="${y + C * 0.1}" width="${C * 0.8}" height="${C * 0.8}" rx="${C * 0.26}"/><circle class="stone-hl" cx="${x + C * 0.36}" cy="${y + C * 0.34}" r="${C * 0.1}"/>`; }
-  for (const a of G.board.list) if (!G.gone.has(a.id)) for (const [f, html] of Object.entries(cubeArrowSVG(a))) faces[f] += html;
+  const N = G.N, M = N * N, W = N * C, S = G.board.shape, panels = S.panels.map(() => ''), box = shapeBox();
+  for (const k of G.board.stones) { const p = Math.floor(k / M), x = (k % M) % N * C, y = Math.floor((k % M) / N) * C;
+    panels[p] += `<rect class="stone" x="${x + C * 0.1}" y="${y + C * 0.1}" width="${C * 0.8}" height="${C * 0.8}" rx="${C * 0.26}"/><circle class="stone-hl" cx="${x + C * 0.36}" cy="${y + C * 0.34}" r="${C * 0.1}"/>`; }
+  for (const a of G.board.list) if (!G.gone.has(a.id)) for (const [p, html] of Object.entries(cubeArrowSVG(a))) panels[p] += html;
   const css = v => [v[0], -v[1], v[2]];
-  return `<div class="ar-vp ar-vp3" id="arVp"><div class="ar-cube" id="arCube">${FACES.map((F, f) => {
-    const u = css(F.u), v = css(F.v), n = css(F.n), t = [(F.o[0] - 0.5) * W, -(F.o[1] - 0.5) * W, (F.o[2] - 0.5) * W];
-    return `<div class="ar-face" id="arF${f}" style="width:${W}px;height:${W}px;transform:matrix3d(${[...u, 0, ...v, 0, ...n, 0, ...t, 1].map(x => Math.round(x * 1000) / 1000).join(',')})"><svg width="${W}" height="${W}" viewBox="0 0 ${W} ${W}">${faces[f]}</svg></div>`;
+  return `<div class="ar-vp ar-vp3" id="arVp"><div class="ar-cube" id="arCube">${S.panels.map((P, p) => {
+    const u = css(P.u), v = css(P.vv), n = css(P.n), t = [(P.o[0] - box.c[0]) * W, -(P.o[1] - box.c[1]) * W, (P.o[2] - box.c[2]) * W];
+    return `<div class="ar-face" id="arF${p}" style="width:${W}px;height:${W}px;transform:matrix3d(${[...u, 0, ...v, 0, ...n, 0, ...t, 1].map(x => Math.round(x * 1000) / 1000).join(',')})"><svg width="${W}" height="${W}" viewBox="0 0 ${W} ${W}">${panels[p]}</svg></div>`;
   }).join('')}</div></div>`;
 }
-// Ángulos para ver de frente cada cara (frente, derecha, atrás, izquierda, arriba, abajo)
-const FACE_VIEW = [[-12, -12], [-12, -102], [-12, 168], [-12, 78], [-80, -12], [80, -12]];
 function setupCube() {
-  const vp = $('arVp'), cube = $('arCube'), W = G.N * C;
+  const vp = $('arVp'), cube = $('arCube'), W = G.N * C, S = G.board.shape, box = shapeBox();
   const rect = () => vp.getBoundingClientRect();
-  const fitK = () => { const r = rect(); return Math.min(r.width, r.height) / (W * 1.55); };
+  const fitK = () => { const r = rect(); return Math.min(r.width, r.height) / (W * box.size * (box.size > 1 ? 1.75 : 1.55)); };
   const cam = G.cam = { k: fitK(), rx: -24, ry: -34 };
-  const kMax = () => Math.max(fitK() * 3, 46 / C), kMin = () => fitK() * 0.8;
+  const kMax = () => Math.max(fitK() * 3 * box.size, 46 / C), kMin = () => fitK() * 0.8;
   const rad = d => d * Math.PI / 180;
+  // Profundidad de cada panel (para tocar el de adelante) y caras de espaldas ocultas
+  const view = (v3, rx, ry) => { const x = v3[0], y = -v3[1], z = v3[2], z1 = -x * Math.sin(ry) + z * Math.cos(ry); return y * Math.sin(rx) + z1 * Math.cos(rx); };
+  G.panelZ = [];
   const apply = () => {
     cam.rx = Math.max(-88, Math.min(88, cam.rx));
     cube.style.transform = `scale(${cam.k}) rotateX(${cam.rx}deg) rotateY(${cam.ry}deg)`;
-    // Las caras de atrás no se ven ni se tocan
-    FACES.forEach((F, f) => {
-      const x = F.n[0], y = -F.n[1], z = F.n[2], ry = rad(cam.ry), rx = rad(cam.rx);
-      const z1 = -x * Math.sin(ry) + z * Math.cos(ry), y2 = y, z2 = y2 * Math.sin(rx) + z1 * Math.cos(rx);
-      const el = $('arF' + f); if (el) el.classList.toggle('back', z2 < 0.03);
+    const rx = rad(cam.rx), ry = rad(cam.ry);
+    S.panels.forEach((P, p) => {
+      const ctrP = add3(add3(P.o, P.u, 0.5), P.vv, 0.5).map((v, i) => v - box.c[i]);
+      G.panelZ[p] = view(ctrP, rx, ry);
+      $('arF' + p)?.classList.toggle('back', view(P.n, rx, ry) < 0.03);
     });
   };
   G.fit = () => { cam.k = fitK(); apply(); };
-  G.focusFace = f => { [cam.rx, cam.ry] = FACE_VIEW[f]; cam.k = Math.max(cam.k, fitK() * 1.2); cube.style.transition = 'transform .45s ease'; apply(); setTimeout(() => { cube.style.transition = ''; }, 480); };
+  G.focusFace = p => {
+    const n = S.panels[p].n;
+    if (n[1] > 0.5) cam.rx = -80; else if (n[1] < -0.5) cam.rx = 80; else { cam.rx = -12; cam.ry = -Math.atan2(n[0], n[2]) * 180 / Math.PI - 12; }
+    cam.k = Math.max(cam.k, fitK() * 1.2); cube.style.transition = 'transform .45s ease'; apply(); setTimeout(() => { cube.style.transition = ''; }, 480);
+  };
   apply();
   const pts = new Map(); let start = null, pinch = null, moved = false;
   vp.onpointerdown = e => {
@@ -728,10 +805,15 @@ function setupCube() {
   vp.oncontextmenu = e => e.preventDefault();
   vp.onwheel = e => { e.preventDefault(); cam.k = Math.min(kMax(), Math.max(kMin(), cam.k * (e.deltaY < 0 ? 1.12 : 1 / 1.12))); apply(); };
 }
-// Toque en el cubo: la flecha bajo el dedo (o muy cerca)
+// Ver a través: los paneles se vuelven medio transparentes para ver lo que hay detrás
+function arrowsXray() { const c = $('arCube'); if (!c) return; c.classList.toggle('xray'); $('arXray')?.classList.toggle('on', c.classList.contains('xray')); }
+// Toque en la figura: la flecha bajo el dedo (o muy cerca); si hay varias, la del panel más cercano a la vista
 function cubeTap(x, y) {
   if (!G || G.over) return;
-  const at = (px, py) => document.elementsFromPoint(px, py).find(el => el.closest?.('.ar-face:not(.back) [data-a]'))?.closest('[data-a]');
+  const at = (px, py) => {
+    const c = document.elementsFromPoint(px, py).map(el => el.closest?.('.ar-face:not(.back) [data-a]')).filter(Boolean);
+    return c.sort((a, b) => (G.panelZ[b.dataset.p] ?? 0) - (G.panelZ[a.dataset.p] ?? 0))[0];
+  };
   let el = at(x, y);
   for (const [ox, oy] of [[8, 0], [-8, 0], [0, 8], [0, -8], [12, 12], [-12, -12], [12, -12], [-12, 12]]) { if (el) break; el = at(x + ox, y + oy); }
   if (el) tapArrow(Number(el.dataset.a));
@@ -830,8 +912,12 @@ function rotate(a) {
 // Camino desde la punta (atraviesa portales). steps = casillas libres en línea recta antes del primer obstáculo o portal.
 function traceG(a, ignore = -1, flash = false) {
   const N = G.N, { base, portalTo } = G.board, [dx, dy] = DIRS[curD(a)];
+  if (G.board.cube) { // en las figuras, el camino ya viene calculado (derecho por los paneles planos hasta una arista)
+    let steps = 0; for (const k of a.ray) { const o = G.occ[k]; if (o >= 0 && o !== ignore) return { free: false, steps, blocker: o, straight: true }; steps++; }
+    return { free: true, steps };
+  }
   let [x, y] = headCell(a), steps = 0, straight = true, hops = 0;
-  const off = (headCell(a)[2] || 0) * N * N; // en el cubo, el camino es dentro de la cara de la punta
+  const off = 0;
   for (;;) {
     x += dx; y += dy;
     if (x < 0 || y < 0 || x >= N || y >= N) return { free: true, steps, portal: hops > 0 };
@@ -1055,9 +1141,9 @@ function win() {
       const had = pr.cs?.[num] || 0, coinsWon = num <= 5 ? 5 : sp.boss ? 20 : 10;
       b.set(ref('arrows', 'p-' + uid()), { cv: Math.max(pr.cv || 1, num + 1), cs: { [num]: Math.max(had, s) } }, { merge: true });
       if (!had && pt?.hatchedAt) b.update(ref('pet', 'main'), { bonus: increment(coinsWon) });
-      msg = `<span class="ar-stars">${stars(s)}</span><br>${n} flechas en ${fmtMs(ms)} · ${errTxt}${!had && pt?.hatchedAt ? ` · +${coinsWon} 🪙` : ''}${num === CUBE_LEVELS ? `<br><b>🏆 ¡Completaste los ${CUBE_LEVELS} cubos!</b>` : ''}`;
-      next = num < CUBE_LEVELS ? `<button class="btn" onclick="playArrows('c${num + 1}')">🧊 Cubo ${num + 1} →</button>` : '';
-      if (!had && (sp.boss || num === CUBE_LEVELS)) notify('arrows', { title: `🧊 ${meForPartner()} ${num === CUBE_LEVELS ? `completó los ${CUBE_LEVELS} cubos de Flechas 🏆` : `venció al cubo jefe ${num} 👑`}`, body: `${n} flechas en ${fmtMs(ms)} · ${errTxt}`, url: './?open=arrows', tag: 'arrows-c' + num });
+      msg = `<span class="ar-stars">${stars(s)}</span><br>${n} flechas en ${fmtMs(ms)} · ${errTxt}${!had && pt?.hatchedAt ? ` · +${coinsWon} 🪙` : ''}${num === CUBE_LEVELS ? `<br><b>🏆 ¡Completaste las ${CUBE_LEVELS} figuras!</b>` : ''}`;
+      next = num < CUBE_LEVELS ? `<button class="btn" onclick="playArrows('c${num + 1}')">${SHAPES[FIG_PLAN[num]].e} Figura ${num + 1} →</button>` : '';
+      if (!had && (sp.boss || num === CUBE_LEVELS)) notify('arrows', { title: `🧊 ${meForPartner()} ${num === CUBE_LEVELS ? `completó las ${CUBE_LEVELS} figuras de Flechas 🏆` : `venció a la figura jefe ${num} 👑`}`, body: `${n} flechas en ${fmtMs(ms)} · ${errTxt}`, url: './?open=arrows', tag: 'arrows-c' + num });
     } else if (sp.inf) {
       b.set(ref('arrows', 'p-' + uid()), { inf: Math.max(pr.inf || 1, num + 1) }, { merge: true });
       if (pt?.hatchedAt) b.update(ref('pet', 'main'), { bonus: increment(10) });
@@ -1147,4 +1233,4 @@ async function giftRewrap() {
 on('arrows profiles', () => { if ($('s-arrows').classList.contains('active') && !view) render(); });
 on('arrows', duelWatch);
 onShow('s-arrows', render);
-expose({ playArrows, arrowHint, arrowFit, arrowsContinue, restartArrows, closeArrows, arrowsExpert, arrowsTestLevel, arrowsTestCube, arrowsLegend, duelInvite, duelAccept, duelDecline, duelCancel, duelEnter, duelGiveUp, unwrapGift, giftGive, giftSave, giftHide, giftRewrap });
+expose({ playArrows, arrowHint, arrowFit, arrowsContinue, restartArrows, closeArrows, arrowsExpert, arrowsTestLevel, arrowsTestCube, arrowsXray, arrowsLegend, duelInvite, duelAccept, duelDecline, duelCancel, duelEnter, duelGiveUp, unwrapGift, giftGive, giftSave, giftHide, giftRewrap });

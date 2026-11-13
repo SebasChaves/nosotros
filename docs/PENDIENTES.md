@@ -34,8 +34,8 @@
   Samsung, que la partida siga guardada al cerrar la app, y la animación del regalo.
   v44: obstáculos (mantener presionado para girar en iPhone y Samsung, que no salga el menú del sistema), niebla,
   y un duelo en vivo real entre los dos teléfonos (la cuenta regresiva y la barrita del otro).
-  v47 🧊 Cubo: que girar con el dedo y tocar flechas en 3D se sienta bien en los dos teléfonos (Safari en iPhone y
-  Chrome en Samsung) y que vaya fluido en los cubos grandes (14×14 por cara, ~390 flechas). Cuando se regale, se puede anotar aquí y en novedades si quieren.
+  v47 🧊 Cubo: confirmado en iPhone que se ve bien. v48 Figuras: probar en los teléfonos las figuras con rincones (L,
+  escalera, dona) y que tocar elija la flecha de adelante; fluidez en la figura 30 (~580 flechas) y en el Samsung. Cuando se regale, se puede anotar aquí y en novedades si quieren.
 
 ## Ideas conversadas, no hechas
 

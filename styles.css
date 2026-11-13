@@ -878,3 +878,5 @@ body:not([data-theme="light"]) .map-box .leaflet-tile-pane { filter: invert(1) h
 .ar-face g.hint .ah { fill: #fff; }
 .ar-face g.boom { animation: arBoom .7s; }
 .ar-cubecard { border-color: rgba(79,214,224,.45); }
+.ar-cube.xray .ar-face { opacity: .5; }
+#arXray.on { background: var(--grad); color: var(--on-grad); }
