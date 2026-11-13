@@ -1,7 +1,20 @@
 {
-  "version": "37",
-  "notes": [],
+  "version": "38",
+  "notes": [
+    "🎨 Su mascota tiene dibujo nuevo, igual en los dos teléfonos: parpadea, respira y cambia de cara (feliz, con hambre, triste o dormida)",
+    "Vive en su escenario: es de día, atardecer o noche según la hora, y su platito se llena cuando los dos le dieron de comer",
+    "🪙 Ganan monedas cada día que come y jugando, y en la tienda le compran ropa y detalles: moños, lentes, bufandas, suéteres, plantas, lucecitas…",
+    "🎮 Cuatro juegos para jugar con ella: Atrapa la comida, Memoria, Salta obstáculos y Toca a tiempo. ¡Compitan por el récord!",
+    "Toquen la mascota en Inicio para abrir su pantalla"
+  ],
   "history": [
+    { "version": "38", "notes": [
+      "🎨 Su mascota tiene dibujo nuevo, igual en los dos teléfonos: parpadea, respira y cambia de cara (feliz, con hambre, triste o dormida)",
+      "Vive en su escenario: es de día, atardecer o noche según la hora, y su platito se llena cuando los dos le dieron de comer",
+      "🪙 Ganan monedas cada día que come y jugando, y en la tienda le compran ropa y detalles: moños, lentes, bufandas, suéteres, plantas, lucecitas…",
+      "🎮 Cuatro juegos para jugar con ella: Atrapa la comida, Memoria, Salta obstáculos y Toca a tiempo. ¡Compitan por el récord!",
+      "Toquen la mascota en Inicio para abrir su pantalla"
+    ] },
     { "version": "37", "notes": [] },
     { "version": "36", "notes": [
       "Ajustes → Notificaciones: nuevo botón «⏰ Revisar avisos programados» para comprobar que los recordatorios y avisos de la noche pueden llegarles"

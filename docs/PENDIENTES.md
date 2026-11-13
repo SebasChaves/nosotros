@@ -26,7 +26,9 @@
 
 ## Ideas conversadas, no hechas
 
-- Mascota: accesorios que se desbloquean con logros, más especies, que el otro vea cuando la acariciaste.
+- Mascota: más ropa y detalles en la tienda, más juegos, que el otro vea cuando la acariciaste o le compraste algo (aviso),
+  ropa por temporada (Navidad, San Valentín).
+- Mascota (v38): probar en los teléfonos los juegos con el dedo (Atrapa y Salta) y que se vea fluido.
 
 - Más accesos directos al mantener presionado el ícono (solo Android; `shortcuts` en `manifest.json`). Ya está
   «Mandar instantánea» (`./?snap`, v32). Hay maqueta (`accesos-directos-futari.html`). Widgets reales no son posibles en una app web.

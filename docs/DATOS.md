@@ -38,7 +38,7 @@ Casi todos los docs llevan `by: uid` (quién lo creó) y `createdAt: ms`. Fechas
 | `events` | planes: `title, date, time, who 'ambos'|uid, note, repeat none/weekly/biweekly/monthly/yearly, until` |
 | `snaps` | instantáneas: `by, at (ms), text, replyTo?, seen{uid: ms}, reacts{uid: {e, at}}, reactSeen?, saved?(id del momento)` — foto en `photos/snap-<id>` (+ miniatura). Duran 24 h: al abrir la app, `snaps.js` borra las vencidas y sus fotos. «Guardar en Momentos» copia la foto a un momento (`fromSnap: true`) |
 | `activity` | id = día: `{ <uid>: true }` — ese día hizo algo que no queda guardado en otro lado (instantánea, nota, cupón, canción); `markActive()` en `core.js`. Cuenta para la racha |
-| `pet` | doc `main`: `start (día de adopción), createdAt, by, species?, name?, hatchedAt?, hatchedBy?, namedBy?` — el crecimiento se calcula con los días de racha desde `start` (`pet.js`) |
+| `pet` | doc `main`: `start (día de adopción), createdAt, by, species? (emoji), name?, hatchedAt?, hatchedBy?, namedBy?, bonus, spent, owned{prenda:true}, wear{head,face,neck,body,room}, best{juego:{uid:récord}}, gameDay{uid:{day,n}}, lastBuy?` — el crecimiento se calcula con los días de racha desde `start`; monedas = 10 × días comidos + `bonus` − `spent` (`pet.js`) |
 | `usage` | id = `<día>_<uid>`: `uid, day, total, secs{pantalla: segundos}` — tiempo con la app a la vista por sección (`tracking.js`). Solo para Administración |
 | `stats` | id = día: `day, sent{uid:{tipo:n}}, opened{uid:{tipo:n}}, acts{uid:{snap,react}}` — avisos mandados/abiertos y acciones que no quedan guardadas (`countStat` en `core.js`). Solo para Administración |
 | `push` | id = uid: `subs { <llave>: { endpoint, keys{p256dh,auth}, device, at } }` — un teléfono por elemento (docs/NOTIFICACIONES.md) |
