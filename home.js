@@ -10,7 +10,7 @@ import { unreadNotes } from './love.js';
 import { listNeedsMyVote } from './decide.js';
 import { quizWaiting } from './quiz.js';
 import { myDailyDone, partnerDailyDone } from './daily.js';
-import { dueReminders } from './reminders.js';
+import { dueReminders, urgentReminders, whenTxt } from './reminders.js';
 import { songDedication } from './music.js';
 
 /* ---------- Racha y "Pensando en ti" ---------- */
@@ -45,6 +45,13 @@ function checkIncomingThink() {
 }
 
 /* ---------- Tarjeta "Hoy" ---------- */
+// Recordatorios urgentes: tarjeta arriba de todo, con check para marcarlos como hechos ahí mismo.
+function urgentCard() {
+  const list = urgentReminders(); if (!list.length) return '';
+  return `<div class="glass urgent-card stack" style="gap:4px"><div class="row"><span class="label" style="color:#FF7A9C">🔴 Urgente</span><button class="link" onclick="go('s-reminders')">Ver todos</button></div>
+    <ul class="list">${list.slice(0, 5).map(r => `<li><button class="check-btn" aria-label="Marcar hecho" onclick="toggleReminder('${r.id}')"></button>
+      <div class="txt" role="button" tabindex="0" style="cursor:pointer" onclick="go('s-reminders');openReminder('${r.id}')"><b>${esc(r.text)}</b><span class="sub">${esc(whenTxt(r))}${r.note ? ' · ' + esc(r.note) : ''}</span></div></li>`).join('')}</ul>${list.length > 5 ? `<p class="tiny muted" style="margin:0">y ${list.length - 5} más</p>` : ''}</div>`;
+}
 function todayCard() {
   const p = partnerUid(), pn = esc(partnerName()), tk = todayKey();
   const tomorrow = dayKey(new Date(today().getFullYear(), today().getMonth(), today().getDate() + 1));
@@ -261,6 +268,7 @@ function renderHome() {
       <div class="row" style="gap:10px"><div class="avatars">${names.map(([id]) => avatar(id, 36)).join('')}</div>
       <button class="icon-btn" onclick="openSearch()" aria-label="Buscar">${icon('search')}</button>
       <button class="icon-btn" onclick="go('s-settings')" aria-label="Ajustes">${icon('gear')}</button></div></div>
+    ${urgentCard()}
     ${hero}
     ${todayCard()}
     ${memoryCard()}

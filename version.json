@@ -1,16 +1,16 @@
 {
-  "version": "24",
+  "version": "25",
   "notes": [
-    "Restaurantes: busquen dónde queda, Cómo llegar con Google Maps o Waze, Cerca de mí, tipo y precio",
-    "Restaurantes en el mapa 🍽️, y se pueden editar los que ya tenían",
-    "Playlist: busquen la canción y se pone sola la portada, o pongan una foto suya",
-    "Playlist: escuchen un adelanto de 30 segundos ▶",
-    "Playlist: marquen «Nuestra canción» 💞 y dedíquense canciones 💌 (le aparece al otro en Hoy)",
-    "Pelis y series: ✨ Sugerencias según lo que han visto y les gustó",
-    "Recordatorios 🔔 en Más: aparecen en Hoy desde su fecha, y se pueden pasar al calendario del teléfono con alarma",
-    "Las novedades ahora muestran todo lo que salió desde la última vez que actualizaron"
+    "Arreglo: volvió el ícono de Momentos en la barra de abajo",
+      "Recordatorios urgentes 🔴: se muestran arriba en Inicio hasta que estén hechos, y se marcan ahí mismo",
+      "Playlist: cada canción tiene botones para abrirla en Spotify, YouTube Music o Apple Music"
   ],
   "history": [
+    { "version": "25", "notes": [
+      "Arreglo: volvió el ícono de Momentos en la barra de abajo",
+      "Recordatorios urgentes 🔴: se muestran arriba en Inicio hasta que estén hechos, y se marcan ahí mismo",
+      "Playlist: cada canción tiene botones para abrirla en Spotify, YouTube Music o Apple Music"
+    ] },
     { "version": "24", "notes": [
       "Restaurantes: busquen dónde queda, Cómo llegar con Google Maps o Waze, Cerca de mí, tipo y precio",
       "Restaurantes en el mapa 🍽️, y se pueden editar los que ya tenían",

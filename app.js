@@ -14,6 +14,7 @@ import './places.js';
 import './trips.js';
 import './us.js';
 import { quizWaiting } from './quiz.js';
+import { urgentReminders } from './reminders.js';
 import './summary.js';
 import './calendar.js';
 import './shows.js';
@@ -31,7 +32,7 @@ import { logVisit } from './tracking.js';
 import { maybeStartTour, resetTourCheck } from './tour.js';
 
 // Versión de esta copia de la app. Súbela junto con version.json y la caché de sw.js al publicar.
-export const APP_VERSION = '24';
+export const APP_VERSION = '25';
 
 // Si la app estuvo abierta hace poco (Android la cierra sola al salir), se vuelve rápido a la misma pantalla.
 const RESUME_KEY = 'futari-resume';
@@ -154,7 +155,7 @@ function updateBadges() {
   if (!S.me) return;
   const setDot = (id, n) => { const el = $(id); el.hidden = !n; el.textContent = n > 9 ? '9+' : n; };
   const p = partnerUid(), ans = todayAnswers();
-  setDot('dot-home', p && ans?.answers?.[p] && !ans?.answers?.[uid()] ? 1 : 0);
+  setDot('dot-home', (p && ans?.answers?.[p] && !ans?.answers?.[uid()] ? 1 : 0) + urgentReminders().length);
   setDot('dot-decide', S.data.lists.filter(listNeedsMyVote).length);
   setDot('dot-love', unreadNotes() + couponAlerts());
   setDot('dot-more', quizWaiting() ? 1 : 0);

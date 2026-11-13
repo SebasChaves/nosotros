@@ -8,9 +8,12 @@ import { backBar } from './lists.js';
 let editing = null, showDone = false;
 const forMe = r => !r.for || r.for === 'ambos' || r.for === uid();
 // Los que tocan hoy (o ya vencieron) y son para mí: los usa la tarjeta Hoy.
-export const dueReminders = () => S.data.reminders.filter(r => !r.done && forMe(r) && r.date <= todayKey())
+export const dueReminders = () => S.data.reminders.filter(r => !r.done && !r.urgent && forMe(r) && r.date <= todayKey())
   .sort((a, b) => (a.date + (a.time || '')).localeCompare(b.date + (b.time || '')));
-const whenTxt = r => {
+// Urgentes: se muestran arriba en Inicio sin importar la fecha, hasta que se marquen como hechos.
+export const urgentReminders = () => S.data.reminders.filter(r => !r.done && r.urgent && forMe(r))
+  .sort((a, b) => (a.date + (a.time || '')).localeCompare(b.date + (b.time || '')));
+export const whenTxt = r => {
   const tk = todayKey(), tm = dayKey(new Date(today().getFullYear(), today().getMonth(), today().getDate() + 1));
   const d = r.date === tk ? 'Hoy' : r.date === tm ? 'Mañana' : r.date < tk ? `Venció el ${parseDate(r.date).toLocaleDateString('es', { day: 'numeric', month: 'short' })}` : fmtDay(parseDate(r.date));
   return d + (r.time ? ` · ${r.time}` : '');
@@ -18,10 +21,10 @@ const whenTxt = r => {
 const whoTxt = r => !r.for || r.for === 'ambos' ? 'Los dos' : r.for === uid() ? 'Para mí' : `Para ${nameOf(r.for)}`;
 
 function render() {
-  const pending = S.data.reminders.filter(r => !r.done).sort((a, b) => (a.date + (a.time || '')).localeCompare(b.date + (b.time || '')));
+  const pending = S.data.reminders.filter(r => !r.done).sort((a, b) => (b.urgent ? 1 : 0) - (a.urgent ? 1 : 0) || (a.date + (a.time || '')).localeCompare(b.date + (b.time || '')));
   const done = S.data.reminders.filter(r => r.done).sort((a, b) => (b.doneAt || 0) - (a.doneAt || 0));
   const item = r => `<li class="${r.done ? 'done' : ''}"><button class="check-btn ${r.done ? 'on' : ''}" aria-label="${r.done ? 'Marcar pendiente' : 'Marcar hecho'}" onclick="toggleReminder('${r.id}')">${r.done ? icon('check') : ''}</button>
-    <div class="txt" role="button" tabindex="0" style="cursor:pointer" onclick="openReminder('${r.id}')"><span class="main">${esc(r.text)}</span>
+    <div class="txt" role="button" tabindex="0" style="cursor:pointer" onclick="openReminder('${r.id}')"><span class="main">${r.urgent && !r.done ? '<span class="urg-tag">Urgente</span> ' : ''}${esc(r.text)}</span>
       <span class="sub" style="${!r.done && r.date < todayKey() ? 'color:#FF7A9C' : ''}">${esc(whenTxt(r))} · ${esc(whoTxt(r))}${r.note ? ' · ' + esc(r.note) : ''}</span></div>
     ${r.done ? '' : `<button class="del" aria-label="Alarma en mi calendario" onclick="reminderAlarm('${r.id}')">🔔</button>`}</li>`;
   paint('s-reminders', `${backBar('Recordatorios', 's-more', `<button class="btn small" onclick="openReminder()">${icon('plus')} Nuevo</button>`)}
@@ -42,6 +45,7 @@ function openReminder(id) {
     <div><label class="f" for="remFor">¿Para quién?</label><select id="remFor"><option value="ambos">Los dos</option><option value="${uid()}">Para mí</option>
       ${p ? `<option value="${p}">Para ${esc(nameOf(p))}</option>` : ''}</select></div>
     <input id="remNote" placeholder="Nota (opcional)" maxlength="120" aria-label="Nota" value="${esc(r?.note || '')}">
+    <label class="check" style="margin-top:0"><input type="checkbox" id="remUrgent" ${r?.urgent ? 'checked' : ''}"> <span>🔴 Urgente <span class="tiny muted" style="display:block">Se muestra arriba en Inicio hasta que esté hecho</span></span></label>
     <button class="btn" onclick="saveReminder()">${r ? 'Guardar cambios' : 'Guardar'}</button>
     ${r ? `<div class="grid2"><button class="btn ghost" onclick="reminderAlarm('${r.id}')">🔔 Alarma</button><button class="btn ghost danger" onclick="delReminder('${r.id}')">${icon('trash')} Borrar</button></div>` : ''}</div>`);
   if (r) $('remFor').value = r.for || 'ambos';
@@ -49,7 +53,7 @@ function openReminder(id) {
 }
 function saveReminder() {
   const text = $('remText').value.trim(); if (!text) return toast('Escribe qué hay que recordar');
-  const data = { text, date: $('remDate').value || todayKey(), time: $('remTime').value || '', for: $('remFor').value, note: $('remNote').value.trim() };
+  const data = { text, date: $('remDate').value || todayKey(), time: $('remTime').value || '', for: $('remFor').value, note: $('remNote').value.trim(), urgent: $('remUrgent').checked };
   if (editing && S.data.reminders.some(r => r.id === editing)) write(updateDoc(ref('reminders', editing), data));
   else write(setDoc(newRef('reminders'), { ...data, done: false, by: uid(), createdAt: Date.now() }));
   closeSheet(); toast(editing ? 'Cambios guardados' : 'Recordatorio guardado'); editing = null;

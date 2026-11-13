@@ -8,6 +8,15 @@ import { backBar } from './lists.js';
 let who = 'all', editing = null, results = [], newCover = null, audio = null, playing = null;
 const service = url => /spotify/.test(url) ? ['Spotify', '#1DB954'] : /youtu/.test(url) ? ['YouTube', '#FF0033'] : /apple/.test(url) ? ['Apple Music', '#FA2D48'] : /deezer/.test(url) ? ['Deezer', '#A238FF'] : url ? ['Escuchar', 'var(--g1)'] : null;
 const safe = u => /^https?:\/\//i.test(u || '') ? u : '';
+// Botones para abrir la canción en cada app. Si guardaron un enlace de ese servicio se usa; si no, se abre la búsqueda (abre la app si está instalada).
+const services = s => {
+  const q = encodeURIComponent(`${s.title} ${s.artist || ''}`.trim()), u = safe(s.url);
+  return [
+    ['Spotify', '#1DB954', /spotify\./.test(u) ? u : `https://open.spotify.com/search/${q}`],
+    ['YouTube Music', '#FF0033', /youtu/.test(u) ? u : `https://music.youtube.com/search?q=${q}`],
+    ['Apple Music', '#FA2D48', /apple\.com/.test(u) ? u : safe(s.apple) || `https://music.apple.com/search?term=${q}`],
+  ];
+};
 const country = () => ({ CRC: 'CR', MXN: 'MX', COP: 'CO', USD: 'US', EUR: 'ES' }[S.settings.currency] || 'CR');
 
 // Dedicatoria pendiente para mí (la muestra la tarjeta Hoy)
@@ -40,8 +49,9 @@ const songCard = (s, big = false) => {
     ${s.preview ? `<button class="icon-btn play-btn" aria-label="Escuchar adelanto" onclick="playSong('${s.id}')">${playing === s.id ? '❚❚' : '▶'}</button>` : ''}</div>
     ${s.why ? `<p style="margin:0;font-style:italic;line-height:1.45">“${esc(s.why)}”</p>` : ''}
     ${d ? `<div class="dedic">💌 <b>${esc(nameOf(d.by))}</b> se la dedicó a ${d.to === uid() ? 'ti' : esc(nameOf(d.to))}${d.msg ? `: “${esc(d.msg)}”` : ''}</div>` : ''}
+    <div class="svc">${services(s).map(([n, col, url]) => `<a href="${esc(url)}" target="_blank" rel="noopener" style="background:${col}">${n}</a>`).join('')}</div>
     <div class="row"><span class="tiny muted">${esc(nameOf(s.by))}${s.date ? ' · ' + fmtShort(parseDate(s.date)) : ''}</span>
-      <div class="row" style="gap:4px">${sv && safe(s.url) ? `<a class="btn small" style="text-decoration:none;background:${sv[1]};color:#fff" href="${esc(s.url)}" target="_blank" rel="noopener">${sv[0]}</a>` : ''}
+      <div class="row" style="gap:4px">${sv && safe(s.url) && !/spotify\.|youtu|apple\.com/.test(s.url) ? `<a class="btn small" style="text-decoration:none;background:${sv[1]};color:#fff" href="${esc(s.url)}" target="_blank" rel="noopener">${sv[0]}</a>` : ''}
       ${partnerUid() ? `<button class="del" aria-label="Dedicar" onclick="dedicateSong('${s.id}')">💌</button>` : ''}
       <button class="del" aria-label="Editar canción" onclick="addSong('${s.id}')">✎</button></div></div></div>`;
 };
@@ -71,11 +81,11 @@ function addSong(id) {
       <div class="stack grow" style="gap:8px"><input id="songTitle" placeholder="Nombre de la canción" maxlength="80" aria-label="Canción" value="${esc(s?.title || '')}">
         <input id="songArtist" placeholder="Artista" maxlength="60" aria-label="Artista" value="${esc(s?.artist || '')}"></div></div>
     <p class="tiny muted" style="margin:-4px 0 0">Toca la portada para poner una foto suya.</p>
-    <input id="songUrl" type="url" placeholder="Enlace de Spotify, YouTube o Apple Music (opcional)" aria-label="Enlace" value="${esc(s?.url || '')}">
+    <input id="songUrl" type="url" placeholder="Enlace de la canción (opcional): Spotify, YouTube Music…" aria-label="Enlace" value="${esc(s?.url || '')}">
     <textarea id="songWhy" placeholder="¿Por qué es especial? Ej: la bailamos en nuestra primera cita" maxlength="200" style="min-height:70px" aria-label="Por qué es especial">${esc(s?.why || '')}</textarea>
     <div><label class="f" for="songDate">¿De qué fecha es el recuerdo?</label><input type="date" id="songDate" value="${s?.date || todayKey()}"></div>
     <label class="check"><input type="checkbox" id="songOurs" ${s?.ours ? 'checked' : ''}> 💞 Es nuestra canción</label>
-    <input type="hidden" id="songThumb" value="${esc(s?.thumb || '')}"><input type="hidden" id="songPreview" value="${esc(s?.preview || '')}">
+    <input type="hidden" id="songThumb" value="${esc(s?.thumb || '')}"><input type="hidden" id="songPreview" value="${esc(s?.preview || '')}"><input type="hidden" id="songApple" value="${esc(s?.apple || '')}">
     <button class="btn" id="songSave" onclick="saveSong()">Guardar</button>
     ${s ? `<button class="btn ghost danger" onclick="delSong('${s.id}')">${icon('trash')} Quitar canción</button>` : ''}</div>`);
   loadPhotos($('sheetBody'));
@@ -97,7 +107,7 @@ function songChoose(i) {
   $('songTitle').value = (x.trackName || '').slice(0, 80); $('songArtist').value = (x.artistName || '').slice(0, 60);
   const art = (x.artworkUrl100 || '').replace('100x100bb', '600x600bb');
   $('songThumb').value = art; $('songPreview').value = x.previewUrl || '';
-  if (!$('songUrl').value && x.trackViewUrl) $('songUrl').value = x.trackViewUrl;
+  $('songApple').value = x.trackViewUrl || '';
   if (!newCover) $('songCoverBox').querySelector('img,span')?.replaceWith(Object.assign(document.createElement('img'), { src: art, alt: '', style: 'width:72px;height:72px;border-radius:12px;object-fit:cover' }));
   $('songRes').innerHTML = '';
 }
@@ -110,7 +120,7 @@ function saveSong() {
   const title = $('songTitle').value.trim(); if (!title) return toast('Pon el nombre de la canción');
   const old = editing ? S.data.songs.find(x => x.id === editing) : null;
   const r = old ? ref('songs', old.id) : newRef('songs');
-  const data = { title, artist: $('songArtist').value.trim(), url: safe($('songUrl').value.trim()), thumb: safe($('songThumb').value), preview: safe($('songPreview').value),
+  const data = { title, artist: $('songArtist').value.trim(), url: safe($('songUrl').value.trim()), thumb: safe($('songThumb').value), preview: safe($('songPreview').value), apple: safe($('songApple').value),
     why: $('songWhy').value.trim(), date: $('songDate').value || todayKey(), ours: $('songOurs').checked };
   const batch = writeBatch(db);
   if (newCover) { const pid = `song-${r.id}-${Date.now()}`; batch.set(ref('photos', pid), { data: newCover }); cachePhoto(pid, newCover); data.cover = pid; if (old?.cover) batch.delete(ref('photos', old.cover)); }
