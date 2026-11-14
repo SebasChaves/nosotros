@@ -3,6 +3,14 @@
 La pareja gasta mucho en comida, salidas y fiestas; la sección está pensada para que **anotar tome 3 segundos** y para
 ver y frenar ese gasto sin que se sienta castigo. No se pide el salario (lo decidió el dueño).
 
+## Guía de Gastos (`money-tour.js`)
+
+11 pantallas con ejemplos (anotar, atajos, quién pagó y cómo se divide, deshacer, Salimos, presupuesto con
+termómetros de ejemplo, alcancías, avisos, banco e ideas para gastar menos) y una **práctica** con teclado que no guarda
+nada. Sale sola la primera vez que cada uno entra a Gastos (`profiles/<uid>.prefs.moneyTour`) y se vuelve a ver con
+«📖 Cómo funciona» (botón arriba en Gastos y enlace en la tarjeta de Inicio). La guía general (`tour.js`, versión 4)
+muestra una vez «Lo nuevo» con un paso de Gastos.
+
 ## Anotar rápido (`quickSpend`)
 
 - Se abre desde **Inicio** (tarjeta «💸 Gustos de la semana»), el botón «+ Gasto» de Gastos, el **atajo del ícono**

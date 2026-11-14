@@ -65,7 +65,7 @@ export function moneyCard() {
     ${w.budget ? thermo(w) : `<p class="small muted" style="margin:0">Pongan un presupuesto semanal para comida, salidas y fiestas y aquí verán cuánto les queda.</p><button class="btn ghost small" onclick="budgetSheet()">Poner presupuesto</button>`}
     ${o ? outingBanner(o) : ''}
     <div class="grid2"><button class="btn" onclick="quickSpend()">${icon('plus')} Anotar gasto</button><button class="btn ghost" onclick="${o ? 'quickSpend()' : 'startOuting()'}">${o ? '➕ A la salida' : '🎉 Salimos'}</button></div>
-    <p class="tiny muted center" style="margin:0">Este mes en gustos: <b class="num">${fmtMoney(month)}</b></p></div>`;
+    <p class="tiny muted center" style="margin:0">Este mes en gustos: <b class="num">${fmtMoney(month)}</b> · <button class="link tiny" onclick="moneyTour()">📖 Cómo funciona</button></p></div>`;
 }
 
 /* ---------- Pantalla Gastos ---------- */
@@ -104,11 +104,11 @@ function render() {
   const wk = (from, to) => Object.fromEntries(GUSTOS.map(c => [c, spentIn(from, to, [c])]));
   const now = wk(w.from, w.to), prev = wk(lastFrom, lastTo), nowT = spentIn(w.from, w.to), prevT = spentIn(lastFrom, lastTo);
   const diff = (a, b) => !b ? '' : a > b ? `<span class="bad">▲ ${Math.round((a / b - 1) * 100)}%</span>` : a < b ? `<span class="good">▼ ${Math.round((1 - a / b) * 100)}%</span>` : '';
-  paint('s-money', `${backBar('Gastos', 's-more', `<button class="btn small" onclick="quickSpend()">${icon('plus')} Gasto</button>`)}
+  paint('s-money', `${backBar('Gastos', 's-more', `<button class="icon-btn" onclick="moneyTour()" aria-label="Cómo funciona Gastos">📖</button><button class="btn small" onclick="quickSpend()">${icon('plus')} Gasto</button>`)}
     <div class="glass stack money-card" style="gap:8px"><div class="row"><span class="label">💸 Gustos de la semana ${catsTxt(weekCats())}</span><button class="link" onclick="budgetSheet()">${w.budget ? 'Cambiar' : 'Poner presupuesto'}</button></div>
       ${w.budget ? thermo(w) : '<p class="small muted" style="margin:0">Sin presupuesto semanal todavía. Pónganlo y lo que les sobre cada semana pasa solo a su alcancía 🐷.</p>'}
       ${o ? outingBanner(o) : `<button class="btn ghost" onclick="startOuting()">🎉 Salimos: sumar lo de esta salida</button>`}
-      <button class="link" onclick="bankTutorial()">⚡ Que se anote desde el aviso del banco</button></div>
+      <div class="row" style="justify-content:center;gap:18px;flex-wrap:wrap"><button class="link" onclick="bankTutorial()">⚡ Que se anote desde el aviso del banco</button><button class="link" onclick="moneyTour()">📖 Cómo funciona</button></div></div>
     ${goalsCard()}
     <div class="glass stack" style="gap:6px"><div class="row"><span class="label">📊 Esta semana vs. la pasada</span></div>
       ${GUSTOS.map(c => `<div class="row small"><span>${catOf(c).join(' ')}</span><span><b class="num">${fmtMoney(now[c])}</b> <span class="muted">· antes ${fmtMoney(prev[c])}</span> ${diff(now[c], prev[c])}</span></div>`).join('')}

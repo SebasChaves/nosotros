@@ -999,3 +999,29 @@ body:not([data-theme="light"]) .map-box .leaflet-tile-pane { filter: invert(1) h
 .steps li > b { flex: none; width: 24px; height: 24px; border-radius: 50%; display: grid; place-items: center; background: var(--grad); color: var(--on-grad); font-size: 12.5px; }
 .code-copy { display: flex; align-items: center; gap: 8px; margin-top: 6px; }
 .code-copy code { flex: 1; min-width: 0; overflow-wrap: anywhere; font-size: 12px; padding: 6px 8px; border-radius: 8px; background: var(--glass-2); }
+
+/* Guía de Gastos (money-tour.js) */
+.dialog.mt-view { text-align: left; background: var(--bg); display: flex; flex-direction: column; align-items: stretch; justify-content: flex-start; gap: 10px;
+  padding: calc(env(safe-area-inset-top) + 12px) 18px calc(env(safe-area-inset-bottom) + 16px); }
+.mt-view > * { width: 100%; max-width: 520px; margin: 0 auto; }
+.mt-top { display: flex; justify-content: space-between; align-items: center; }
+.mt-body { flex: 1; min-height: 0; overflow-y: auto; overscroll-behavior: contain; display: flex; flex-direction: column; gap: 10px; padding-bottom: 6px; }
+.mt-body h2 { margin: 0; font-size: 22px; }
+.mt-body p { margin: 0; line-height: 1.5; font-size: 15px; }
+.mt-emoji { font-size: 46px; line-height: 1; }
+.mt-list, .mt-ol { margin: 0; padding-left: 20px; line-height: 1.55; font-size: 14.5px; display: flex; flex-direction: column; gap: 4px; }
+.mt-ex { border-radius: 16px; padding: 12px; background: var(--glass); border: 1px solid var(--line); display: flex; flex-direction: column; gap: 8px; }
+.mt-ex-t { font-size: 12px; font-weight: 800; letter-spacing: .4px; text-transform: uppercase; color: var(--muted); }
+.mt-demo { display: flex; flex-direction: column; gap: 6px; }
+.mt-demo.qs-chips, .mt-demo.qs-opts { flex-direction: row; }
+.undo-bar.mt-static { position: static; transform: none; animation: none; margin: 0 auto; max-width: 100%; }
+.mt-practice { border-radius: 16px; padding: 12px; border: 1px dashed color-mix(in srgb, var(--g1) 55%, transparent); display: flex; flex-direction: column; gap: 8px; }
+.mt-amt { font-size: 32px; padding: 0; }
+.mt-keys button { height: 40px; font-size: 18px; }
+.mt-ok { padding: 8px; border-radius: 12px; background: color-mix(in srgb, #3DD68C 16%, transparent); }
+.mt-notifs { display: flex; flex-direction: column; gap: 6px; }
+.mt-notif { display: flex; flex-direction: column; gap: 1px; padding: 9px 12px; border-radius: 14px; background: var(--glass-2); font-size: 13.5px; }
+.mt-notif b { font-size: 11.5px; color: var(--muted); }
+.mt-dots { display: flex; gap: 5px; justify-content: center; }
+.mt-dots i { width: 7px; height: 7px; border-radius: 9px; background: var(--line); cursor: pointer; transition: width .2s; }
+.mt-dots i.on { width: 20px; background: var(--grad); }
