@@ -1374,13 +1374,14 @@ export function giftAdminCard() {
   if (!isOwner()) return '';
   const g = giftInfo(), p = partnerUid(), opened = p && profile(p).prefs?.unwrapped?.arrows;
   const when = t => new Date(t).toLocaleDateString('es', { day: 'numeric', month: 'short', hour: 'numeric', minute: '2-digit' });
+  // Ya regalado: solo queda el registro (el dueño pidió quitar esconder / volver a envolver)
+  if (g.on) return `<div class="glass stack"><span class="label">🎁 Flechas</span>
+    <p class="small" style="margin:0">Regalado el ${when(g.at)}. ${opened ? `${esc(nameOf(p))} lo abrió el ${when(opened)} 💝` : `${esc(nameOf(p) || 'Tu pareja')} todavía no lo abre.`}</p></div>`;
   return `<div class="glass stack" style="border-color:rgba(255,181,71,.5)"><span class="label">🎁 Sorpresa: Flechas</span>
     <p class="small" style="margin:0">${g.on ? `🎁 Regalado el ${when(g.at)}. ${opened ? `${esc(nameOf(p))} lo abrió el ${when(opened)} 💝` : `${esc(nameOf(p) || 'Tu pareja')} todavía no lo abre.`}`
       : '🔒 Escondido: solo tú lo ves (Más → Flechas). Tu pareja no ve nada: ni la sección, ni en el buscador, ni el aviso en Ajustes.'}</p>
     <div><label class="f" for="giftMsg">Mensaje al abrirlo (opcional)</label><textarea id="giftMsg" maxlength="200" placeholder="Ej: Para que juegues a lo que te gusta, pero aquí 💕">${esc(g.msg || '')}</textarea></div>
-    ${g.on ? `<div class="grid2"><button class="btn ghost small" style="width:100%" onclick="giftSave()">Guardar mensaje</button><button class="btn ghost small" style="width:100%" onclick="giftRewrap()">↺ Volver a envolver</button></div>
-        <button class="btn ghost small danger" onclick="giftHide()">🔒 Esconderlo otra vez</button>`
-      : `<label class="check"><input type="checkbox" id="giftNotify" checked> Avisarle con una notificación («🎁 Tienes un regalo en Futari»)</label>
+    ${`<label class="check"><input type="checkbox" id="giftNotify" checked> Avisarle con una notificación («🎁 Tienes un regalo en Futari»)</label>
         <button class="btn" onclick="giftGive()">🎁 Envolver y regalar</button>`}
     <div class="grid2"><button class="btn ghost small" style="width:100%" onclick="unwrapGift(true)">👀 Ver cómo se abre</button><button class="btn ghost small" style="width:100%" onclick="go('s-arrows')">🏹 Probar el juego</button></div></div>`;
 }
@@ -1392,16 +1393,9 @@ async function giftGive() {
   if (n) notify('surprise', { title: '🎁 Tienes un regalo en Futari', body: 'Ábrelo cuando quieras 💝', url: './?open=gift', tag: 'gift-arrows' });
   celebrate(); toast('¡Regalo envuelto y entregado! 🎁');
 }
-function giftSave() { saveGift({ msg: $('giftMsg').value.trim() }); toast('Mensaje guardado'); }
-async function giftHide() { if (await ask('¿Esconderlo otra vez? Tu pareja deja de verlo (su progreso no se borra).', { ok: 'Esconder' })) saveGift({ on: false }); }
-async function giftRewrap() {
-  const p = partnerUid(); if (!p) return;
-  if (!(await ask('¿Volver a envolverlo? A tu pareja le aparece otra vez como regalo sin abrir.', { ok: 'Envolver' }))) return;
-  write(setDoc(ref('profiles', p), { prefs: { unwrapped: { arrows: null } } }, { merge: true })); toast('Envuelto otra vez 🎀');
-}
 
 on('arrows profiles', () => { if ($('s-arrows').classList.contains('active') && !view) render(); });
 on('arrows', duelWatch);
 onShow('s-arrows', render);
 if (EMU) window.__arrowsG = () => G; // solo emulador: para las pruebas automáticas
-expose({ playArrows, arrowHint, arrowFit, arrowsContinue, restartArrows, closeArrows, arrowsExpert, arrowsTestLevel, arrowsTestCube, arrowsXray, arrowsLegend, duelInvite, duelAccept, duelDecline, duelCancel, duelEnter, duelGiveUp, unwrapGift, giftGive, giftSave, giftHide, giftRewrap });
+expose({ playArrows, arrowHint, arrowFit, arrowsContinue, restartArrows, closeArrows, arrowsExpert, arrowsTestLevel, arrowsTestCube, arrowsXray, arrowsLegend, duelInvite, duelAccept, duelDecline, duelCancel, duelEnter, duelGiveUp, unwrapGift, giftGive });

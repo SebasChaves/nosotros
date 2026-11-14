@@ -22,9 +22,8 @@ Lee estos documentos antes de cambiar algo:
 
 ## Flechas
 
-Flechas es una **sorpresa**: no la menciones en novedades ni en la guía hasta que el dueño la regale. El error de las
-figuras 3D (flechas que atravesaban a otras de otro cubito) se arregló en v52; ver [docs/FLECHAS.md](docs/FLECHAS.md).
-Falta que el dueño lo confirme en el teléfono antes de quitar el «BETA».
+Flechas ya **se regaló** (noviembre 2026): ya no es secreto y la pareja lo usa. Figuras y Mixto siguen en **BETA** hasta
+que el dueño diga. Ver [docs/FLECHAS.md](docs/FLECHAS.md).
 
 ## Reglas que no se rompen
 

@@ -7,9 +7,8 @@
 
 ## En curso
 
-- **Flechas, figuras 3D:** arreglado en v52 (las flechas atravesaban a otras de otro cubito porque la ocupación solo
-  cubría 6 paneles; y el toque ahora se calcula con geometría). Falta que el dueño lo confirme en el iPhone y decida si
-  quitar el «BETA» de Figuras y Mixto. Detalle en docs/FLECHAS.md.
+- **Flechas:** regalado. Figuras (80 niveles) y Mixto siguen en «BETA» por decisión del dueño; choques, toque y
+  movimiento de las figuras arreglados en v52–v53 (confirmado en iPhone que se ve mejor). Detalle en docs/FLECHAS.md.
 
 ## Pendiente de confirmar
 

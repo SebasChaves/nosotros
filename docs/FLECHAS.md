@@ -1,8 +1,9 @@
 # Flechas (juego sorpresa)
 
-Juego de sacar flechas del tablero (`arrows.js`, pantalla `s-arrows`). Lo pidió el dueño como **sorpresa para su pareja**:
-mientras no lo regale, solo él lo ve. **No lo menciones en las novedades (`version.json`) ni en la guía** hasta que el
-dueño diga que ya lo regaló.
+Juego de sacar flechas del tablero (`arrows.js`, pantalla `s-arrows`). Lo hizo el dueño como **sorpresa para su pareja**
+y **ya se lo regaló** (v55): ahora lo ven los dos. En Administración solo queda el registro de cuándo se regaló y se abrió
+(se quitaron «esconder» y «volver a envolver»). La zona de pruebas sigue siendo solo del dueño. Ya se puede mencionar en
+novedades o en la guía si el dueño quiere.
 
 ## Error de las figuras que «atravesaban» flechas (resuelto en v52)
 
