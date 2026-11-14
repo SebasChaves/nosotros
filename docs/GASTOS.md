@@ -13,7 +13,7 @@ muestra una vez «Lo nuevo» con un paso de Gastos.
 
 ## Gráficos (`money-charts.js`)
 
-Pantalla completa desde Gastos («📈 Ver gráficos») y la tarjeta de Inicio. Solo lee `expenses` (no guarda nada).
+Pantalla completa desde el ícono 📈 de arriba en Gastos (entre 📖 y «+ Gasto») y la tarjeta de Inicio. Solo lee `expenses` (no guarda nada).
 - Arriba hasta 3 frases con lo importante (mes vs. mes pasado —antes del día 20 solo dice cuánto llevan—, semanas que
   cumplieron el presupuesto, el día que más gastan, la categoría #1).
 - **Gustos semana a semana** (12 semanas, línea punteada del presupuesto) · **¿En qué se va?** (barras por categoría:

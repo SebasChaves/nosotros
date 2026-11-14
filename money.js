@@ -104,12 +104,11 @@ function render() {
   const wk = (from, to) => Object.fromEntries(GUSTOS.map(c => [c, spentIn(from, to, [c])]));
   const now = wk(w.from, w.to), prev = wk(lastFrom, lastTo), nowT = spentIn(w.from, w.to), prevT = spentIn(lastFrom, lastTo);
   const diff = (a, b) => !b ? '' : a > b ? `<span class="bad">▲ ${Math.round((a / b - 1) * 100)}%</span>` : a < b ? `<span class="good">▼ ${Math.round((1 - a / b) * 100)}%</span>` : '';
-  paint('s-money', `${backBar('Gastos', 's-more', `<button class="icon-btn" onclick="moneyTour()" aria-label="Cómo funciona Gastos">📖</button><button class="btn small" onclick="quickSpend()">${icon('plus')} Gasto</button>`)}
+  paint('s-money', `${backBar('Gastos', 's-more', `<button class="icon-btn" onclick="moneyTour()" aria-label="Cómo funciona Gastos">📖</button><button class="icon-btn" onclick="moneyCharts()" aria-label="Gráficos de gastos">📈</button><button class="btn small" onclick="quickSpend()">${icon('plus')} Gasto</button>`)}
     <div class="glass stack money-card" style="gap:8px"><div class="row"><span class="label">💸 Gustos de la semana ${catsTxt(weekCats())}</span><button class="link" onclick="budgetSheet()">${w.budget ? 'Cambiar' : 'Poner presupuesto'}</button></div>
       ${w.budget ? thermo(w) : '<p class="small muted" style="margin:0">Sin presupuesto semanal todavía. Pónganlo y lo que les sobre cada semana pasa solo a su alcancía 🐷.</p>'}
       ${o ? outingBanner(o) : `<button class="btn ghost" onclick="startOuting()">🎉 Salimos: sumar lo de esta salida</button>`}
       <div class="row" style="justify-content:center;gap:18px;flex-wrap:wrap"><button class="link" onclick="bankTutorial()">⚡ Que se anote desde el aviso del banco</button><button class="link" onclick="moneyTour()">📖 Cómo funciona</button></div></div>
-    <button class="btn ghost vz-open" onclick="moneyCharts()">📈 Ver gráficos: semanas, categorías, meses y días</button>
     ${goalsCard()}
     <div class="glass stack" style="gap:6px"><div class="row"><span class="label">📊 Esta semana vs. la pasada</span></div>
       ${GUSTOS.map(c => `<div class="row small"><span>${catOf(c).join(' ')}</span><span><b class="num">${fmtMoney(now[c])}</b> <span class="muted">· antes ${fmtMoney(prev[c])}</span> ${diff(now[c], prev[c])}</span></div>`).join('')}
