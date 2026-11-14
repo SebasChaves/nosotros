@@ -55,7 +55,7 @@ tocar puntos dentro de cada casilla de una flecha (que se elija esa flecha).
 | Modo | Qué es | Progreso (`arrows/p-<uid>`) |
 |---|---|---|
 | 📄 Plano | Escalera de 90 (`levelSpec`): 1–5 de ~30 flechas, desde el 6 de 300 a ~700, jefe 👑 cada 10, obstáculos por nivel (`MOD_FROM`). Después del 90, infinito | `lv`, `ls`, `lx`, `inf` |
-| 🧊 Figuras **BETA** | 30 figuras 3D de cubitos (`cubeSpec`, `FIG_PLAN`, `SHAPES`) | `cv`, `cs` |
+| 🧊 Figuras **BETA** | 80 figuras 3D de cubitos (`cubeSpec`, `FIG_PLAN`, `SHAPES`): 1–30 crecen de ~40 a ~580 flechas; 31–80 (v54) turnan figuras grandes y raras, ~520 a ~860, jefes cada 10. El dueño pidió dejarlo en beta por ahora | `cv`, `cs` |
 | 🔀 Mixto **BETA** | 30 niveles, uno de cada 3 es figura (`mixSpec`) | `mv`, `ms` |
 | 🗓️ Reto del día | Mismo tablero para los dos; crece en la semana | `arrows/d-<día>` |
 | ⏱️ Contrarreloj | 5 minutos | `tt` |

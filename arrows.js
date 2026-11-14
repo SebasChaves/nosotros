@@ -324,18 +324,23 @@ export function levelMods(L) {
 }
 // 🧊 Cubos: escalera propia de 30 y, además, unos niveles de la escalera de 90 son cubos (sorpresa)
 // La escalera de 90 es solo plana (las figuras quedaron en sus modos beta: Figuras y Mixto)
-export const CUBE_LEVELS = 30, CUBES_IN_LADDER = new Set();
+export const CUBE_LEVELS = 80, CUBES_IN_LADDER = new Set();
 const CUBE_OK = ['stones', 'ice', 'locks', 'nums', 'bombs', 'chains']; // en el cubo no hay giratorias, portales ni niebla
 const CUBE_FROM = { stones: 4, ice: 7, locks: 11, nums: 15, bombs: 19, chains: 23 };
 // Escalera de Figuras (30): empieza con cubos y van apareciendo las demás formas. Jefes 👑 en 10, 20 y 30.
 const FIG_PLAN = ['cubo', 'cubo', 'cubo', 'cubo', 'cubo', 'caja', 'caja', 'torre', 'ele', 'cubo', 'cajon', 'torre', 'ele', 'escalera', 'cruz',
   'caja', 'dona', 'escalera', 'rara', 'cruz', 'ele', 'dona', 'rara', 'torre', 'escalera', 'rara', 'cruz', 'dona', 'rara', 'rara'];
-export const figTarget = L => L <= 5 ? 38 + (L - 1) * 10 : Math.round((100 + (L - 6) * 14) * (L % 10 === 0 ? 1.2 : 1));
+// Del 31 al 80 (agregados después): se turnan figuras grandes y raras; jefes en 40, 50… 80
+const FIG_MORE = ['rara', 'ele', 'escalera', 'cruz', 'torre', 'dona', 'cajon', 'rara', 'caja'], FIG_BOSS = ['dona', 'cruz', 'rara', 'escalera', 'rara'];
+for (let L = 31; L <= 80; L++) FIG_PLAN.push(L % 10 === 0 ? FIG_BOSS[(L / 10 - 4) % FIG_BOSS.length] : FIG_MORE[(L - 31) % FIG_MORE.length]);
+export const figTarget = L => L <= 5 ? 38 + (L - 1) * 10
+  : L <= 30 ? Math.round((100 + (L - 6) * 14) * (L % 10 === 0 ? 1.2 : 1))
+  : Math.min(780, Math.round((520 + (L - 30) * 4.6) * (L % 10 === 0 ? 1.12 : 1)));
 // Lado de cada panel para llegar a esas flechas (~0,32 flechas por casilla)
 const panelSize = (vox, arrows) => clamp(Math.round(Math.sqrt(arrows / (buildSurface(vox).panels.length * 0.32))), 3, 14);
 const voxOf = (shape, key, size) => SHAPES[shape].v || randomShape(rng(hash('fig-' + key)), size);
 export function cubeSpec(L) {
-  const R = rng(hash('cubo-mods-' + L)), boss = L % 10 === 0, mods = [], shape = FIG_PLAN[L - 1], vox = voxOf(shape, L, 6 + Math.floor(L / 8)), n0 = figTarget(L), N = panelSize(vox, n0);
+  const R = rng(hash('cubo-mods-' + L)), boss = L % 10 === 0, mods = [], shape = FIG_PLAN[L - 1], vox = voxOf(shape, L, Math.min(12, 6 + Math.floor(L / 8))), n0 = figTarget(L), N = panelSize(vox, n0);
   if (L >= CUBE_FROM.stones && (R() < 0.5 || boss)) mods.push('stones');
   const fresh = Object.entries(CUBE_FROM).find(([k, f]) => f === L && k !== 'stones')?.[0], extra = fresh ? [fresh] : [];
   for (const k of Object.keys(CUBE_FROM).filter(k => k !== 'stones' && CUBE_FROM[k] < L).sort(() => R() - 0.5)) if (extra.length < (boss ? 3 : 2) && R() < (boss ? 0.7 : 0.3)) extra.push(k);

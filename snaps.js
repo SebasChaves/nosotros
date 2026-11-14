@@ -4,7 +4,7 @@
 import { writeBatch, updateDoc, deleteField } from 'https://www.gstatic.com/firebasejs/11.0.2/firebase-firestore.js';
 import { $, S, db, esc, icon, on, expose, toast, openSheet, closeSheet, write, ref, newRef, loadPhotos, cachePhoto, getPhoto,
          compressImage, photoError, makeThumb, thumbId, dayKey, nameOf, partnerUid, partnerName, plural, uid, ask, avatar,
-         syncBack, openCamera, nativePick, ANDROID, IOS, celebrate, markActive, countStat } from './core.js';
+         syncBack, takePhoto, nativePick, ANDROID, IOS, celebrate, markActive, countStat, camSrc, setCamSrc } from './core.js';
 import { notify, meForPartner } from './push.js';
 
 const LIFE = 24 * 3600e3;
@@ -22,11 +22,13 @@ let replyTo = null, pending = null;
 // En el teléfono abre directo la cámara de Futari; en la computadora, el selector de archivos.
 function newSnap(reply) {
   replyTo = typeof reply === 'string' ? reply : null;
-  if ((ANDROID || IOS) && navigator.mediaDevices?.getUserMedia) openCamera('image/*', gotFile);
+  if (ANDROID || IOS) takePhoto('image/*', gotFile); // la cámara que se usó la última vez en este teléfono
   else nativePick('image/*', null, gotFile);
 }
 function retakeSnap() { newSnap(replyTo); }
 function snapFromGallery() { nativePick('image/*', null, gotFile); }
+// Cambiar de cámara desde la hoja de la instantánea (queda recordado para las siguientes)
+function snapOtherCam() { setCamSrc(camSrc() === 'phone' ? 'futari' : 'phone'); newSnap(replyTo); }
 async function gotFile(f) {
   try { pending = await compressImage(f, 1080); } catch (e) { return photoError(e); }
   const r = replyTo && S.data.snaps.find(s => s.id === replyTo);
@@ -34,7 +36,7 @@ async function gotFile(f) {
     <div class="snap-frame"><img src="${pending}" alt=""><div class="snap-text" id="snapPreview" hidden></div></div>
     <input id="snapText" maxlength="80" placeholder="Escribe algo encima (opcional)" aria-label="Texto sobre la foto" oninput="snapTextInput()">
     <div class="grid2"><button class="btn ghost" onclick="retakeSnap()">Otra foto</button><button class="btn" id="snapBtn" onclick="sendSnap()">Mandar 📸</button></div>
-    <button class="link" style="align-self:center" onclick="snapFromGallery()">🖼️ Mejor elegir de la galería</button>
+    <div class="row" style="justify-content:center;gap:18px"><button class="link" onclick="snapFromGallery()">🖼️ De la galería</button>${ANDROID || IOS ? `<button class="link" onclick="snapOtherCam()">${camSrc() === 'phone' ? '📷 Con la cámara de Futari' : '📱 Con la cámara del teléfono'}</button>` : ''}</div>
     <p class="tiny muted center" style="margin:0">Se borra sola en 24 horas, salvo que la guarden en Momentos.</p></div>`);
 }
 function snapTextInput() { const t = $('snapText').value.trim(), p = $('snapPreview'); p.hidden = !t; p.textContent = t; }
@@ -202,4 +204,4 @@ export function snapShortcut() {
   setTimeout(go, 300);
 }
 
-expose({ newSnap, retakeSnap, snapFromGallery, snapTextInput, sendSnap, openSnaps, closeSnaps, moveSnap, reactSnap, replySnap, saveSnapMoment, delSnap });
+expose({ newSnap, retakeSnap, snapFromGallery, snapOtherCam, snapTextInput, sendSnap, openSnaps, closeSnaps, moveSnap, reactSnap, replySnap, saveSnapMoment, delSnap });

@@ -174,7 +174,7 @@ document.addEventListener('touchend', e => {
 
 /* ================= Teléfonos: elegir entre cámara y galería =================
    El selector nuevo de Android no ofrece la cámara, así que se pregunta antes de abrirlo.
-   "Tomar foto" abre la cámara propia de Futari (abajo); si no se puede, la del teléfono. */
+   Se elige entre la cámara propia de Futari (abajo), la del teléfono (más opciones) o la galería. */
 export const ANDROID = /Android/i.test(navigator.userAgent);
 export const IOS = /iPhone|iPad|iPod/i.test(navigator.userAgent) || (navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1);
 // Pasa el archivo elegido al <input> original como si el usuario lo hubiera escogido ahí.
@@ -190,11 +190,22 @@ export function nativePick(accept, capture, onFile) {
   tmp.onchange = () => { const f = tmp.files[0]; tmp.remove(); if (f) onFile(f); };
   document.body.appendChild(tmp); tmp.click();
 }
+// Qué cámara usar: la de Futari (rápida, sin espejo) o la del teléfono (zoom, flash, modos). Se recuerda por teléfono
+// (localStorage "futari-cam-src") para las instantáneas, que abren la cámara directo.
+export const camSrc = () => { try { return localStorage.getItem('futari-cam-src') === 'phone' ? 'phone' : 'futari'; } catch { return 'futari'; } };
+export const setCamSrc = v => { try { localStorage.setItem('futari-cam-src', v); } catch {} };
+// Tomar una foto con la cámara elegida (o la del teléfono si este navegador no deja usar la de Futari)
+export function takePhoto(accept, onFile) {
+  if (camSrc() === 'phone' || !navigator.mediaDevices?.getUserMedia) nativePick(accept, camPref().facing || 'environment', onFile);
+  else openCamera(accept, onFile);
+}
 function chooseImageSource(input) {
-  const el = document.createElement('div');
+  const el = document.createElement('div'), last = camSrc();
   el.className = 'dialog';
   el.innerHTML = `<div class="box stack" role="dialog" aria-modal="true" aria-label="Agregar foto" style="gap:10px">
-    <button class="btn" data-src="camera">📷 Tomar foto</button><button class="btn ghost" data-src="gallery">🖼️ Elegir de la galería</button>
+    <button class="btn ${last === 'futari' ? '' : 'ghost'} src-btn" data-src="camera">📷 Cámara de Futari<small>Rápida y sin espejo</small></button>
+    <button class="btn ${last === 'phone' ? '' : 'ghost'} src-btn" data-src="phone">📱 Cámara del teléfono<small>Con zoom, flash y sus modos</small></button>
+    <button class="btn ghost" data-src="gallery">🖼️ Elegir de la galería</button>
     <button class="btn ghost" data-v="0">Cancelar</button></div>`;
   const close = () => { el.classList.add('out'); setTimeout(() => { el.remove(); syncBack(); }, 160); };
   el.querySelector('[data-v="0"]').onclick = close;
@@ -202,8 +213,8 @@ function chooseImageSource(input) {
   el.querySelectorAll('[data-src]').forEach(b => b.onclick = () => {
     close();
     if (b.dataset.src === 'gallery') return nativePick(input.accept, null, f => deliverFile(input, f));
-    if (navigator.mediaDevices?.getUserMedia) openCamera(input.accept, f => deliverFile(input, f));
-    else nativePick(input.accept, 'environment', f => deliverFile(input, f));
+    setCamSrc(b.dataset.src === 'phone' ? 'phone' : 'futari');
+    takePhoto(input.accept, f => deliverFile(input, f));
   });
   document.body.appendChild(el); syncBack();
 }
@@ -229,6 +240,7 @@ export function openCamera(accept, onFile) {
   el.innerHTML = `<div class="cam-view"><video playsinline autoplay muted></video><canvas hidden></canvas>
       <div class="cam-msg" hidden><p></p><button class="btn" data-a="native">📷 Usar la cámara del teléfono</button></div></div>
     <button class="cam-x" data-v="0" aria-label="Cerrar cámara">${icon('x')}</button>
+    <button class="cam-phone" data-a="phone" aria-label="Usar la cámara del teléfono">📱 Cámara del teléfono</button>
     <div class="cam-bar">
       <button class="cam-btn" data-a="mirror" aria-label="Espejo" aria-pressed="false"><span>⇋</span><small>Espejo</small></button>
       <button class="cam-shoot" data-a="shoot" aria-label="Tomar foto"></button>
@@ -307,6 +319,7 @@ export function openCamera(accept, onFile) {
     else if (a === 'flip') { facing = facing === 'user' ? 'environment' : 'user'; mirror = !!camPref()['mirror_' + facing]; saveCamPref({ facing }); paintMirror(); start(); }
     else if (a === 'mirror') { mirror = !mirror; saveCamPref({ ['mirror_' + facing]: mirror }); paintMirror(); if (review) flipShot(); }
     else if (a === 'native') { close(); nativePick(accept, facing, onFile); }
+    else if (a === 'phone') { close(); setCamSrc('phone'); nativePick(accept, facing, onFile); }
     else if (a === 'use') {
       b.disabled = true;
       canvas.toBlob(blob => { close(); if (blob) onFile(new File([blob], `foto-${Date.now()}.jpg`, { type: 'image/jpeg' })); }, 'image/jpeg', 0.92);

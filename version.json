@@ -1,7 +1,14 @@
 {
-  "version": "53",
-  "notes": [],
+  "version": "54",
+  "notes": [
+    "📷 Al tomar una foto ahora eliges: la cámara de Futari (rápida y sin espejo) o la cámara del teléfono, con zoom, flash y sus modos. Dentro de la cámara de Futari también hay un botón para pasar a la del teléfono",
+    "📸 Las instantáneas recuerdan la última cámara que usaste en tu teléfono, y en la hoja de envío puedes cambiarla"
+  ],
   "history": [
+    { "version": "54", "notes": [
+      "📷 Al tomar una foto ahora eliges: la cámara de Futari (rápida y sin espejo) o la cámara del teléfono, con zoom, flash y sus modos. Dentro de la cámara de Futari también hay un botón para pasar a la del teléfono",
+      "📸 Las instantáneas recuerdan la última cámara que usaste en tu teléfono, y en la hoja de envío puedes cambiarla"
+    ] },
     { "version": "53", "notes": [] },
     { "version": "52", "notes": [] },
     { "version": "51", "notes": [] },
