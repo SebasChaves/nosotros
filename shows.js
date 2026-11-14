@@ -6,14 +6,14 @@ import { TMDB_KEY } from './tmdb-config.js';
 import { backBar } from './lists.js';
 import { createList } from './decide.js';
 
-const HAS_TMDB = !!TMDB_KEY;
-const IMG = (path, w = 342) => path ? `https://image.tmdb.org/t/p/w${w}${path}` : '';
+export const HAS_TMDB = !!TMDB_KEY;
+export const IMG = (path, w = 342) => path ? `https://image.tmdb.org/t/p/w${w}${path}` : '';
 const STATUS = [['want', 'Por ver'], ['watching', 'Viendo'], ['seen', 'Vistas']];
 const REGION = { CRC: 'CR', MXN: 'MX', COP: 'CO', GTQ: 'GT', PEN: 'PE', ARS: 'AR', CLP: 'CL', EUR: 'ES', USD: 'US' };
-const region = () => REGION[S.settings.currency] || 'CR';
+export const region = () => REGION[S.settings.currency] || 'CR';
 let tab = 'want', kind = 'all', openId = null, searchTimer = null;
 
-async function tmdb(path, params = {}) {
+export async function tmdb(path, params = {}) {
   const long = TMDB_KEY.length > 40; // token de lectura (v4) o clave corta (v3)
   const q = new URLSearchParams({ language: 'es-MX', ...params, ...(long ? {} : { api_key: TMDB_KEY }) });
   const res = await fetch(`https://api.themoviedb.org/3/${path}?${q}`, long ? { headers: { Authorization: `Bearer ${TMDB_KEY}` } } : {});
@@ -31,7 +31,7 @@ function render() {
     <div class="seg">${STATUS.map(([k, l]) => `<button class="${tab === k ? 'on' : ''}" onclick="showsTab('${k}')">${l} · ${count(k)}</button>`).join('')}</div>
     <div class="row"><div class="chips">${[['all', 'Todo'], ['movie', 'Películas'], ['tv', 'Series']].map(([k, l]) => `<button class="chip ${kind === k ? 'on' : ''}" onclick="showsKind('${k}')">${l}</button>`).join('')}</div></div>
     ${tab === 'want' && count('want') >= 2 ? `<button class="btn ghost" onclick="showsToDecide()">${icon('dice')} ¿Qué vemos hoy?</button>` : ''}
-    ${HAS_TMDB ? `<button class="btn ghost" onclick="openSuggestions()">✨ Sugerencias para ustedes</button>` : ''}
+    ${HAS_TMDB ? `<button class="btn" onclick="openFinder()">🔎 ¿Qué vemos? Buscar por estilo y plataforma</button>` : ''}
     ${list.length ? `<div class="posters">${list.map(s => `<button class="poster" onclick="openShow('${s.id}')">
       <span class="img">${s.poster ? `<img src="${IMG(s.poster, 342)}" alt="" loading="lazy">` : (s.type === 'tv' ? '📺' : '🎬')}
         ${s.status === 'watching' && s.type === 'tv' && s.progress ? `<span class="tag">T${s.progress.s} · E${s.progress.e}</span>` : ''}</span>
@@ -84,6 +84,12 @@ function searchShows(q) {
 async function pickShow(i, keep = false) {
   const r = lastResults[i]; if (!r) return;
   if (keep) { const b = document.querySelector(`[data-sug="${i}"]`); if (b) { b.disabled = true; b.textContent = '✓'; } }
+  await addFromTmdb(r);
+  if (!keep) { tab = 'want'; closeSheet(); }
+  toast('Agregada a Por ver');
+}
+// Agrega un resultado de TMDB a «Por ver» con sus plataformas (en la región de ustedes) y temporadas
+export async function addFromTmdb(r) {
   const type = r.media_type;
   let providers = [], seasons = null;
   try {
@@ -100,8 +106,6 @@ async function pickShow(i, keep = false) {
     poster: r.poster_path || null, overview: (r.overview || '').slice(0, 600), providers, seasons,
     status: 'want', ratings: {}, by: uid(), createdAt: Date.now(),
   }));
-  if (!keep) { tab = 'want'; closeSheet(); }
-  toast('Agregada a Por ver');
 }
 
 /* ---------- Sugerencias ---------- */

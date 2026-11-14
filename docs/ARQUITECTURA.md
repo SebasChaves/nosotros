@@ -42,6 +42,7 @@ manifest.json   PWA (nombre, íconos, colores)
 | `trips.js`, `booking.js` | Viajes (itinerario, maleta, presupuesto) y búsqueda de hospedaje/vuelos con enlaces a Airbnb, Booking, etc. |
 | `calendar.js` | Calendario compartido, planes que se repiten, exportar a calendario del teléfono (.ics / Google) |
 | `shows.js` | Pelis y series con TMDB (póster, dónde verla, sugerencias) |
+| `shows-finder.js` | «¿Qué vemos?»: buscador por tipo, estilos (géneros), plataformas de su país y extras, usando sus calificaciones (4-5 ★ suben, 1-2 ★ bajan); 20 por tanda con «Cargar más». Prefs por persona en `prefs.watch` |
 | `music.js` | Playlist: búsqueda en iTunes (portada + adelanto), nuestra canción, dedicatorias, botones a Spotify/YT Music/Apple |
 | `reminders.js` | Recordatorios (normales en Hoy desde su fecha; urgentes arriba en Inicio) y alarma vía .ics |
 | `recipes.js` (+ `recipes-data.js`) | Recetario (46 incluidas + propias), favoritas, menú semanal → súper |
