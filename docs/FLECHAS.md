@@ -4,25 +4,31 @@ Juego de sacar flechas del tablero (`arrows.js`, pantalla `s-arrows`). Lo pidió
 mientras no lo regale, solo él lo ve. **No lo menciones en las novedades (`version.json`) ni en la guía** hasta que el
 dueño diga que ya lo regaló.
 
-## ⚠️ Siguiente tarea: error al tocar en las figuras 3D (Figuras y Mixto, beta)
+## Error de las figuras que «atravesaban» flechas (resuelto en v52)
 
-**Síntoma (lo vio el dueño en el iPhone):** en una figura de cubitos pegados, una flecha que tiene otra enfrente en el
-cubito vecino «pasa igual». **Causa encontrada:** la regla está bien (el camino cruza las caras planas y el choque se
-detecta: comprobado con 7.926 flechas contra un cálculo 3D independiente, y tocando la punta exacta siempre rebota). Lo que
-falla es **qué flecha se elige al tocar**: cerca de la flecha a veces se toma la vecina (que sí estaba libre) y sale esa.
-Prueba automática: tocando a ±7 px de 355 flechas de figuras, en 12 salió otra flecha.
+**Síntoma (lo vio el dueño en el iPhone):** en una figura de cubitos pegados, una flecha con otra enfrente en el cubito
+vecino salía igual. **Causa real:** `newGame()` creaba el arreglo de ocupación `G.occ` con tamaño `6 × N²` (pensado para el
+cubo). Las figuras tienen más paneles (caja 10, dona 32…), así que las casillas de los paneles 7 en adelante nunca se
+marcaban y el juego las veía vacías: en la versión publicada, 298 de 818 flechas de prueba no veían un choque real. Ahora
+`G.occ` mide `board.base.length` (paneles × N²). Comprobado: 0 de 802.
 
-- Código: `cubeTap()` usa `document.elementsFromPoint()` sobre las SVG de los paneles 3D y prefiere el trazo real (`.ab`,
-  `.ah`) sobre el área ampliada (`.ht`, `stroke-width = C·0,7`). En v50 se cambió de «el panel más cercano» a esto; mejoró
-  pero no lo quitó.
-- **Idea para arreglarlo:** no depender del SVG debajo del dedo. Calcular la casilla tocada con geometría: rayo desde la
-  cámara (rotación `cam.rx/ry`, escala `cam.k`, `perspective` de `.ar-vp3`) contra los planos de los paneles
-  (`G.board.shape.panels`: `o, u, vv, n`), quedarse con el panel más cercano que contenga el punto, sacar `[x, y, panel]` y
-  ver `G.occ`. Si cae en una casilla vacía, buscar la flecha más cercana dentro de ese mismo panel (como `arrowAt` en el
-  plano). Así el toque nunca elige una flecha de otro lugar.
-- Para probar: en el emulador `window.__arrowsG()` devuelve el estado del juego (solo con `?emu`). El script de prueba
-  tocaba alrededor de la punta de cada flecha con caminos que cruzan de panel y contaba si salía otra flecha
-  (`G.gone` antes/después). Cuando quede en 0, se le puede quitar el «BETA» a Figuras y Mixto si el dueño quiere.
+**También se cambió el toque** (`cubeTap` → `cubePick`): ya no depende de qué dibujo SVG queda bajo el dedo. Proyecta las
+casillas de los paneles que miran a la cámara con la misma rotación, zoom y perspectiva que el CSS (`cubeProjector`,
+`PERSPECTIVE = 1600` igual que `.ar-vp3`), elige la casilla del panel más cercano y, si está vacía, la flecha más cercana
+de ese panel. Los paneles casi de canto (orientación < 0,2) no aceptan toques. Prueba: 2.036 de 2.036 toques dentro de
+flechas eligieron la correcta.
+
+**La pista también cambió** (`G.focusFace(panel, id)`): prueba ángulos (empezando por ver la cara de frente) hasta uno
+donde `cubePick` en la punta devuelve esa flecha, porque en la dona o los rincones la cara de frente puede quedar tapada
+por otra parte de la figura. Antes, con el error de ocupación, una flecha tapada se dejaba sacar igual y no se notaba.
+Resueltas completas en el emulador, tocando el centro de la punta tras cada pista: L, escalera, cruz, cajón, dona y figura
+rara, todas con 0 errores.
+
+**Para probar en el emulador:** `window.__arrowsG()` devuelve el estado del juego (solo con `?emu`) y `cubePick` /
+`cubeProjector` están exportados. Pruebas usadas: comparar `a.ray` contra `G.occ` (que el juego vea todos los choques) y
+tocar puntos dentro de cada casilla de una flecha (que se elija esa flecha).
+
+**Pendiente:** que el dueño lo confirme en el iPhone. Si va bien, se le puede quitar el «BETA» a Figuras y Mixto.
 
 ## Sorpresa / regalo
 

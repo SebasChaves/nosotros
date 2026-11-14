@@ -17,14 +17,14 @@ Lee estos documentos antes de cambiar algo:
 | [docs/PRUEBAS.md](docs/PRUEBAS.md) | Emulador local con dos cuentas de prueba; qué solo se puede probar en el teléfono |
 | [docs/PUBLICAR.md](docs/PUBLICAR.md) | Versiones, aviso de actualización, novedades y cómo publicar |
 | [docs/NOTIFICACIONES.md](docs/NOTIFICACIONES.md) | Avisos al teléfono: Worker de Cloudflare, cómo agregar un aviso, configuración |
-| [docs/FLECHAS.md](docs/FLECHAS.md) | Juego Flechas (sorpresa del dueño): modos, regalo, generador y **el error pendiente al tocar en 3D** |
+| [docs/FLECHAS.md](docs/FLECHAS.md) | Juego Flechas (sorpresa del dueño): modos, regalo, generador, figuras 3D |
 | [docs/PENDIENTES.md](docs/PENDIENTES.md) | Cosas pospuestas, ideas, servicios externos y trampas conocidas (iPhone/Android) |
 
-## Tarea abierta
+## Flechas
 
-**Flechas, Figuras/Mixto (beta): al tocar en las figuras 3D a veces sale la flecha vecina.** Detalle, causa e idea de
-arreglo en [docs/FLECHAS.md](docs/FLECHAS.md#️-siguiente-tarea-error-al-tocar-en-las-figuras-3d-figuras-y-mixto-beta). Retomarlo cuando el dueño lo pida.
-Flechas es una **sorpresa**: no la menciones en novedades ni en la guía hasta que el dueño la regale.
+Flechas es una **sorpresa**: no la menciones en novedades ni en la guía hasta que el dueño la regale. El error de las
+figuras 3D (flechas que atravesaban a otras de otro cubito) se arregló en v52; ver [docs/FLECHAS.md](docs/FLECHAS.md).
+Falta que el dueño lo confirme en el teléfono antes de quitar el «BETA».
 
 ## Reglas que no se rompen
 

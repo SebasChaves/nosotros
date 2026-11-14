@@ -7,8 +7,9 @@
 
 ## En curso
 
-- **Flechas: error al tocar en las figuras 3D** (Figuras y Mixto, beta). Causa, idea de arreglo y cómo probarlo en
-  docs/FLECHAS.md. El modo Plano funciona bien.
+- **Flechas, figuras 3D:** arreglado en v52 (las flechas atravesaban a otras de otro cubito porque la ocupación solo
+  cubría 6 paneles; y el toque ahora se calcula con geometría). Falta que el dueño lo confirme en el iPhone y decida si
+  quitar el «BETA» de Figuras y Mixto. Detalle en docs/FLECHAS.md.
 
 ## Pendiente de confirmar
 
@@ -39,7 +40,6 @@
   Samsung, que la partida siga guardada al cerrar la app, y la animación del regalo.
   v44: obstáculos (mantener presionado para girar en iPhone y Samsung, que no salga el menú del sistema), niebla,
   y un duelo en vivo real entre los dos teléfonos (la cuenta regresiva y la barrita del otro).
-  **Pendiente (Figuras/Mixto, beta): tocar elige a veces la flecha vecina** → ver docs/FLECHAS.md (primera sección).
   v47 🧊 Cubo: confirmado en iPhone que se ve bien. v48 Figuras: probar en los teléfonos las figuras con rincones (L,
   escalera, dona) y que tocar elija la flecha de adelante; fluidez en la figura 30 (~580 flechas) y en el Samsung. Cuando se regale, se puede anotar aquí y en novedades si quieren.
 

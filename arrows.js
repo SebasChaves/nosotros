@@ -606,7 +606,9 @@ function playArrows(what) {
 const cix = (N, c) => (c[2] || 0) * N * N + c[1] * N + c[0];
 const ix = c => cix(G.N, c);
 function newGame(spec, what) {
-  const board = boardOf(spec), N = board.N, occ = new Int32Array((board.cube ? 6 : 1) * N * N).fill(-1);
+  // Una casilla por cada casilla del tablero (en las figuras: paneles × N²; antes se asumían 6 caras y en figuras de
+  // más paneles las casillas sobrantes quedaban «vacías»: las flechas atravesaban a las de otros cubitos)
+  const board = boardOf(spec), N = board.N, occ = new Int32Array(board.base.length).fill(-1);
   for (const a of board.list) for (const c of a.cells) occ[cix(N, c)] = a.id;
   const xp = spec.test === 'xp' || ((spec.hard || spec.day) && (!spec.test || /^(lv|cv)/.test(spec.test)) && expertOn());
   const g = { spec, what, board, N, occ, gone: new Set(), lives: 3, errors: 0, hints: 0, paid: 0, elapsed: 0, t0: Date.now(), over: false,
@@ -808,10 +810,24 @@ function setupCube() {
     });
   };
   G.fit = () => { cam.k = fitK(); apply(); };
-  G.focusFace = p => {
-    const n = S.panels[p].n;
-    if (n[1] > 0.5) cam.rx = -80; else if (n[1] < -0.5) cam.rx = 80; else { cam.rx = -12; cam.ry = -Math.atan2(n[0], n[2]) * 180 / Math.PI - 12; }
-    cam.k = Math.max(cam.k, fitK() * 1.2); cube.style.transition = 'transform .45s ease'; apply(); setTimeout(() => { cube.style.transition = ''; }, 480);
+  // Girar hacia la cara de una flecha. Si se pasa la flecha, se prueban varios ángulos hasta uno donde de verdad se vea
+  // (en la dona o en los rincones, mirando la cara de frente la puede tapar otra parte de la figura).
+  G.focusFace = (p, id) => {
+    const n = S.panels[p].n, from = { rx: cam.rx, ry: cam.ry, k: cam.k }, k = Math.max(cam.k, fitK() * 1.2);
+    const baseRy = Math.abs(n[1]) > 0.5 ? cam.ry : -Math.atan2(n[0], n[2]) * 180 / Math.PI - 12;
+    const baseRx = n[1] > 0.5 ? -80 : n[1] < -0.5 ? 80 : -12, cands = [];
+    for (let rx = -85; rx <= 85; rx += 10) for (let dy = -180; dy < 180; dy += 15) cands.push([rx, baseRy + dy]);
+    cands.sort((a, b) => Math.abs(a[0] - baseRx) + Math.abs(a[1] - baseRy) - Math.abs(b[0] - baseRx) - Math.abs(b[1] - baseRy)); // primero los más parecidos a ver la cara de frente
+    let pickV = cands[0];
+    if (id != null) {
+      const a = G.board.list[id], [hx, hy, hp] = headCell(a), P = S.panels[hp], N = G.N;
+      const head3 = [0, 1, 2].map(i => P.o[i] + P.u[i] * (hx + 0.5) / N + P.vv[i] * (hy + 0.5) / N);
+      cam.k = k;
+      for (const [rx, ry] of cands) { cam.rx = rx; cam.ry = ry; apply(); const [sx, sy] = cubeProjector()(head3); if (cubePick(sx, sy) === id) { pickV = [rx, ry]; break; } }
+      Object.assign(cam, from); apply();
+    }
+    [cam.rx, cam.ry] = pickV; cam.k = k;
+    cube.style.transition = 'transform .45s ease'; apply(); setTimeout(() => { cube.style.transition = ''; }, 480);
   };
   apply();
   const pts = new Map(); let start = null, pinch = null, moved = false;
@@ -844,17 +860,61 @@ function setupCube() {
 }
 // Ver a través: los paneles se vuelven medio transparentes para ver lo que hay detrás
 function arrowsXray() { const c = $('arCube'); if (!c) return; c.classList.toggle('xray'); $('arXray')?.classList.toggle('on', c.classList.contains('xray')); }
-// Toque en la figura: primero la flecha que de verdad está bajo el dedo (su trazo o su punta, en el orden de profundidad
-// que da el navegador); solo si no hay ninguna, el área ampliada (para dedos gordos). Antes se elegía por la cara «más
-// cercana» y en las uniones entre cubitos podía salir la flecha vecina en vez de la tocada.
+// Toque en la figura, con geometría (no depende de qué dibujo SVG queda bajo el dedo):
+// cada casilla de los paneles que miran a la cámara se proyecta a la pantalla con el mismo giro, zoom y perspectiva que
+// usa el CSS (.ar-vp3 perspective, .ar-cube scale·rotateX·rotateY). Se elige la casilla bajo el dedo del panel más cercano
+// a la vista; si está vacía, la flecha más cercana de ese mismo panel (a menos de ~1 casilla). Así nunca se toma una
+// flecha de otro lugar (antes, cerca de las uniones entre cubitos, a veces salía la vecina).
+const PERSPECTIVE = 1600; // igual que .ar-vp3 en styles.css
+export function cubeProjector() {
+  const { k, rx, ry } = G.cam, W = G.N * C, box = shapeBox(), r = $('arVp').getBoundingClientRect();
+  const cx = r.left + r.width / 2, cy = r.top + r.height / 2, sx = Math.sin(rx * Math.PI / 180), cxr = Math.cos(rx * Math.PI / 180), sy = Math.sin(ry * Math.PI / 180), cyr = Math.cos(ry * Math.PI / 180);
+  // Punto de la figura (en cubitos, y hacia arriba) → [x, y en pantalla, profundidad (mayor = más cerca)]
+  return p3 => {
+    const X = (p3[0] - box.c[0]) * W, Y = -(p3[1] - box.c[1]) * W, Z = (p3[2] - box.c[2]) * W;
+    const x1 = X * cyr + Z * sy, z1 = -X * sy + Z * cyr, y2 = Y * cxr - z1 * sx, z2 = Y * sx + z1 * cxr;
+    const qx = x1 * k, qy = y2 * k, qz = z2 * k, f = PERSPECTIVE / (PERSPECTIVE - qz);
+    return [cx + qx * f, cy + qy * f, qz];
+  };
+}
+// ¿El punto está dentro del cuadrilátero (convexo) a, b, c, d?
+const inQuad = (x, y, q) => { let sign = 0; for (let i = 0; i < 4; i++) { const [ax, ay] = q[i], [bx, by] = q[(i + 1) % 4], cr = (bx - ax) * (y - ay) - (by - ay) * (x - ax); if (cr !== 0) { if (sign && Math.sign(cr) !== sign) return false; sign = Math.sign(cr); } } return true; };
+export function cubePick(x, y) {
+  const S = G.board.shape, N = G.N, M = N * N, proj = cubeProjector();
+  let best = null;
+  // Las caras casi de canto (se ven como una rayita) no se tocan: ahí cualquier toque sería al azar
+  const { rx, ry } = G.cam, srx = Math.sin(rx * Math.PI / 180), crx = Math.cos(rx * Math.PI / 180), sry = Math.sin(ry * Math.PI / 180), cry = Math.cos(ry * Math.PI / 180);
+  const facing = n => -n[1] * srx + (-n[0] * sry + n[2] * cry) * crx;
+  S.panels.forEach((P, p) => {
+    if ($('arF' + p)?.classList.contains('back') || facing(P.n) < 0.2) return;
+    const at = (i, j) => proj([P.o[0] + P.u[0] * i / N + P.vv[0] * j / N, P.o[1] + P.u[1] * i / N + P.vv[1] * j / N, P.o[2] + P.u[2] * i / N + P.vv[2] * j / N]);
+    const quad = [at(0, 0), at(N, 0), at(N, N), at(0, N)];
+    if (!inQuad(x, y, quad)) return;
+    for (let j = 0; j < N; j++) for (let i = 0; i < N; i++) {
+      const q = [at(i, j), at(i + 1, j), at(i + 1, j + 1), at(i, j + 1)];
+      if (!inQuad(x, y, q)) continue;
+      const z = (q[0][2] + q[1][2] + q[2][2] + q[3][2]) / 4;
+      if (!best || z > best.z) best = { p, i, j, z, at };
+    }
+  });
+  if (!best) return -1;
+  const { p, i, j, at } = best, here = G.occ[p * M + j * N + i];
+  if (here >= 0) return here;
+  // Casilla vacía: la flecha más cercana del mismo panel (en pantalla), si está a menos de ~1 casilla
+  const cell = at(1, 0), o = at(0, 0), cellPx = Math.hypot(cell[0] - o[0], cell[1] - o[1]);
+  let pick = -1, bd = Infinity;
+  for (let jj = j - 1; jj <= j + 1; jj++) for (let ii = i - 1; ii <= i + 1; ii++) {
+    if (ii < 0 || jj < 0 || ii >= N || jj >= N) continue;
+    const id = G.occ[p * M + jj * N + ii]; if (id < 0) continue;
+    const c = at(ii + 0.5, jj + 0.5), d = Math.hypot(c[0] - x, c[1] - y);
+    if (d < bd) { bd = d; pick = id; }
+  }
+  return bd < cellPx * 1.1 ? pick : -1;
+}
 function cubeTap(x, y) {
   if (!G || G.over) return;
-  const hits = (px, py) => document.elementsFromPoint(px, py).filter(el => el.closest?.('.ar-face:not(.back) [data-a]'));
-  const real = el => el.classList?.contains('ab') || el.classList?.contains('ah') || !!el.closest?.('.bd');
-  const pick = (px, py) => { const h = hits(px, py); return (h.find(real) || h[0])?.closest('[data-a]'); };
-  let el = (hits(x, y).find(real))?.closest('[data-a]') || pick(x, y);
-  for (const [ox, oy] of [[6, 0], [-6, 0], [0, 6], [0, -6], [10, 10], [-10, -10], [10, -10], [-10, 10]]) { if (el) break; el = pick(x + ox, y + oy); }
-  if (el) tapArrow(Number(el.dataset.a));
+  const id = cubePick(x, y);
+  if (id >= 0) tapArrow(id);
 }
 function cubeMove(a, g, dist, back) {
   const [dx, dy] = DIRS[curD(a)], all = pieces(a.id), others = all.filter(e => e !== g);
@@ -1077,7 +1137,7 @@ function arrowHint() {
   const a = free[Math.floor(Math.random() * free.length)];
   view.querySelectorAll('.hint').forEach(e => e.classList.remove('hint'));
   pieces(a.id).forEach(e => e.classList.add('hint')); G.hints++; save(); if (msg) toast(msg);
-  if (G.board.cube) G.focusFace(headCell(a)[2]);
+  if (G.board.cube) G.focusFace(headCell(a)[2], a.id);
   else { const [hx, hy] = ctr(headCell(a)); if (G.N > 10) G.focus(hx, hy); }
 }
 // Explicación de los obstáculos nuevos (una vez por teléfono) y leyenda con «?»
