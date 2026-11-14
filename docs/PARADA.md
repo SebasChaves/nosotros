@@ -7,7 +7,7 @@ dibujos propios. **Es sorpresa:** mientras el dueño no lo regale (Administraci�
 
 ## Reglas
 
-- Estacionamiento en 3D (CSS `preserve-3d`, plano inclinado `rotateX` · `rotateZ(-10deg)`) con autos (2 casillas, 4
+- Estacionamiento en 3D (CSS `preserve-3d`, plano recto inclinado con `rotateX`) con autos (2 casillas, 4
   asientos), busetas (3, 6), buses (4, 10) y **autos en diagonal** (ocupan 2×2 casillas, 4 asientos). Al tocarlo sale si
   el barrido de su huella hacia adelante está libre; si choca, avanza hasta el que estorba (que parpadea) y regresa.
 - Al salir sigue derecho hasta la calle que rodea el estacionamiento, la recorre y entra de frente a un **lugar de la
@@ -25,7 +25,7 @@ dibujos propios. **Es sorpresa:** mientras el dueño no lo regale (Administraci�
 
 - `layout()` da las medidas del plano: fila arriba, 7 lugares, calle de arriba, estacionamiento (`C = 34` px por
   casilla) y la calle alrededor. `fit()` mide marcas invisibles (`.mk`) en las esquinas ya proyectadas en 3D y ajusta
-  escala y centro para que **todo el tablero quepa** en la pantalla; en tableros altos baja la inclinación (47° → 39°)
+  escala y centro para que **todo el tablero quepa** en la pantalla; la cámara va recta (sin girar) e inclinada ~30°; en tableros altos baja a 26° o 22°
   si así los vehículos salen más grandes. Se recalcula al girar o cambiar el tamaño.
 - Vehículos: `<button class="v3">` con capas apiladas (`translateZ`) de esquinas redondas: carrocería, cintura, vidrio y
   techo; ruedas `.whl` (no `.wheel`: esa clase ya existe en la ruleta). El número va contra-girado para leerse siempre.

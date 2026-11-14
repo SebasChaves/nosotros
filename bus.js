@@ -226,7 +226,7 @@ function duelResultTxt(d) {
 }
 
 /* ---------- Jugar (3D) ----------
-   Todo se dibuja en un «plano» de CSS 3D inclinado (rotateX 47° · rotateZ −10°). Arriba la fila de pasajeros (figuritas
+   Todo se dibuja en un «plano» de CSS 3D inclinado y recto (rotateX ~30°, sin girar: el estacionamiento se ve de frente). Arriba la fila de pasajeros (figuritas
    paradas), luego los 7 lugares de la parada, la calle y el estacionamiento. Los vehículos son capas apiladas con esquinas
    redondas (carrocería → vidrio → techo). La cámara se ajusta sola (fit) para que se vea todo el tablero en el teléfono.
    Las animaciones van con requestAnimationFrame: salen derecho, rodean por la calle y entran de frente a su lugar. */
@@ -299,13 +299,16 @@ function place(v) {
   el.style.transform = `translate(${(v.x - (v.L + 6) / 2).toFixed(1)}px,${(v.y - C / 2).toFixed(1)}px) rotateZ(${v.ang.toFixed(1)}deg)`;
   el.style.opacity = v.op;
   el.firstElementChild.style.transform = v.lean ? `translateX(${v.lean.toFixed(2)}px)` : '';
-  const n = el.querySelector('.num'); n.style.transform = `translateZ(2px) rotateZ(${(-v.ang - 10).toFixed(0)}deg)`;
+  const n = el.querySelector('.num'); n.style.transform = `translateZ(2px) rotateZ(${(-v.ang).toFixed(0)}deg)`;
   n.textContent = v.phase === 'lot' || v.phase === 'drive' ? v.cap : `${v.filled}/${v.cap}`;
 }
+// Candado dibujado (no emoji): candado blanco en una ficha dorada y una camarita para decir «con una foto»
+const LOCK_SVG = `<span class="lk"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M7.5 10.5V8a4.5 4.5 0 0 1 9 0v2.5" fill="none" stroke="#fff" stroke-width="2.6" stroke-linecap="round"/><rect x="5" y="10" width="14" height="10.5" rx="3" fill="#fff"/><circle cx="12" cy="14.6" r="1.7" fill="#E2A21A"/><path d="M12 15.5v2.2" stroke="#E2A21A" stroke-width="1.8" stroke-linecap="round"/></svg></span>
+  <span class="lk-cam"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 8.5A2 2 0 0 1 6 6.5h2l1.4-2h5.2l1.4 2h2a2 2 0 0 1 2 2v8.5a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2z" fill="#2F7DF0"/><circle cx="12" cy="12.6" r="3.4" fill="#fff"/><circle cx="12" cy="12.6" r="1.8" fill="#2F7DF0"/></svg></span>`;
 function bayHTML(i) {
   const x = G.lay.bx[i] - 20, open = G.open.has(i);
   return open ? `<div class="bay" data-b="${i}" style="left:${x}px;top:${BY0}px">P</div>`
-    : `<button class="bay locked" data-b="${i}" style="left:${x}px;top:${BY0}px" onclick="busBay(${i})" aria-label="Lugar con candado: ábrelo con una foto"><span>🔒</span><small>📷</small></button>`;
+    : `<button class="bay locked" data-b="${i}" style="left:${x}px;top:${BY0}px" onclick="busBay(${i})" aria-label="Lugar con candado: ábrelo con una foto">${LOCK_SVG}</button>`;
 }
 function paint() {
   const sp = G.spec, Y = G.lay, b = G.board;
@@ -339,7 +342,7 @@ function fitAt(tilt) {
   const sc = $('busScene'), pl = $('busPlane'), W = sc.clientWidth, H = sc.clientHeight, mks = [...pl.querySelectorAll('.mk')];
   let s = 0.8, tx = 0, ty = 0;
   for (let it = 0; it < 7; it++) {
-    pl.style.transform = `translate(${tx.toFixed(1)}px,${ty.toFixed(1)}px) scale3d(${s},${s},${s}) rotateX(${tilt}deg) rotateZ(-10deg)`;
+    pl.style.transform = `translate(${tx.toFixed(1)}px,${ty.toFixed(1)}px) scale3d(${s},${s},${s}) rotateX(${tilt}deg)`;
     const sr = sc.getBoundingClientRect(); let x0 = Infinity, y0 = Infinity, x1 = -Infinity, y1 = -Infinity;
     for (const m of mks) { const r = m.getBoundingClientRect(); x0 = Math.min(x0, r.left); x1 = Math.max(x1, r.right); y0 = Math.min(y0, r.top); y1 = Math.max(y1, r.bottom); }
     if (it % 2 === 0) s *= Math.min((W - 8) / (x1 - x0), (H - 8) / (y1 - y0));
@@ -352,8 +355,8 @@ function fit() {
   const W = sc.clientWidth, H = sc.clientHeight; if (!W || !H) return;
   const Y = G.lay, fx = (Y.X0 + Y.X1) / 2, fy = Y.Y1 / 2;
   pl.style.left = `${W / 2 - fx}px`; pl.style.top = `${H / 2 - fy}px`; pl.style.transformOrigin = `${fx}px ${fy}px`;
-  let best = 47, bs = fitAt(47);
-  for (const t of [43, 39]) { const s = fitAt(t); if (s > bs * 1.04) { bs = s; best = t; } else break; }
+  let best = 30, bs = fitAt(30);
+  for (const t of [26, 22]) { const s = fitAt(t); if (s > bs * 1.04) { bs = s; best = t; } else break; }
   G.cam = fitAt(best); G.tilt = best;
 }
 // Fila de pasajeros: figuritas en una U arriba de la parada; las de adelante caminan a su vehículo
@@ -544,7 +547,7 @@ function unlockButtons() {
 function busBay() {
   if (!G || G.over) return;
   if (G.spec.duel) return toast('En el duelo los lugares 🔒 no se abren');
-  overlay(`<div style="font-size:42px">🔒</div><h2>Lugar con candado</h2>
+  overlay(`<div class="lk-big">${LOCK_SVG}</div><h2>Lugar con candado</h2>
     <p class="small muted" style="margin:0">Se abre solo durante este nivel. Mándale una foto a ${esc(partnerName() || 'tu pareja')} (llega como instantánea) y es tuyo.</p>
     ${unlockButtons()}<button class="btn ghost" onclick="busCloseOverlay()">Ahora no</button>`);
 }
