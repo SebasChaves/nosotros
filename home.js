@@ -17,7 +17,7 @@ import { petCard } from './pet.js';
 import { guessCard, guessWaiting } from './guess.js';
 import { weekCard } from './week.js';
 import { cravingsCard, partnerCravings } from './cravings.js';
-import { giftCard } from './arrows.js';
+import { giftCard } from './gifts.js';
 import { notify, meForPartner } from './push.js';
 
 /* ---------- Racha y "Pensando en ti" ---------- */

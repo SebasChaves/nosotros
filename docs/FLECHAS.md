@@ -38,7 +38,7 @@ tocar puntos dentro de cada casilla de una flecha (que se elija esa flecha).
 
 **Pendiente:** que el dueño lo confirme en el iPhone. Si va bien, se le puede quitar el «BETA» a Figuras y Mixto.
 
-## Sorpresa / regalo
+## Sorpresa / regalo (ahora en gifts.js, común con La parada)
 
 - `couples/nosotros.features.arrows = { on, at, by, msg }`. `isOwner()` (TESTERS; en el emulador, el primero que entró a
   la pareja = Ana) lo ve siempre; la pareja solo si `on`.

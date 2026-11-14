@@ -7,6 +7,8 @@
 
 ## En curso
 
+- **La parada (v56):** juego sorpresa todavía sin regalar. Probar en el teléfono los tableros grandes y decidir cuándo
+  regalarlo (Administración → Pruebas). Ver docs/PARADA.md.
 - **Flechas:** regalado. Figuras (80 niveles) y Mixto siguen en «BETA» por decisión del dueño; choques, toque y
   movimiento de las figuras arreglados en v52–v53 (confirmado en iPhone que se ve mejor). Detalle en docs/FLECHAS.md.
 

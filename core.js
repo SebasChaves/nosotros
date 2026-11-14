@@ -373,7 +373,7 @@ export const SECTIONS = [['s-decide', 'dice', '¿Qué hacemos?'], ['s-moments', 
   ['s-reminders', 'bell', 'Recordatorios'], ['s-recipes', 'pot', 'Recetas'], ['s-map', 'map', 'Nuestro mapa'],
   ['s-music', 'music', 'Su playlist'], ['s-pet', 'paw', 'Su mascota'], ['s-badges', 'medal', 'Logros'], ['s-game', 'flame', 'Juego de retos'],
   ['s-us', 'heart', 'Gustos y regalos'], ['s-quiz', 'brain', '¿Cuánto me conoces?'], ['s-bucket', 'list', 'Bucket list'],
-  ['s-summary', 'spark', 'Resumen del año'], ['s-arrows', 'arrow', 'Flechas'], ['s-admin', 'admin', 'Administración']];
+  ['s-summary', 'spark', 'Resumen del año'], ['s-arrows', 'arrow', 'Flechas'], ['s-bus', 'bus', 'La parada'], ['s-admin', 'admin', 'Administración']];
 // Secciones o avisos que no todos ven todavía (por ejemplo una sorpresa que el dueño pone desde Administración).
 // gates[clave] = () => true/false; claves: id de pantalla ('s-arrows') o 'notif:<tipo>'. Sin gate = siempre visible.
 export const gates = {};
@@ -522,7 +522,7 @@ export const write = p => p.catch(err => {
 
 /* ================= Estado ================= */
 export const COLLECTIONS = ['bucket', 'ideas', 'notes', 'coupons', 'dates', 'moments', 'lists', 'answers',
-  'moods', 'challenges', 'groceries', 'expenses', 'places', 'trips', 'quiz', 'profiles', 'shows', 'events', 'cards', 'games', 'thinks', 'daily', 'pins', 'recipes', 'recipefav', 'menu', 'songs', 'reminders', 'snaps', 'push', 'activity', 'pet', 'guess', 'cravings', 'arrows'];
+  'moods', 'challenges', 'groceries', 'expenses', 'places', 'trips', 'quiz', 'profiles', 'shows', 'events', 'cards', 'games', 'thinks', 'daily', 'pins', 'recipes', 'recipefav', 'menu', 'songs', 'reminders', 'snaps', 'push', 'activity', 'pet', 'guess', 'cravings', 'arrows', 'bus'];
 export const PRIVATE = ['gifts'];
 export const S = {
   me: null,

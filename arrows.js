@@ -19,20 +19,13 @@ import { backBar } from './lists.js';
 import { isTester } from './testing.js';
 import { notify, meForPartner } from './push.js';
 import { pet, coins } from './pet.js';
+import { isOwner, giftInfo as giftInfoOf, giftVisible, giftWrapped } from './gifts.js';
 
-/* ---------- Sorpresa: quién lo ve ---------- */
-// El dueño (TESTERS). En el emulador los dos son «testers», así que ahí el dueño es quien entró primero a la pareja.
-export const isOwner = () => {
-  if (!EMU) return isTester();
-  const m = Object.entries(S.settings.members || {}).sort((a, b) => (a[1].joined || 0) - (b[1].joined || 0));
-  return !m.length || m[0][0] === uid();
-};
-export const giftInfo = () => S.settings.features?.arrows || {};
-export const arrowsVisible = () => isOwner() || !!giftInfo().on;
-// Puesto para la pareja, pero todavía envuelto (no lo ha abierto)
-export const arrowsWrapped = () => !isOwner() && !!giftInfo().on && !profile(uid()).prefs?.unwrapped?.arrows;
-gates['s-arrows'] = () => arrowsVisible() && !arrowsWrapped();
-gates['notif:arrows'] = arrowsVisible;
+/* ---------- Sorpresa: quién lo ve (gifts.js) ---------- */
+export { isOwner };
+const giftInfo = () => giftInfoOf('arrows');
+export const arrowsVisible = () => giftVisible('arrows');
+export const arrowsWrapped = () => giftWrapped('arrows');
 
 /* ---------- Generador de tableros (siempre tienen solución) ----------
    Las flechas son líneas de 1 a 5 casillas (con curvas). Al tocarlas avanzan como serpiente siguiendo su punta: solo
@@ -1336,66 +1329,8 @@ function win() {
     <p style="margin:0" class="center">${msg}</p><div class="${next ? 'grid2' : 'stack'}"><button class="btn ghost" onclick="closeArrows()">${next ? 'Salir' : 'Listo'}</button>${next}</div>`);
 }
 
-/* ---------- Regalo envuelto ---------- */
-// Tarjeta de Inicio y mosaico de Más mientras esté envuelto
-export const giftCard = () => !arrowsWrapped() ? '' : `<button class="glass gift-card" onclick="unwrapGift()" aria-label="Abrir regalo">
-    <span class="gift-box" aria-hidden="true"><i></i></span><span class="stack" style="gap:2px;text-align:left"><b>Tienes un regalo 🎁</b><span class="small muted">Tócalo para abrirlo</span></span></button>`;
-export const giftTile = () => !arrowsWrapped() ? '' : `<button class="tile gift-tile" onclick="unwrapGift()"><span class="gift-bow" aria-hidden="true">🎀</span>
-    <div><b>Un regalo para ti</b></div><span class="sub">Tócalo para abrirlo</span></button>`;
-// Abrirlo (preview = solo verlo, desde Administración, sin guardar nada)
-function unwrapGift(preview) {
-  if (!preview && !arrowsWrapped()) return;
-  const el = document.createElement('div');
-  el.className = 'dialog gift-open'; el.setAttribute('role', 'dialog'); el.setAttribute('aria-modal', 'true'); el.setAttribute('aria-label', 'Regalo');
-  el.innerHTML = `<button class="icon-btn gift-x" data-v="0" aria-label="Cerrar">${icon('x')}</button>
-    <div class="gift-stage"><button class="gift-big" aria-label="Abrir el regalo"><span class="lid"></span><span class="box"></span></button><p class="gift-hint">Toca para abrirlo</p></div>`;
-  document.body.appendChild(el); syncBack();
-  const close = () => { el.classList.add('out'); setTimeout(() => { el.remove(); syncBack(); }, 160); };
-  el.querySelector('.gift-x').onclick = close;
-  let taps = 0;
-  el.querySelector('.gift-big').onclick = e => {
-    const g = e.currentTarget; navigator.vibrate?.(15);
-    if (++taps < 3) { g.classList.remove('wiggle'); void g.offsetWidth; g.classList.add('wiggle'); el.querySelector('.gift-hint').textContent = taps === 1 ? '¡Otra vez!' : '¡Una más!'; return; }
-    g.classList.add('open'); celebrate(); setTimeout(() => celebrate('hearts'), 500);
-    if (!preview) write(setDoc(ref('profiles', uid()), { prefs: { unwrapped: { arrows: Date.now() } } }, { merge: true }));
-    const m = giftInfo().msg;
-    setTimeout(() => {
-      el.querySelector('.gift-stage').innerHTML = `<div class="gift-reveal"><div style="font-size:64px">🏹</div><h2>Flechas</h2>
-        <p class="muted" style="margin:0">Un juego hecho para ti: saca todas las flechas del tablero sin que choquen.</p>
-        ${m ? `<p class="gift-msg">«${esc(m)}»</p>` : ''}
-        <button class="btn" id="giftPlay">¡A jugar!</button>${preview ? '<p class="tiny muted" style="margin:0">(Vista previa: no se guardó nada)</p>' : ''}</div>`;
-      el.querySelector('#giftPlay').onclick = () => { close(); window.go('s-arrows'); };
-    }, 700);
-  };
-}
-
-/* ---------- Administración: tarjeta de la sorpresa ---------- */
-export function giftAdminCard() {
-  if (!isOwner()) return '';
-  const g = giftInfo(), p = partnerUid(), opened = p && profile(p).prefs?.unwrapped?.arrows;
-  const when = t => new Date(t).toLocaleDateString('es', { day: 'numeric', month: 'short', hour: 'numeric', minute: '2-digit' });
-  // Ya regalado: solo queda el registro (el dueño pidió quitar esconder / volver a envolver)
-  if (g.on) return `<div class="glass stack"><span class="label">🎁 Flechas</span>
-    <p class="small" style="margin:0">Regalado el ${when(g.at)}. ${opened ? `${esc(nameOf(p))} lo abrió el ${when(opened)} 💝` : `${esc(nameOf(p) || 'Tu pareja')} todavía no lo abre.`}</p></div>`;
-  return `<div class="glass stack" style="border-color:rgba(255,181,71,.5)"><span class="label">🎁 Sorpresa: Flechas</span>
-    <p class="small" style="margin:0">${g.on ? `🎁 Regalado el ${when(g.at)}. ${opened ? `${esc(nameOf(p))} lo abrió el ${when(opened)} 💝` : `${esc(nameOf(p) || 'Tu pareja')} todavía no lo abre.`}`
-      : '🔒 Escondido: solo tú lo ves (Más → Flechas). Tu pareja no ve nada: ni la sección, ni en el buscador, ni el aviso en Ajustes.'}</p>
-    <div><label class="f" for="giftMsg">Mensaje al abrirlo (opcional)</label><textarea id="giftMsg" maxlength="200" placeholder="Ej: Para que juegues a lo que te gusta, pero aquí 💕">${esc(g.msg || '')}</textarea></div>
-    ${`<label class="check"><input type="checkbox" id="giftNotify" checked> Avisarle con una notificación («🎁 Tienes un regalo en Futari»)</label>
-        <button class="btn" onclick="giftGive()">🎁 Envolver y regalar</button>`}
-    <div class="grid2"><button class="btn ghost small" style="width:100%" onclick="unwrapGift(true)">👀 Ver cómo se abre</button><button class="btn ghost small" style="width:100%" onclick="go('s-arrows')">🏹 Probar el juego</button></div></div>`;
-}
-const saveGift = patch => write(setDoc(coupleRef, { features: { arrows: { ...giftInfo(), ...patch } } }, { merge: true }));
-async function giftGive() {
-  if (!(await ask('¿Regalar Flechas ahora? A tu pareja le aparece envuelto en Inicio y en Más.', { ok: 'Regalar' }))) return;
-  const n = $('giftNotify')?.checked;
-  saveGift({ on: true, at: Date.now(), by: uid(), msg: $('giftMsg').value.trim() });
-  if (n) notify('surprise', { title: '🎁 Tienes un regalo en Futari', body: 'Ábrelo cuando quieras 💝', url: './?open=gift', tag: 'gift-arrows' });
-  celebrate(); toast('¡Regalo envuelto y entregado! 🎁');
-}
-
 on('arrows profiles', () => { if ($('s-arrows').classList.contains('active') && !view) render(); });
 on('arrows', duelWatch);
 onShow('s-arrows', render);
 if (EMU) window.__arrowsG = () => G; // solo emulador: para las pruebas automáticas
-expose({ playArrows, arrowHint, arrowFit, arrowsContinue, restartArrows, closeArrows, arrowsExpert, arrowsTestLevel, arrowsTestCube, arrowsXray, arrowsLegend, duelInvite, duelAccept, duelDecline, duelCancel, duelEnter, duelGiveUp, unwrapGift, giftGive });
+expose({ playArrows, arrowHint, arrowFit, arrowsContinue, restartArrows, closeArrows, arrowsExpert, arrowsTestLevel, arrowsTestCube, arrowsXray, arrowsLegend, duelInvite, duelAccept, duelDecline, duelCancel, duelEnter, duelGiveUp });

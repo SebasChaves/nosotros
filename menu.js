@@ -9,6 +9,7 @@ import { unseenSnaps } from './snaps.js';
 import { quizWaiting } from './quiz.js';
 import { cravingAlerts } from './cravings.js';
 import { arrowsAlerts } from './arrows.js';
+import { busAlerts } from './bus.js';
 
 const prefs = () => profile(uid()).prefs?.menu || {};
 const known = id => SECTIONS.some(([k]) => k === id) && gateOn(id);
@@ -30,7 +31,7 @@ export const sectionIcon = id => SECTIONS.find(([k]) => k === id)?.[1] || 'grid'
 // Avisos (puntitos) por sección: van en su botón de la barra o, si no está en la barra, se suman en Más
 export const sectionAlerts = () => ({
   's-decide': S.data.lists.filter(listNeedsMyVote).length, 's-love': unreadNotes() + couponAlerts(),
-  's-moments': unseenSnaps().length, 's-quiz': quizWaiting() ? 1 : 0, 's-cravings': cravingAlerts(), 's-arrows': arrowsAlerts(),
+  's-moments': unseenSnaps().length, 's-quiz': quizWaiting() ? 1 : 0, 's-cravings': cravingAlerts(), 's-arrows': arrowsAlerts(), 's-bus': busAlerts(),
 });
 
 const saveMenu = patch => write(setDoc(ref('profiles', uid()), { prefs: { menu: { order: menuOrder(), bar: barChoice(), hidden: prefs().hidden || [], ...patch } } }, { merge: true }));

@@ -18,12 +18,16 @@ Lee estos documentos antes de cambiar algo:
 | [docs/PUBLICAR.md](docs/PUBLICAR.md) | Versiones, aviso de actualización, novedades y cómo publicar |
 | [docs/NOTIFICACIONES.md](docs/NOTIFICACIONES.md) | Avisos al teléfono: Worker de Cloudflare, cómo agregar un aviso, configuración |
 | [docs/FLECHAS.md](docs/FLECHAS.md) | Juego Flechas (sorpresa del dueño): modos, regalo, generador, figuras 3D |
+| [docs/PARADA.md](docs/PARADA.md) | Juego La parada (sorpresa del dueño, todavía sin regalar) |
 | [docs/PENDIENTES.md](docs/PENDIENTES.md) | Cosas pospuestas, ideas, servicios externos y trampas conocidas (iPhone/Android) |
 
 ## Flechas
 
 Flechas ya **se regaló** (noviembre 2026): ya no es secreto y la pareja lo usa. Figuras y Mixto siguen en **BETA** hasta
 que el dueño diga. Ver [docs/FLECHAS.md](docs/FLECHAS.md).
+
+**La parada** (v56) es la nueva **sorpresa**: no la menciones en novedades ni en la guía hasta que el dueño la regale.
+Los juegos sorpresa comparten `gifts.js` (regalo envuelto, `gates`). Ver [docs/PARADA.md](docs/PARADA.md).
 
 ## Reglas que no se rompen
 
