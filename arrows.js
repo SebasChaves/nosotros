@@ -916,13 +916,74 @@ function cubeTap(x, y) {
   const id = cubePick(x, y);
   if (id >= 0) tapArrow(id);
 }
+// Movimiento en las figuras, como en el plano: la flecha avanza como serpiente por su propio trazo (cruzando aristas y
+// rincones), sigue por su camino y al llegar a la arista sale hacia afuera en el plano de su cara. Se dibuja con trazos
+// temporales en cada panel por el que pasa; de cada uno se muestra solo el tramo que ocupa la serpiente en ese momento.
+function seqPieces(seq) {
+  const N = G.N, W = N * C, S = G.board.shape, out = [];
+  const loc = (p, p3) => { const P = S.panels[p], q = add3(p3, P.o, -1); return [dot3(q, P.u) * W, dot3(q, P.vv) * W]; };
+  let cur = { p: seq[0][2], pts: [ctr(seq[0])] };
+  for (let i = 1; i < seq.length; i++) {
+    const c = seq[i], pc = seq[i - 1];
+    if (c[2] === pc[2]) { cur.pts.push(ctr(c)); continue; }
+    const c1 = cellCenter(S, N, pc), c2 = cellCenter(S, N, c), n1 = S.panels[pc[2]].n, n2 = S.panels[c[2]].n, dlt = add3(c2, c1, -1);
+    const same = n1[0] === n2[0] && n1[1] === n2[1] && n1[2] === n2[2];
+    const w = same ? dlt.map(v => Math.round(v * N)) : dot3(n2, dlt) > 0 ? n2 : n2.map(v => -v), e3 = add3(c1, w, 0.5 / N);
+    cur.pts.push(loc(pc[2], e3)); out.push(cur); cur = { p: c[2], pts: [loc(c[2], e3), ctr(c)] };
+  }
+  out.push(cur);
+  return out;
+}
+const segLen = pts => pts.slice(1).reduce((t, q, i) => t + Math.hypot(q[0] - pts[i][0], q[1] - pts[i][1]), 0);
+function pointAt(pts, t) {
+  for (let i = 1; i < pts.length; i++) {
+    const [ax, ay] = pts[i - 1], [bx, by] = pts[i], l = Math.hypot(bx - ax, by - ay);
+    if (t <= l || i === pts.length - 1) { const f = l ? Math.min(1, t / l) : 0; return [ax + (bx - ax) * f, ay + (by - ay) * f, (bx - ax) / (l || 1), (by - ay) / (l || 1)]; }
+    t -= l;
+  }
+  return [...pts[0], 1, 0];
+}
 function cubeMove(a, g, dist, back) {
-  const [dx, dy] = DIRS[curD(a)], all = pieces(a.id), others = all.filter(e => e !== g);
-  if (back) { g.animate([{ transform: 'translate(0,0)' }, { transform: `translate(${dx * dist}px,${dy * dist}px)`, offset: 0.45 }, { transform: 'translate(0,0)' }], { duration: 300 + dist / C * 40, easing: 'ease-in-out' }); return; }
-  g.querySelectorAll('.bd, .ib').forEach(e => e.style.opacity = '0');
-  others.forEach(e => e.animate([{ opacity: 1 }, { opacity: 0 }], { duration: 220, fill: 'forwards' }));
-  g.animate([{ transform: 'translate(0,0)', opacity: 1 }, { transform: `translate(${dx * dist}px,${dy * dist}px)`, opacity: 0 }], { duration: Math.min(700, 220 + dist / C * 30), easing: 'cubic-bezier(.5,0,.9,.6)', fill: 'forwards' })
-    .finished.then(() => all.forEach(e => e.remove())).catch(() => {});
+  const N = G.N, M = N * N, [dx, dy] = DIRS[a.d], statics = pieces(a.id);
+  // Camino completo: cuerpo + casillas del camino (hasta el choque si regresa) + salida al aire más allá de la arista
+  const rayCells = (back ? a.ray.slice(0, Math.ceil(dist / C) + 1) : a.ray).map(k => [k % N, Math.floor((k % M) / N), Math.floor(k / M)]);
+  const parts = seqPieces([...a.cells, ...rayCells]);
+  const bodyLen = seqPieces(a.cells).reduce((t, x) => t + segLen(x.pts), 0); // largo del cuerpo (de la cola a la punta)
+  if (!back) { const last = parts[parts.length - 1], [lx, ly] = last.pts[last.pts.length - 1]; last.pts.push([lx + dx * (bodyLen + C * 2.5), ly + dy * (bodyLen + C * 2.5)]); }
+  let acc = 0; for (const x of parts) { x.a = acc; x.len = segLen(x.pts); acc += x.len; }
+  const travel = back ? dist : acc - bodyLen;
+  // Trazos temporales por panel
+  const svgOf = p => $('arF' + p)?.querySelector('svg'), NS = 'http://www.w3.org/2000/svg', made = [], heads = {};
+  for (const x of parts) {
+    const el = document.createElementNS(NS, 'path'); el.setAttribute('class', 'ab mv'); el.setAttribute('d', ptsD(x.pts)); el.setAttribute('stroke-width', C * 0.3); el.style.color = a.c;
+    svgOf(x.p)?.appendChild(el); x.el = el; made.push(el);
+    if (!heads[x.p]) { const h = document.createElementNS(NS, 'path'); h.setAttribute('class', 'ah mv'); h.style.color = a.c; h.style.fill = a.c; svgOf(x.p)?.appendChild(h); heads[x.p] = h; made.push(h); }
+  }
+  statics.forEach(e => e.style.visibility = 'hidden');
+  const draw = (sv, op) => {
+    for (const x of parts) {
+      const v0 = Math.max(sv, x.a), v1 = Math.min(sv + bodyLen, x.a + x.len);
+      if (v1 - v0 > 0.5) { x.el.style.display = ''; x.el.style.strokeDasharray = `${v1 - v0} 999999`; x.el.style.strokeDashoffset = -(v0 - x.a); }
+      else x.el.style.display = 'none';
+      x.el.style.opacity = op;
+    }
+    const H = sv + bodyLen, hp = [...parts].reverse().find(x => H >= x.a - 0.01) || parts[0];
+    for (const [p, h] of Object.entries(heads)) h.style.display = Number(p) === hp.p ? '' : 'none';
+    const [hx, hy, tx, ty] = pointAt(hp.pts, H - hp.a), px = -ty, py = tx, t = C * 0.42, bb = C * 0.02, w = C * 0.27;
+    heads[hp.p].setAttribute('d', `M${hx + tx * t} ${hy + ty * t}L${hx + tx * bb + px * w} ${hy + ty * bb + py * w}L${hx + tx * bb - px * w} ${hy + ty * bb - py * w}Z`);
+    heads[hp.p].style.opacity = op;
+  };
+  const dur = back ? 240 + dist / C * 40 : Math.min(950, 260 + travel / C * 22), t0 = performance.now();
+  const step = now => {
+    const p = Math.min(1, (now - t0) / dur);
+    const sv = back ? dist * Math.sin(p * Math.PI) : travel * (p * p * (3 - 2 * p) * 0.4 + p * 0.6);
+    draw(sv, back ? 1 : p > 0.72 ? (1 - p) / 0.28 : 1);
+    if (p < 1) return requestAnimationFrame(step);
+    made.forEach(e => e.remove());
+    if (back) statics.forEach(e => e.style.visibility = '');
+    else statics.forEach(e => e.remove());
+  };
+  draw(0, 1); requestAnimationFrame(step);
 }
 
 /* ---------- Cámara: arrastrar, pellizcar, tocar y mantener ---------- */

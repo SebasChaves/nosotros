@@ -24,6 +24,13 @@ por otra parte de la figura. Antes, con el error de ocupación, una flecha tapad
 Resueltas completas en el emulador, tocando el centro de la punta tras cada pista: L, escalera, cruz, cajón, dona y figura
 rara, todas con 0 errores.
 
+**Movimiento en las figuras (v53):** antes la punta se deslizaba recta y el resto se desvanecía (flechas con curva
+«tiesas», partes que quedaban atrás o que se metían bajo la figura). Ahora `cubeMove` hace lo mismo que el plano: arma el
+camino completo (cuerpo + casillas del camino + salida al aire más allá de la arista, en el plano de su cara) con
+`seqPieces`, dibuja trazos temporales en cada panel por el que pasa y en cada cuadro muestra solo el tramo que ocupa la
+serpiente (`stroke-dasharray`); la punta se dibuja donde va, siguiendo el camino. Al chocar, avanza hasta la flecha que
+la bloquea y regresa.
+
 **Para probar en el emulador:** `window.__arrowsG()` devuelve el estado del juego (solo con `?emu`) y `cubePick` /
 `cubeProjector` están exportados. Pruebas usadas: comparar `a.ray` contra `G.occ` (que el juego vea todos los choques) y
 tocar puntos dentro de cada casilla de una flecha (que se elija esa flecha).
