@@ -87,6 +87,7 @@ de solo lectura** y manda, según la hora de Costa Rica (`TIME_ZONE`):
 | el minuto exacto del recordatorio (o 8:00) | recordatorios 🔔 de hoy no hechos, a quien le toca | `reminders` |
 | 8:00 / 9:00 | «Hoy es…» / «Mañana es…»: fechas especiales, aniversarios y mesiversarios | `dates` |
 | domingo 19:00 | «📊 Su semana en Futari»: días juntos, corazones e instantáneas o preguntas (como `week.js`) | `week` |
+| domingo 19:30 | «🐷 ¡Les sobraron…!» / «💸 Se pasaron…»: gustos de la semana vs. presupuesto y vs. la semana pasada (lee solo `expenses` con `date` de las últimas 2 semanas y `money/cfg`). Desde `WORKER_VERSION` 6 | `money` |
 
 - La racha usa la misma regla que `home.js` (`didSomething`): `moods`, `answers`, `thinks`, `daily` y `activity`.
   Si cambias esa regla, cámbiala también en el Worker.

@@ -37,7 +37,7 @@ manifest.json   PWA (nombre, íconos, colores)
 | `push.js` (+ `push-config.js`) | Notificaciones: activar en el teléfono, `notify()` a la pareja, preferencias y `?open=` al tocar un aviso (docs/NOTIFICACIONES.md) |
 | `settings.js` | Pantalla **Más** (mosaico de secciones) y **Ajustes** (nombre, fecha, moneda, acento, tema, avatar, fondo, PIN, respaldo) |
 | `lists.js` | Bucket list, súper y la función `backBar()` (barra superior con botón Volver) |
-| `money.js` | Gastos compartidos y balance |
+| `money.js` | Gastos: anotar rápido, salida en curso, presupuesto semanal, alcancías, aviso del banco y balance (ver docs/GASTOS.md) |
 | `places.js` | Restaurantes (ubicación, cerca de mí, Google Maps/Waze, calificaciones, visitas) |
 | `trips.js`, `booking.js` | Viajes (itinerario, maleta, presupuesto) y búsqueda de hospedaje/vuelos con enlaces a Airbnb, Booking, etc. |
 | `calendar.js` | Calendario compartido, planes que se repiten, exportar a calendario del teléfono (.ics / Google) |

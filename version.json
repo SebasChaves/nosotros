@@ -1,7 +1,8 @@
 {
-  "version": "58",
-  "notes": [],
+  "version": "59",
+  "notes": ["💸 Anotar un gasto ahora toma segundos: teclado grande y con un toque en la categoría queda anotado (con «Deshacer»). Aparecen sus gastos frecuentes, «Repetir el último» y botones de +1.000 / +5.000 / +10.000", "🎉 «Salimos»: lo que anoten durante una salida o fiesta se suma junto, con un límite opcional y un aviso suave si se pasan", "📊 Presupuesto de la semana para comida, salidas y fiestas, con termómetro en Inicio. Lo que les sobre pasa solo a su alcancía 🐷 (metas de ahorro en Gastos)", "⚡ Que se anote solo desde el aviso del banco: en Gastos → «Que se anote desde el aviso del banco» está el paso a paso para iPhone y Samsung", "📲 En Android, manteniendo presionado el ícono de Futari aparece «Anotar gasto». Y cada domingo en la noche les llega el resumen de gastos de la semana"],
   "history": [
+    { "version": "59", "notes": ["💸 Anotar un gasto ahora toma segundos: teclado grande y con un toque en la categoría queda anotado (con «Deshacer»). Aparecen sus gastos frecuentes, «Repetir el último» y botones de +1.000 / +5.000 / +10.000", "🎉 «Salimos»: lo que anoten durante una salida o fiesta se suma junto, con un límite opcional y un aviso suave si se pasan", "📊 Presupuesto de la semana para comida, salidas y fiestas, con termómetro en Inicio. Lo que les sobre pasa solo a su alcancía 🐷 (metas de ahorro en Gastos)", "⚡ Que se anote solo desde el aviso del banco: en Gastos → «Que se anote desde el aviso del banco» está el paso a paso para iPhone y Samsung", "📲 En Android, manteniendo presionado el ícono de Futari aparece «Anotar gasto». Y cada domingo en la noche les llega el resumen de gastos de la semana"] },
     { "version": "58", "notes": [] },
     { "version": "57", "notes": [] },
     { "version": "56", "notes": [] },

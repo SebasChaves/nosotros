@@ -17,6 +17,7 @@ Lee estos documentos antes de cambiar algo:
 | [docs/PRUEBAS.md](docs/PRUEBAS.md) | Emulador local con dos cuentas de prueba; qué solo se puede probar en el teléfono |
 | [docs/PUBLICAR.md](docs/PUBLICAR.md) | Versiones, aviso de actualización, novedades y cómo publicar |
 | [docs/NOTIFICACIONES.md](docs/NOTIFICACIONES.md) | Avisos al teléfono: Worker de Cloudflare, cómo agregar un aviso, configuración |
+| [docs/GASTOS.md](docs/GASTOS.md) | Gastos: anotar rápido, salidas, presupuesto, alcancías, aviso del banco y su tutorial |
 | [docs/FLECHAS.md](docs/FLECHAS.md) | Juego Flechas (sorpresa del dueño): modos, regalo, generador, figuras 3D |
 | [docs/PARADA.md](docs/PARADA.md) | Juego La parada (sorpresa del dueño, todavía sin regalar) |
 | [docs/PENDIENTES.md](docs/PENDIENTES.md) | Cosas pospuestas, ideas, servicios externos y trampas conocidas (iPhone/Android) |

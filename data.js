@@ -296,7 +296,7 @@ export const QUIZ = [
 
 export const EXPENSE_CATS = [
   ['🍽️', 'Comida'], ['🛒', 'Súper'], ['🎬', 'Salidas'], ['✈️', 'Viajes'],
-  ['🏠', 'Casa'], ['🎁', 'Regalos'], ['🚗', 'Transporte'], ['📦', 'Otro'],
+  ['🏠', 'Casa'], ['🎁', 'Regalos'], ['🚗', 'Transporte'], ['🎉', 'Fiestas'], ['📦', 'Otro'],
 ];
 
 export const CURRENCIES = [

@@ -18,6 +18,7 @@ import { guessCard, guessWaiting } from './guess.js';
 import { weekCard } from './week.js';
 import { cravingsCard, partnerCravings } from './cravings.js';
 import { giftCard } from './gifts.js';
+import { moneyCard } from './money.js';
 import { notify, meForPartner } from './push.js';
 
 /* ---------- Racha y "Pensando en ti" ---------- */
@@ -247,7 +248,7 @@ function renderHome() {
   } else hero = counterCard();
   const up = upcoming().slice(0, 5);
   const cards = {
-    urgent: urgentCard, cravings: cravingsCard, counter: () => hero, pet: petCard, snaps: snapsCard, guess: guessCard, week: weekCard, today: todayCard, memory: memoryCard, mood: moodCard, question: questionCard, challenge: challengeCard,
+    urgent: urgentCard, cravings: cravingsCard, money: moneyCard, counter: () => hero, pet: petCard, snaps: snapsCard, guess: guessCard, week: weekCard, today: todayCard, memory: memoryCard, mood: moodCard, question: questionCard, challenge: challengeCard,
     upcoming: () => `<div class="glass"><div class="row"><span class="label">${icon('cal')} Próximos momentos</span>
       <div class="row" style="gap:0"><button class="link" onclick="go('s-cal')">Calendario</button><button class="link" onclick="openFechas()">Fechas</button></div></div>
       <div style="margin-top:6px">${up.length ? up.map(m => `<div class="event"><div>${esc(m.label)}<div class="tiny muted">${fmtDate(m.date)}</div></div>
@@ -268,7 +269,7 @@ function renderHome() {
 }
 
 /* ---------- Personalización de Inicio ---------- */
-export const HOME_CARDS = [['urgent', '🔴 Recordatorios urgentes'], ['cravings', '🚨 Antojos urgentes de tu pareja'], ['counter', '💞 Contador'], ['week', '📊 Resumen de la semana (domingo y lunes)'], ['pet', '🥚 Su mascota'], ['snaps', '📸 Instantáneas'], ['today', '📌 Hoy'], ['memory', '📸 Un día como hoy'],
+export const HOME_CARDS = [['urgent', '🔴 Recordatorios urgentes'], ['cravings', '🚨 Antojos urgentes de tu pareja'], ['counter', '💞 Contador'], ['week', '📊 Resumen de la semana (domingo y lunes)'], ['pet', '🥚 Su mascota'], ['snaps', '📸 Instantáneas'], ['money', '💸 Gastos: anotar rápido y presupuesto de la semana'], ['today', '📌 Hoy'], ['memory', '📸 Un día como hoy'],
   ['mood', '🙂 ¿Cómo te sientes?'], ['question', '💬 Pregunta del día'], ['guess', '🔮 ¿Qué respondería tu pareja?'], ['challenge', '🏆 Reto de la semana'], ['upcoming', '🗓️ Próximos momentos']];
 // [{ id, on }] en el orden elegido; las tarjetas nuevas que no estén guardadas se agregan visibles, detrás de la
 // tarjeta que tienen antes en HOME_CARDS (por ejemplo, Instantáneas queda debajo del contador).
@@ -317,7 +318,7 @@ setInterval(() => {
   const m = $('heroMin'); if (m) m.innerHTML = `<b>${mins % 60}</b>minutos`;
 }, 20000);
 
-on('dates moments moods answers challenges trips profiles events thinks notes coupons lists quiz daily reminders songs snaps activity pet guess cravings', renderHome);
+on('dates moments moods answers challenges trips profiles events thinks notes coupons lists quiz daily reminders songs snaps activity pet guess cravings expenses money', renderHome);
 window.rerenderHome = () => { if ($('s-home').classList.contains('active')) renderHome(); };
 on('thinks', checkIncomingThink);
 expose({ sendThink, openFechas, answerQuestion, openAnswers, setMood, skipChallenge, doneChallenge });

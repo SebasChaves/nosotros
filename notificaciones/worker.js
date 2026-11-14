@@ -16,7 +16,7 @@
 //   COUPLE_ID          (texto, opcional) por defecto nosotros
 // Ver docs/NOTIFICACIONES.md. Sin dependencias: se pega tal cual en el editor de Cloudflare.
 
-const WORKER_VERSION = 5; // súbelo al cambiar este archivo (la app lo muestra en el diagnóstico)
+const WORKER_VERSION = 6; // súbelo al cambiar este archivo (la app lo muestra en el diagnóstico)
 const enc = new TextEncoder();
 const b64u = buf => btoa(String.fromCharCode(...new Uint8Array(buf))).replace(/\+/g, '-').replace(/\//g, '_').replace(/=+$/, '');
 const unb64u = s => Uint8Array.from(atob(s.replace(/-/g, '+').replace(/_/g, '/') + '==='.slice((s.length + 3) % 4)), c => c.charCodeAt(0));
@@ -139,6 +139,7 @@ export async function encryptPayload(sub, payload, fixed = {}) {
 //   20:00 racha en peligro / mascota con hambre (a quien todavía no ha hecho nada hoy)
 //   8:00 «Hoy es…» y 9:00 «Mañana es…» para fechas especiales, aniversarios y mesiversarios
 //   domingo 19:00 resumen de la semana (lunes a domingo), como el de week.js en la app
+//   domingo 19:30 resumen de gastos de la semana (gustos vs. presupuesto y vs. la semana pasada), como el de money.js
 // Para gastar pocas lecturas: cada minuto solo consulta los recordatorios de hoy; el resto se lee solo si hay algo que mandar.
 // Devuelve la lista de avisos (sirve para las pruebas). La app usa la misma regla de racha que home.js.
 export async function runSchedule(env, when = Date.now(), { dryRun = false } = {}) {
@@ -156,7 +157,8 @@ export async function runSchedule(env, when = Date.now(), { dryRun = false } = {
   const db = await firestoreReader(env);
   // Recordatorios de hoy que tocan en este minuto (los que no tienen hora, a las 8:00)
   const due = (await db.query('reminders', 'date', today)).filter(r => !r.done && (r.time ? String(r.time).slice(0, 5) === hhmm : onTheHour && hour === TODAY_HOUR));
-  if (!due.length && !onTheHour) return [];
+  const moneyTime = weekday === 0 && hour === WEEK_HOUR && L.minute === '30';
+  if (!due.length && !onTheHour && !moneyTime) return [];
   const couple = await db.get('');
   if (!couple) return [];
   const members = Object.keys(couple.members || {}).filter(u => (env.ALLOWED_UIDS || '').split(',').map(x => x.trim()).includes(u));
@@ -246,6 +248,23 @@ export async function runSchedule(env, when = Date.now(), { dryRun = false } = {
     for (const u of members) add(u, 'week', { title, body: parts.join(' · ') + '. Toquen para ver el resumen completo.', url: './?open=week', tag: 'week-' + today });
   }
 
+  // 5. Resumen de gastos de la semana (domingo 19:30): lee solo los gastos de las últimas dos semanas
+  if (L.minute === '30' && hour === WEEK_HOUR && weekday === 0 && members.length) {
+    const from = shift(today, -13), mid = shift(today, -6);
+    const cfg = (await db.get('money/cfg')) || {}, cats = cfg.weekCats?.length ? cfg.weekCats : ['🍽️', '🎬', '🎉'];
+    const ex = (await db.query('expenses', 'date', from, 'GREATER_THAN_OR_EQUAL')).filter(e => e.type !== 'settle' && e.date <= today);
+    const sum = (a, b, all) => ex.filter(e => e.date >= a && e.date <= b && (all || cats.includes(e.cat))).reduce((s, e) => s + (Number(e.amount) || 0), 0);
+    const now = sum(mid, today), prev = sum(from, shift(mid, -1)), all = sum(mid, today, true);
+    if (ex.length) {
+      const cur = couple.currency || 'USD', fm = n => { try { return new Intl.NumberFormat('es', { style: 'currency', currency: cur, currencyDisplay: 'narrowSymbol', maximumFractionDigits: 0 }).format(n); } catch { return String(Math.round(n)); } };
+      const budget = Number(cfg.week) || 0, parts = [`Gustos: ${fm(now)}${budget ? ` de ${fm(budget)}` : ''}`];
+      if (prev) parts.push(now <= prev ? `▼ ${Math.round((1 - now / prev) * 100)}% menos que la semana pasada` : `▲ ${Math.round((now / prev - 1) * 100)}% más que la semana pasada`);
+      parts.push(`Todo: ${fm(all)}`);
+      const title = budget && now <= budget ? `🐷 ¡Les sobraron ${fm(budget - now)} esta semana!` : budget ? `💸 Se pasaron ${fm(now - budget)} esta semana` : '💸 Sus gastos de la semana';
+      for (const u of members) add(u, 'money', { title, body: parts.join(' · ') + (budget && now <= budget ? '. Mañana pasan a su alcancía.' : ''), url: './?open=money', tag: 'money-' + today });
+    }
+  }
+
   if (!dryRun) {
     await Promise.all(out.map(async n => {
       const payload = enc.encode(JSON.stringify({ title: n.title.slice(0, 120), body: n.body.slice(0, 300), url: n.url, tag: n.tag.slice(0, 60) }));
@@ -313,9 +332,9 @@ function restReader(base, auth) {
   const root = base.slice(0, base.indexOf('/documents/') + '/documents'.length), prefix = base.slice(base.indexOf('/projects/') + 1);
   return {
     // Documentos de una colección con campo == valor (solo se cobran los que coinciden)
-    async query(col, field, eq) {
+    async query(col, field, eq, op = 'EQUAL') {
       const r = await fetch(base + ':runQuery', { method: 'POST', headers: { ...auth, 'Content-Type': 'application/json' },
-        body: JSON.stringify({ structuredQuery: { from: [{ collectionId: col }], where: { fieldFilter: { field: { fieldPath: field }, op: 'EQUAL', value: { stringValue: eq } } } } }) });
+        body: JSON.stringify({ structuredQuery: { from: [{ collectionId: col }], where: { fieldFilter: { field: { fieldPath: field }, op, value: { stringValue: eq } } } } }) });
       if (!r.ok) throw new Error('query ' + col + ' ' + r.status + ' ' + await r.text());
       return (await r.json()).filter(x => x.document).map(x => docOf(x.document));
     },

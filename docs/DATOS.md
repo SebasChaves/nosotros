@@ -32,7 +32,8 @@ Casi todos los docs llevan `by: uid` (quién lo creó) y `createdAt: ms`. Fechas
 | `lists` | listas de Decidir: `name, emoji, options[], votes: { <uid>: { opción: true/false } }` |
 | `ideas` | ideas de cita propias: `t, place: 'casa'|'afuera', cost: 0-3, e` |
 | `bucket`, `groceries` | `text, done, doneAt` |
-| `expenses` | gastos (`amount, paidBy, split, cat, date, tripId?`) y pagos de saldo (`type: 'settle'`) |
+| `expenses` | gastos (`desc, amount, paidBy, split: half/full/none, cat, date, tripId?, outing?, outName?, quick?`) y pagos de saldo (`type: 'settle'`) |
+| `money` | `cfg` `{ week, weekCats[], goal, lastRoll }` (presupuesto semanal y alcancía donde cae lo que sobra), `out` `{ active, oid, name, limit, startAt, by, warned }` (salida en curso), `g-<ts>` `{ kind: 'goal', name, emoji, target, saved, log[], done? }` (alcancías). Ver docs/GASTOS.md |
 | `places` | restaurantes: `name, kind, price 0-4, loc?{name,lat,lng}, status 'want'|'been', ratings{uid:1-5}, visits[{date,note,by}]` |
 | `trips` | viajes con itinerario, maleta, presupuesto y opciones de hospedaje/vuelo (`stays`, `flights` con votos) |
 | `events` | planes: `title, date, time, who 'ambos'|uid, note, repeat none/weekly/biweekly/monthly/yearly, until` |
