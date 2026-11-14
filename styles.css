@@ -892,32 +892,65 @@ body:not([data-theme="light"]) .map-box .leaflet-tile-pane { filter: invert(1) h
 .cam-phone { position: absolute; top: calc(env(safe-area-inset-top) + 12px); left: 14px; z-index: 2; height: 42px; padding: 0 14px; border-radius: 21px; border: 0;
   background: rgba(255,255,255,.16); color: #fff; font-weight: 600; font-size: 13px; backdrop-filter: blur(12px); -webkit-backdrop-filter: blur(12px); }
 
-/* ---------- La parada (bus.js) ---------- */
-.bus-view { gap: 10px; }
-.bus-queue { width: 100%; max-width: 480px; display: flex; flex-wrap: wrap; align-items: center; gap: 5px; padding: 8px 10px; min-height: 40px;
-  border-radius: 16px; background: var(--soft); border: 1px solid var(--line); }
-.pax { width: 16px; height: 16px; border-radius: 50%; background: var(--c); box-shadow: inset 0 -3px 0 rgba(0,0,0,.25); display: inline-block; }
-.pax.first { width: 24px; height: 24px; box-shadow: 0 0 0 3px #fff, inset 0 -4px 0 rgba(0,0,0,.25); }
-.bus-slots { width: 100%; max-width: 480px; display: grid; grid-template-columns: repeat(auto-fit, minmax(0, 1fr)); gap: 6px; }
-.bus-slot { height: 58px; border-radius: 14px; border: 2px dashed var(--line); display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 1px; color: var(--muted); font-size: 18px; }
-.bus-slot.full { border: 2px solid var(--c); background: color-mix(in srgb, var(--c) 16%, transparent); color: var(--text); animation: pop .25s; }
-.bus-slot.leaving { animation: busLeave .38s forwards; }
-@keyframes busLeave { to { transform: translateY(-14px); opacity: 0; } }
-.bus-slot svg { width: 86%; height: 30px; }
-.bus-slot b { font-size: 12px; }
-.bus-lot { flex: 1; min-height: 0; width: 100%; max-width: 480px; display: grid; place-items: center; }
-.bus-lot svg { width: 100%; height: 100%; touch-action: manipulation; -webkit-user-select: none; user-select: none; }
-.lot-bg { fill: #2a2633; }
-.lot-line { stroke: rgba(255,255,255,.07); stroke-width: 2; stroke-dasharray: 6 8; }
-.veh { cursor: pointer; }
-.veh .vb { stroke: rgba(0,0,0,.35); stroke-width: 2; }
-.vr { fill: rgba(255,255,255,.14); }
-.vw { fill: #cfe8ff; opacity: .9; }
-.vw.dim { opacity: .55; }
-.vl { fill: #fff6b0; }
-.vc { font-size: 12px; font-weight: 800; fill: rgba(0,0,0,.55); }
-.veh.hit .vb { stroke: #FF3B6B; stroke-width: 4; }
-.towing .veh { animation: arHint 1s ease-in-out infinite; }
-.bus-help { display: grid; grid-template-columns: repeat(3, 1fr); gap: 6px; width: 100%; max-width: 480px; }
-.bus-help .btn { display: flex; flex-direction: column; line-height: 1.15; padding: 6px 4px; font-size: 12px; }
+/* ---------- La parada (bus.js): plano 3D de día ---------- */
+.dialog.bus-view { gap: 10px; background: linear-gradient(#BFE3FF, #EEF5FC 36%); color: #2A2433; }
+.bus-view .ar-top .icon-btn { background: #fff; color: #2A2433; box-shadow: 0 2px 0 #C7D2DD; }
+.bus-view .muted, .bus-view .ar-title .muted { color: #5B5466; }
+.bus-view .pill { background: #fff; color: #2A2433; border-color: #D5DEE8; }
+.bus-scene { position: relative; flex: 1; min-height: 0; width: 100%; max-width: 560px; overflow: hidden; perspective: 1100px; perspective-origin: 50% 30%;
+  touch-action: manipulation; -webkit-user-select: none; user-select: none; -webkit-touch-callout: none; }
+.bus-plane { position: absolute; transform-style: preserve-3d; }
+.bus-plane > div, #busPeople, #busCars, #busBays { transform-style: preserve-3d; }
+.bus-plane .mk { position: absolute; width: 1px; height: 1px; pointer-events: none; }
+.bg-ground { position: absolute; inset: 0; border-radius: 28px; background: #E3E9EF; box-shadow: 0 18px 0 #B6C0CA; }
+.bg-walk { position: absolute; top: 0; height: 112px; border-radius: 20px; background: #F4F6F9; }
+.bg-plaza { position: absolute; top: 34px; height: 44px; border-radius: 16px; background: #A6DCAB; box-shadow: inset 0 0 0 4px #8BC892; }
+.bg-road { position: absolute; border-radius: 24px; background: #77808A; }
+.bg-road:not(.top)::after { content: ''; position: absolute; inset: 11px; border-radius: 18px; border: 2px dashed rgba(255,255,255,.5); }
+.bg-road.top { border-radius: 14px; }
+.bg-lot { position: absolute; border-radius: 10px; background: #5C646E; background-image: repeating-linear-gradient(90deg, transparent 0 32px, rgba(255,255,255,.35) 32px 34px); }
+.bay { position: absolute; width: 40px; height: 146px; border-radius: 8px; box-sizing: border-box; border: 3px solid #fff; border-top-style: dashed; background: #B9C3CD;
+  display: flex; align-items: flex-end; justify-content: center; padding: 0 0 6px; color: #fff; font: 800 14px/1 inherit; }
+.bay.locked { flex-direction: column; justify-content: center; gap: 6px; padding: 0; border-style: dashed; border-color: #FFD27A; background: repeating-linear-gradient(45deg, #9AA5B1 0 8px, #A8B2BD 8px 16px); cursor: pointer; }
+.bay.locked span { font-size: 18px; } .bay.locked small { font-size: 14px; }
+.bay.opened { animation: busOpen .6s; }
+@keyframes busOpen { 0% { background: #FFE9A8; } 100% { background: #B9C3CD; } }
+.pp { position: absolute; width: 0; height: 0; transform-style: preserve-3d; transition: left .55s cubic-bezier(.4,0,.2,1), top .55s cubic-bezier(.4,0,.2,1), opacity .3s ease; pointer-events: none; }
+.pp::before { content: ''; position: absolute; left: -6px; top: -3px; width: 12px; height: 6px; border-radius: 50%; background: rgba(0,0,0,.16); }
+.fig { position: absolute; left: -6px; bottom: 0; width: 12px; height: 24px; transform-origin: 50% 100%; transform: rotateZ(10deg) rotateX(-90deg); display: flex; flex-direction: column; align-items: center; gap: 1px; }
+.fig i { width: 8px; height: 8px; border-radius: 50%; background: #F2C9A8; box-shadow: inset -1px -1px 0 rgba(0,0,0,.15); }
+.fig b { width: 12px; height: 14px; border-radius: 6px 6px 3px 3px; box-shadow: inset -2px -2px 0 rgba(0,0,0,.18); }
+.pp.first .fig { left: -8px; width: 16px; height: 31px; } .pp.first .fig i { width: 10px; height: 10px; outline: 2px solid #fff; } .pp.first .fig b { width: 16px; height: 18px; }
+.pp.walk .fig { animation: busHop .28s ease-in-out 2; }
+@keyframes busHop { 50% { transform: rotateZ(10deg) rotateX(-90deg) translateY(-4px); } }
+.v3 { position: absolute; left: 0; top: 0; padding: 0; border: 0; background: none; cursor: pointer; transform-style: preserve-3d; transform-origin: 50% 50%; -webkit-tap-highlight-color: transparent; }
+.body3 { position: absolute; left: 3px; right: 3px; top: 4px; bottom: 4px; transform-style: preserve-3d; }
+.body3 i { position: absolute; display: block; }
+.v3 .shadow { left: 2px; right: -4px; top: 3px; bottom: -5px; border-radius: 12px; background: rgba(20,25,40,.28); filter: blur(3px); }
+.v3 .whl { width: 12px; height: 30%; border-radius: 4px; background: #23202A; transform: translateZ(3px); }
+.v3 .whl.w1 { left: 12%; top: -2px; } .v3 .whl.w2 { right: 14%; top: -2px; } .v3 .whl.w3 { left: 12%; bottom: -2px; } .v3 .whl.w4 { right: 14%; bottom: -2px; }
+.ly.b0 { background: color-mix(in srgb, var(--c) 55%, #12091c); }
+.ly.b1 { background: color-mix(in srgb, var(--c) 66%, #12091c); }
+.ly.b2 { background: color-mix(in srgb, var(--c) 76%, #12091c); }
+.ly.b3 { background: color-mix(in srgb, var(--c) 86%, #12091c); }
+.ly.bt { background: radial-gradient(120% 140% at 70% 25%, color-mix(in srgb, var(--c) 70%, #fff) 0, var(--c) 55%); }
+.ly.gl { background: #2E5577; box-shadow: inset 0 0 0 1px rgba(255,255,255,.18); }
+.ly.rf { background: radial-gradient(120% 160% at 65% 25%, color-mix(in srgb, var(--c) 62%, #fff) 0, var(--c) 60%); box-shadow: inset 0 0 0 1.5px rgba(255,255,255,.3); }
+.v3 .lamp { width: 5px; height: 5px; border-radius: 50%; transform: translateZ(9px); }
+.v3 .lamp.hl1 { right: -1px; top: 3px; background: #FFF4A8; box-shadow: 0 0 6px #FFF4A8; } .v3 .lamp.hl2 { right: -1px; bottom: 3px; background: #FFF4A8; box-shadow: 0 0 6px #FFF4A8; }
+.v3 .lamp.tl1 { left: -1px; top: 3px; background: #FF4B3E; } .v3 .lamp.tl2 { left: -1px; bottom: 3px; background: #FF4B3E; }
+.v3 .badge { position: absolute; inset: 0; display: grid; place-items: center; pointer-events: none; transform-style: preserve-3d; }
+.v3 .badge .ac { left: 22%; width: 24%; top: 28%; bottom: 28%; border-radius: 5px; background: #EEF3F8; box-shadow: 0 1px 0 rgba(0,0,0,.2); transform: translateZ(1.5px); }
+.v3.car .badge .ac, .v3.van .badge .ac { display: none; }
+.v3 .num { position: relative; min-width: 16px; padding: 1px 5px; border-radius: 9px; background: rgba(255,255,255,.92); color: #2A2433; font-size: 10px; font-weight: 800; text-align: center; line-height: 1.3; }
+.v3.bus .num { margin-left: 22%; }
+.v3.hit .body3 { animation: busHit .45s; }
+@keyframes busHit { 25%, 75% { filter: brightness(1.5) saturate(.6); } 50% { filter: none; } }
+.towing .v3 { animation: arHint 1s ease-in-out infinite; }
+.bus-presets { display: flex; flex-wrap: wrap; gap: 6px; }
+.bus-presets small { opacity: .7; }
+.bus-help { display: grid; grid-template-columns: repeat(2, 1fr); gap: 6px; width: 100%; max-width: 480px; }
+.bus-help .btn { display: flex; flex-direction: column; line-height: 1.15; padding: 6px 4px; font-size: 12px; background: #fff; color: #2A2433; border-color: #D5DEE8; }
 .bus-help small { font-size: 10.5px; opacity: .75; }
+.bus-view .ar-end { color: var(--text); } .bus-view .ar-end .muted { color: var(--muted); }
+.bus-view .ar-end-box .snap-frame img { max-height: 34vh; }

@@ -40,20 +40,25 @@ async function gotFile(f) {
     <p class="tiny muted center" style="margin:0">Se borra sola en 24 horas, salvo que la guarden en Momentos.</p></div>`);
 }
 function snapTextInput() { const t = $('snapText').value.trim(), p = $('snapPreview'); p.hidden = !t; p.textContent = t; }
-async function sendSnap() {
-  if (!pending) return;
-  $('snapBtn').disabled = true;
+// Manda una instantánea ya comprimida (la usan esta hoja y La parada para desbloquear un lugar con una foto)
+export async function sendPhotoSnap(dataUrl, text = '', replyId = null) {
   const r = newRef('snaps'), pid = snapPhotoId(r.id);
-  const thumb = await makeThumb(pending).catch(() => null);
+  const thumb = await makeThumb(dataUrl).catch(() => null);
   const batch = writeBatch(db);
-  batch.set(ref('photos', pid), { data: pending }); cachePhoto(pid, pending);
+  batch.set(ref('photos', pid), { data: dataUrl }); cachePhoto(pid, dataUrl);
   if (thumb) { batch.set(ref('photos', thumbId(pid)), { data: thumb }); cachePhoto(thumbId(pid), thumb); }
-  const data = { by: uid(), at: Date.now(), text: $('snapText').value.trim() };
-  if (replyTo && S.data.snaps.some(s => s.id === replyTo)) data.replyTo = replyTo;
+  const data = { by: uid(), at: Date.now(), text };
+  if (replyId && S.data.snaps.some(s => s.id === replyId)) data.replyTo = replyId;
   batch.set(r, data);
   write(batch.commit()); markActive(); countStat('acts', 'snap');
   notify('snaps', { title: data.replyTo ? `📸 ${meForPartner()} te respondió con una foto` : `📸 ${meForPartner()} te mandó una instantánea`,
     body: data.text || 'Tócala para verla 👀', url: './?open=snaps', tag: 'snaps' });
+  return r.id;
+}
+async function sendSnap() {
+  if (!pending) return;
+  $('snapBtn').disabled = true;
+  await sendPhotoSnap(pending, $('snapText').value.trim(), replyTo);
   pending = null; replyTo = null;
   closeSheet(); toast('Instantánea enviada 📸');
 }
