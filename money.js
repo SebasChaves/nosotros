@@ -65,7 +65,7 @@ export function moneyCard() {
     ${w.budget ? thermo(w) : `<p class="small muted" style="margin:0">Pongan un presupuesto semanal para comida, salidas y fiestas y aquí verán cuánto les queda.</p><button class="btn ghost small" onclick="budgetSheet()">Poner presupuesto</button>`}
     ${o ? outingBanner(o) : ''}
     <div class="grid2"><button class="btn" onclick="quickSpend()">${icon('plus')} Anotar gasto</button><button class="btn ghost" onclick="${o ? 'quickSpend()' : 'startOuting()'}">${o ? '➕ A la salida' : '🎉 Salimos'}</button></div>
-    <p class="tiny muted center" style="margin:0">Este mes en gustos: <b class="num">${fmtMoney(month)}</b> · <button class="link tiny" onclick="moneyTour()">📖 Cómo funciona</button></p></div>`;
+    <p class="tiny muted center" style="margin:0">Este mes en gustos: <b class="num">${fmtMoney(month)}</b> · <button class="link tiny" onclick="moneyCharts()">📈 Gráficos</button> · <button class="link tiny" onclick="moneyTour()">📖 Cómo funciona</button></p></div>`;
 }
 
 /* ---------- Pantalla Gastos ---------- */
@@ -109,6 +109,7 @@ function render() {
       ${w.budget ? thermo(w) : '<p class="small muted" style="margin:0">Sin presupuesto semanal todavía. Pónganlo y lo que les sobre cada semana pasa solo a su alcancía 🐷.</p>'}
       ${o ? outingBanner(o) : `<button class="btn ghost" onclick="startOuting()">🎉 Salimos: sumar lo de esta salida</button>`}
       <div class="row" style="justify-content:center;gap:18px;flex-wrap:wrap"><button class="link" onclick="bankTutorial()">⚡ Que se anote desde el aviso del banco</button><button class="link" onclick="moneyTour()">📖 Cómo funciona</button></div></div>
+    <button class="btn ghost vz-open" onclick="moneyCharts()">📈 Ver gráficos: semanas, categorías, meses y días</button>
     ${goalsCard()}
     <div class="glass stack" style="gap:6px"><div class="row"><span class="label">📊 Esta semana vs. la pasada</span></div>
       ${GUSTOS.map(c => `<div class="row small"><span>${catOf(c).join(' ')}</span><span><b class="num">${fmtMoney(now[c])}</b> <span class="muted">· antes ${fmtMoney(prev[c])}</span> ${diff(now[c], prev[c])}</span></div>`).join('')}

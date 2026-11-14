@@ -11,6 +11,18 @@ nada. Sale sola la primera vez que cada uno entra a Gastos (`profiles/<uid>.pref
 «📖 Cómo funciona» (botón arriba en Gastos y enlace en la tarjeta de Inicio). La guía general (`tour.js`, versión 4)
 muestra una vez «Lo nuevo» con un paso de Gastos.
 
+## Gráficos (`money-charts.js`)
+
+Pantalla completa desde Gastos («📈 Ver gráficos») y la tarjeta de Inicio. Solo lee `expenses` (no guarda nada).
+- Arriba hasta 3 frases con lo importante (mes vs. mes pasado —antes del día 20 solo dice cuánto llevan—, semanas que
+  cumplieron el presupuesto, el día que más gastan, la categoría #1).
+- **Gustos semana a semana** (12 semanas, línea punteada del presupuesto) · **¿En qué se va?** (barras por categoría:
+  este mes / mes pasado / 3 meses) · **Mes contra mes** (6 meses, gustos + lo demás apilado, con leyenda) · **¿Qué días
+  gastan más?** (gustos de las últimas 8 semanas).
+- Tocar una barra muestra su detalle debajo; cada gráfico tiene «Ver como tabla».
+- SVG a mano, sin librerías. Colores `--viz-1` (azul) y `--viz-2` (naranja) en `styles.css`, distintos en tema oscuro
+  y claro, validados con el validador de paletas (contraste y daltonismo). Grilla tenue, un solo eje, sin número en cada barra.
+
 ## Anotar rápido (`quickSpend`)
 
 - Se abre desde **Inicio** (tarjeta «💸 Gustos de la semana»), el botón «+ Gasto» de Gastos, el **atajo del ícono**

@@ -1,6 +1,7 @@
 /* Diseño "Aurora": fondo oscuro con luces de color, tarjetas de vidrio y degradados.
    Los colores de acento cambian con body[data-accent] (se elige en Ajustes). */
 :root {
+  --viz-1: #3987e5; --viz-2: #d95926; /* gráficos (money-charts.js), validados en oscuro */
   --bg: #140C1C;
   --glass: rgba(255, 255, 255, .075);
   --glass-2: rgba(255, 255, 255, .12);
@@ -356,6 +357,7 @@ body.is-offline .offline { display: block; }
 /* ===== Modo claro (Ajustes → Tu estilo) ===== */
 body[data-theme="light"] {
   color-scheme: light;
+  --viz-1: #2a78d6; --viz-2: #eb6834; /* gráficos, validados en claro */
   --bg: #FBF6F8;
   --glass: rgba(255, 255, 255, .72);
   --glass-2: rgba(40, 20, 50, .07);
@@ -1025,3 +1027,42 @@ body:not([data-theme="light"]) .map-box .leaflet-tile-pane { filter: invert(1) h
 .mt-dots { display: flex; gap: 5px; justify-content: center; }
 .mt-dots i { width: 7px; height: 7px; border-radius: 9px; background: var(--line); cursor: pointer; transition: width .2s; }
 .mt-dots i.on { width: 20px; background: var(--grad); }
+
+/* Gráficos de Gastos (money-charts.js) */
+.vz-body { gap: 12px; }
+.vz-view .mt-body, .vz-view p, .vz-card { text-align: left; }
+.vz-refk { display: inline-block; width: 18px; border-top: 1.5px dashed var(--text); opacity: .7; vertical-align: middle; margin-right: 4px; }
+.vz-ins { display: flex; flex-direction: column; gap: 6px; padding: 12px 14px; border-radius: 16px; background: var(--glass); border: 1px solid var(--line); }
+.vz-ins p { font-size: 14px; }
+.vz-card { display: flex; flex-direction: column; gap: 6px; padding: 14px; border-radius: 18px; background: var(--glass); border: 1px solid var(--line); }
+.vz-card h3 { margin: 0; font-size: 16px; }
+.vz-sub { font-size: 12.5px !important; color: var(--muted); }
+.vz-svg { width: 100%; height: auto; display: block; overflow: visible; -webkit-tap-highlight-color: transparent; }
+.vz-grid, .vz-base { stroke: var(--line); stroke-width: 1; }
+.vz-base { stroke: color-mix(in srgb, var(--text) 25%, transparent); }
+.vz-ax { font-size: 9.5px; fill: var(--muted); font-family: var(--font); }
+.vz-ax.cur { fill: var(--text); font-weight: 700; }
+.vz-s1 { fill: var(--viz-1); } .vz-s2 { fill: var(--viz-2); }
+.vz-hit { fill: transparent; cursor: pointer; }
+.vz-hit.on { fill: color-mix(in srgb, var(--text) 7%, transparent); }
+.vz-ref { stroke: var(--text); stroke-width: 1.5; stroke-dasharray: 5 4; opacity: .7; }
+.vz-reft { fill: var(--text); font-weight: 600; }
+.vz-tip { font-size: 13px !important; min-height: 2.6em; color: var(--muted); }
+.vz-tip b { color: var(--text); }
+.vz-legend { display: flex; gap: 14px; font-size: 12.5px; color: var(--muted); }
+.vz-legend span { display: flex; align-items: center; gap: 6px; }
+.vz-legend i { width: 10px; height: 10px; border-radius: 3px; display: inline-block; }
+.vz-k1 { background: var(--viz-1); } .vz-k2 { background: var(--viz-2); }
+.vz-seg { margin: 2px 0; }
+.vz-hbars { display: flex; flex-direction: column; gap: 8px; }
+.vz-hrow { display: grid; grid-template-columns: 104px 1fr auto; gap: 8px; align-items: center; font-size: 13px; }
+.vz-hl { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.vz-htrack { height: 10px; }
+.vz-htrack i { display: block; height: 100%; border-radius: 0 4px 4px 0; background: var(--viz-1); }
+.vz-hv { text-align: right; font-variant-numeric: tabular-nums; white-space: nowrap; font-size: 12.5px; }
+.vz-table summary { font-size: 12.5px; color: var(--muted); cursor: pointer; }
+.vz-table table { width: 100%; border-collapse: collapse; margin-top: 6px; font-size: 13px; }
+.vz-table th { text-align: left; font-weight: 600; color: var(--muted); padding: 4px 0; border-bottom: 1px solid var(--line); }
+.vz-table td { padding: 4px 0; border-bottom: 1px solid var(--line); }
+.vz-table td.num, .vz-table th:not(:first-child) { text-align: right; font-variant-numeric: tabular-nums; }
+.vz-open { width: 100%; }

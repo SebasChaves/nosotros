@@ -50,7 +50,7 @@ const SLIDES = () => [
     <p class="tiny muted">El dinero no se mueve de verdad: es para que vean cuánto llevan. Apártenlo también en su cuenta de ahorro 😉.</p>` },
   { e: '🔔', t: 'Avisos y resumen del domingo', body: `<p>Si tienen las notificaciones activadas, Futari les avisa (pueden apagar cada tipo en Ajustes → Notificaciones → «💸 Gastos»):</p>
     <div class="mt-notifs">${['🟡 Van por el 80 % del presupuesto de la semana', `🎉 ${pn()} empezó «Salida del sábado»`, `🙈 Ya van ${m(28000)} en Salida del sábado`, `🐷 ¡Les sobraron ${m(12000)} esta semana!`].map(t => `<div class="mt-notif"><b>Futari</b><span>${t}</span></div>`).join('')}</div>
-    <p>Cada <b>domingo en la noche</b> llega el resumen: cuánto gastaron en gustos, comparado con su presupuesto y con la semana anterior. En Gastos también está la tarjeta «Esta semana vs. la pasada».</p>` },
+    <p>Cada <b>domingo en la noche</b> llega el resumen: cuánto gastaron en gustos, comparado con su presupuesto y con la semana anterior. En Gastos también está la tarjeta «Esta semana vs. la pasada», y en <b>📈 Ver gráficos</b> ven sus semanas, en qué se va la plata, mes contra mes y qué días gastan más.</p>` },
   { e: '🏦', t: 'Desde el aviso del banco', body: `<p>Si su banco les manda un SMS, correo o notificación con cada compra, el teléfono puede <b>abrir Futari con el monto y el lugar ya puestos</b>: solo tocas la categoría.</p>
     ${ex('Ejemplo', `<div class="mt-notif"><b>Banco</b><span>Compra aprobada por CRC 18,750.00 en AUTOMERCADO el 14/11</span></div><p style="margin:8px 0 0">↓ se abre Futari con <b>${fmtMoney(C() ? 18750 : 37.5)}</b> y «AUTOMERCADO» → tocas 🛒 Súper. Listo.</p>`)}
     <p>Se configura una vez en cada teléfono. Hay un paso a paso para iPhone y Samsung:</p>

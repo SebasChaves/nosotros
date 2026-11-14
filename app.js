@@ -11,6 +11,7 @@ import './moments.js';
 import { snapShortcut } from './snaps.js';
 import { moneyShortcut } from './money.js';
 import './money-tour.js';
+import './money-charts.js';
 import { handleOpenParam } from './push.js';
 import { guessWaiting } from './guess.js';
 import './lists.js';
@@ -40,7 +41,7 @@ import { logVisit } from './tracking.js';
 import { maybeStartTour, resetTourCheck } from './tour.js';
 
 // Versión de esta copia de la app. Súbela junto con version.json y la caché de sw.js al publicar.
-export const APP_VERSION = '60';
+export const APP_VERSION = '61';
 window.FUTARI_VERSION = APP_VERSION; // lo guarda el registro de ingresos (panel de administración)
 
 // Si la app estuvo abierta hace poco (Android la cierra sola al salir), se vuelve rápido a la misma pantalla.
