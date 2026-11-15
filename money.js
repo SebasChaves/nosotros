@@ -336,7 +336,7 @@ function saveOuting() {
   const name = $('outName').value.trim() || 'Salida', limit = parseAmount($('outLimit').value) || 0;
   write(setDoc(ref('money', 'out'), { active: true, oid: 'o' + Date.now(), name, limit, startAt: Date.now(), by: uid(), warned: false }));
   closeSheet(); toast('🎉 ¡Que se diviertan! Anoten lo que gasten');
-  notify('money', { title: `🎉 ${meForPartner()} empezó «${name}»`, body: limit ? `Límite: ${fmtMoney(limit)}. Lo que anoten se suma ahí.` : 'Lo que anoten se suma ahí.', url: './?open=money', tag: 'outing' });
+  notify('money', { title: `🎉 ${meForPartner()} empezó «${name}»`, body: `${limit ? `Límite: ${fmtMoney(limit)}. ` : ''}Toca aquí para anotar cada gasto de la salida`, url: './?open=gasto', tag: 'outing-live' });
 }
 async function endOuting() {
   const o = outing(); if (!o) return;
@@ -344,6 +344,8 @@ async function endOuting() {
   if (!(await ask(`¿Terminar «${o.name}»? Total: ${fmtMoney(total)}`, { ok: 'Terminar' }))) return;
   write(updateDoc(ref('money', 'out'), { active: false, endAt: Date.now(), total }));
   toast(`Salida terminada: ${fmtMoney(total)}`);
+  // Quita la notificación fija también en el teléfono de la pareja (aunque tenga Futari cerrada)
+  notify('money', { title: `✅ Terminó «${o.name}»`, body: `Total: ${fmtMoney(total)}${o.limit ? ` (límite ${fmtMoney(o.limit)})` : ''}`, url: './?open=money', tag: 'outing-done' });
 }
 
 /* ---------- Presupuesto semanal ---------- */
@@ -513,7 +515,25 @@ function syncOutFab() {
   el.setAttribute('aria-label', `Anotar un gasto en ${o.name}`);
   el.innerHTML = `<span class="out-fab-ic">＋</span><span class="out-fab-txt"><b>Anotar</b><small>🎉 ${fmtMoney(total)}${o.limit ? ` de ${fmtMoney(o.limit)}` : ''}</small></span>`;
 }
-on('expenses trips money', () => { render(); rollWeek(); syncOutFab(); });
+// Notificación fija mientras dura la salida (Android: se queda hasta terminar; iPhone: queda en el centro de
+// notificaciones). Tocarla —o su botón «＋ Anotar gasto»— abre «Anotar». Se actualiza con el total, sin sonar.
+let outNotifKey = '';
+async function syncOutNotif() {
+  try {
+    if (!('serviceWorker' in navigator) || !('Notification' in window) || Notification.permission !== 'granted') return;
+    const reg = await navigator.serviceWorker.getRegistration(); if (!reg) return;
+    const o = outing(), open = await reg.getNotifications({ tag: 'outing-live' });
+    if (!o) { open.forEach(n => n.close()); outNotifKey = ''; return; }
+    const total = spends().filter(e => e.outing === o.oid).reduce((s, e) => s + e.amount, 0), key = `${o.oid}|${total}`;
+    if (key === outNotifKey && open.length) return;
+    outNotifKey = key;
+    await reg.showNotification(`🎉 ${o.name} en curso`, {
+      body: `Llevan ${fmtMoney(total)}${o.limit ? ` de ${fmtMoney(o.limit)}${total > o.limit ? ' 🙈' : ''}` : ''} · Toca para anotar un gasto`,
+      tag: 'outing-live', renotify: false, silent: true, requireInteraction: true, icon: 'icon-192.png', badge: 'icon-badge.png',
+      actions: [{ action: 'gasto', title: '＋ Anotar gasto' }], data: { url: './?open=gasto' } });
+  } catch (e) { console.warn('outing notif', e); }
+}
+on('expenses trips money', () => { render(); rollWeek(); syncOutFab(); syncOutNotif(); });
 expose({ mvFilter, openExpense, saveExpense, settleUp, delExpense, quickSpend, qsKey, qsAdd, qsToggle, qsMore, qsBack, qsFreq, qsRepeat, qsSave, qsDescIn,
   startOuting, saveOuting, endOuting, budgetSheet, saveBudget, goalSheet, saveGoal, goalAdd, saveGoalAdd, goalStar, goalDel,
   bankTutorial, copyBankUrl, bankTry, bankTryOpen });

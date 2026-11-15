@@ -169,6 +169,7 @@ const OPEN = {
   arrows: () => window.go('s-arrows'),
   bus: () => window.go('s-bus'),
   money: () => go('s-money'),
+  gasto: () => window.quickSpend?.(),
   grocery: () => go('s-grocery'),
   gift: () => { go('s-home'); setTimeout(() => window.unwrapGift?.(), 600); },
   'cravings-done': () => window.openCravings?.('done'),

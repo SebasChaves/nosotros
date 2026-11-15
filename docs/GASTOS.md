@@ -40,7 +40,7 @@ Pantalla completa desde el ícono 📈 de arriba en Gastos (entre 📖 y «+ Gas
 
 «🎉 Salimos» (nombre y límite opcional). Mientras está activa, lo que anoten los dos lleva `outing`/`outName` y en la
 lista se ve como **una sola fila** que se abre con el detalle. Si pasan el límite: aviso a la pareja (`money`) y toast
-(una vez, `warned`). «Terminar» la cierra. Mientras está activa, `syncOutFab()` pone un botón flotante «＋ Anotar» con el total en todas las pantallas (rojo si pasan el límite; se esconde con hojas y ventanas abiertas).
+(una vez, `warned`). «Terminar» la cierra. Mientras está activa, `syncOutFab()` pone un botón flotante «＋ Anotar» con el total en todas las pantallas (rojo si pasan el límite; se esconde con hojas y ventanas abiertas). Además `syncOutNotif()` muestra una notificación fija (etiqueta `outing-live`, `requireInteraction`, botón «＋ Anotar gasto», sin sonido al actualizar el total) que abre `./?open=gasto`; a la pareja le llega por push con la misma etiqueta. Al terminar, el push `outing-done` la quita en el otro teléfono (sw.js). En iPhone no existen notificaciones fijas: queda en el centro de notificaciones.
 
 ## Presupuesto semanal, termómetro y alcancías
 
