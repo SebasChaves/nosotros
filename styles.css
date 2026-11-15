@@ -989,7 +989,7 @@ body:not([data-theme="light"]) .map-box .leaflet-tile-pane { filter: invert(1) h
 .qs-cats .btn { display: flex; flex-direction: column; align-items: center; gap: 0; padding: 8px 4px; font-size: 22px; line-height: 1.1; }
 .qs-cats .btn small { font-size: 11.5px; font-weight: 600; }
 .undo-bar { position: fixed; left: 50%; bottom: calc(env(safe-area-inset-bottom) + 92px); transform: translateX(-50%); z-index: 120; display: flex; align-items: center; gap: 14px;
-  max-width: calc(100% - 32px); padding: 10px 10px 10px 16px; border-radius: 16px; background: #26202f; color: #fff; box-shadow: 0 10px 30px rgba(0,0,0,.4); font-size: 14px; animation: pop .2s; transition: opacity .3s; }
+  width: max-content; max-width: calc(100% - 32px); padding: 10px 10px 10px 16px; border-radius: 16px; background: #26202f; color: #fff; box-shadow: 0 10px 30px rgba(0,0,0,.4); font-size: 14px; animation: pop .2s; transition: opacity .3s; }
 .undo-bar.out { opacity: 0; }
 .undo-bar button { border: 0; border-radius: 10px; padding: 8px 12px; background: var(--grad); color: var(--on-grad); font-weight: 700; cursor: pointer; }
 .goal { display: flex; flex-direction: column; gap: 4px; padding: 8px 0; border-bottom: 1px solid var(--line); }

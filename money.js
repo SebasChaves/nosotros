@@ -27,7 +27,18 @@ export const catOf = c => EXPENSE_CATS.find(([e]) => e === c) || EXPENSE_CATS[EX
 const monthName = k => { const [y, m] = k.split('-'); return new Date(+y, +m - 1, 1).toLocaleDateString('es', { month: 'long', year: 'numeric' }); };
 const QUICK_CATS = ['🍽️', '🎬', '🎉', '🛒', '📦'];
 const GUSTOS = ['🍽️', '🎬', '🎉'];
-const SPLITS = { half: 'A medias', full: 'Todo lo debe el otro', none: 'Solo mío' };
+const SPLITS = { half: 'A medias: el otro debe la mitad', full: 'El otro debe todo', none: 'Nadie debe: cada quien lo suyo' };
+// Cómo quedan las cuentas de un gasto, dicho claro: quién le debe cuánto a quién (desde mi lado si me toca)
+function debtTxt(split, paidBy, amount) {
+  const other = paidBy === uid() ? partnerUid() : uid();
+  if (split === 'none' || !other) return 'Nadie debe nada';
+  const owes = split === 'full' ? amount : amount / 2;
+  const m = amount ? ' ' + fmtMoney(owes) : (split === 'full' ? ' todo' : ' la mitad');
+  return other === uid() ? `Le debes${m} a ${nameOf(paidBy)}` : `${nameOf(other)} te debe${m}`;
+}
+// La última forma de dividir que eligieron en este teléfono queda como la de siempre
+const lastSplit = () => { try { return localStorage.getItem('futari-split') || 'half'; } catch { return 'half'; } };
+const keepSplit = s => { try { localStorage.setItem('futari-split', s); } catch {} };
 
 /* ---------- Datos de apoyo ---------- */
 const cfg = () => S.data.money.find(d => d.id === 'cfg') || {};
@@ -91,7 +102,7 @@ function render() {
     const [ce, cl] = e.type === 'settle' ? ['🤝', 'Pago'] : catOf(e.cat);
     const trip = e.tripId && S.data.trips.find(t => t.id === e.tripId);
     return `<li><span style="font-size:22px">${ce}</span><div class="txt" role="button" tabindex="0" style="cursor:pointer" ${e.type === 'settle' ? '' : `onclick="openExpense({id:'${e.id}'})"`}>${esc(e.type === 'settle' ? `${nameOf(e.paidBy)} saldó cuentas` : e.desc || cl)}
-      <span class="sub">${fmtShort(parseDate(e.date))} · ${e.type === 'settle' ? '' : `pagó ${esc(nameOf(e.paidBy))} · ${SPLITS[e.split] || SPLITS.half}`}${trip ? ` · ${esc(trip.name)}` : ''}</span></div>
+      <span class="sub">${fmtShort(parseDate(e.date))} · ${e.type === 'settle' ? '' : `pagó ${esc(nameOf(e.paidBy))} · ${esc(debtTxt(e.split || 'half', e.paidBy, e.amount))}`}${trip ? ` · ${esc(trip.name)}` : ''}</span></div>
       <b class="num">${fmtMoney(e.amount)}</b><button class="del" aria-label="Borrar" onclick="delExpense('${e.id}')">${icon('trash')}</button></li>`;
   };
   for (const e of items) {
@@ -165,7 +176,7 @@ function frequent() {
 }
 const lastMine = () => [...spends()].filter(e => e.by === uid()).sort((a, b) => b.createdAt - a.createdAt)[0];
 export function quickSpend(pre = {}) {
-  Q = { amt: pre.amount ? String(Math.round(pre.amount * 100) / 100) : '', desc: pre.desc || '', paidBy: uid(), split: 'half', date: todayKey(), note: pre.note || '' };
+  Q = { amt: pre.amount ? String(Math.round(pre.amount * 100) / 100) : '', desc: pre.desc || '', paidBy: uid(), split: lastSplit(), date: todayKey(), note: pre.note || '' };
   paintQuick();
 }
 function paintQuick() {
@@ -184,7 +195,7 @@ function paintQuick() {
       <button class="btn ghost" onclick="qsMore()">⋯<small>Más</small></button></div>
     <div class="qs-opts">
       <button class="chip" onclick="qsToggle('paid')">💳 Pagó ${Q.paidBy === uid() ? 'yo' : esc(nameOf(p))}</button>
-      <button class="chip" onclick="qsToggle('split')">➗ ${SPLITS[Q.split]}</button>
+      <button class="chip" onclick="qsToggle('split')">➗ ${esc(debtTxt(Q.split, Q.paidBy, 0))}</button>
       <button class="chip" onclick="qsToggle('date')">📅 ${Q.date === todayKey() ? 'Hoy' : Q.date === shiftKey(todayKey(), -1) ? 'Ayer' : fmtShort(parseDate(Q.date))}</button>
     </div></div>`);
 }
@@ -201,7 +212,7 @@ function qsAdd(n) { if (!Q) return; Q.amt = String(Math.round((Number(Q.amt || 0
 function qsToggle(what) {
   const p = partnerUid();
   if (what === 'paid' && p) Q.paidBy = Q.paidBy === uid() ? p : uid();
-  if (what === 'split') Q.split = { half: 'full', full: 'none', none: 'half' }[Q.split];
+  if (what === 'split') { Q.split = { half: 'full', full: 'none', none: 'half' }[Q.split]; keepSplit(Q.split); }
   if (what === 'date') Q.date = Q.date === todayKey() ? shiftKey(todayKey(), -1) : Q.date === shiftKey(todayKey(), -1) ? shiftKey(todayKey(), -2) : todayKey();
   paintQuick();
 }
@@ -220,7 +231,7 @@ function qsSave(cat) {
     ...(o ? { outing: o.oid, outName: o.name } : {}) };
   write(setDoc(r, data)); markActive();
   closeSheet(); Q = null; navigator.vibrate?.(12);
-  undoBar(`Anotado ${fmtMoney(amount)} en ${catOf(cat)[1]}${o ? ' · ' + o.name : ''}`, () => write(deleteDoc(r)));
+  undoBar(`Anotado ${fmtMoney(amount)} en ${catOf(cat)[1]}${o ? ' · ' + o.name : ''} · ${debtTxt(data.split, data.paidBy, amount)}`, () => write(deleteDoc(r)));
   setTimeout(() => afterSpend(data, before), 600);
 }
 // Avisos suaves: salida que pasó su límite y presupuesto de la semana al 80 % o pasado
@@ -274,7 +285,8 @@ export function openExpense(preset = {}) {
     ${trips.length ? `<div><label class="f" for="exTrip">Viaje (opcional)</label><select id="exTrip"><option value="">Ninguno</option>${trips.map(t => `<option value="${t.id}" ${preset.tripId === t.id ? 'selected' : ''}>${esc(t.name)}</option>`).join('')}</select></div>` : ''}
     <button class="btn" onclick="saveExpense()">${ex ? 'Guardar cambios' : 'Guardar gasto'}</button>
     ${ex ? `<button class="btn ghost danger" onclick="delExpense('${ex.id}')">${icon('trash')} Borrar gasto</button>` : ''}</div>`);
-  if (ex) { $('exPaid').value = ex.paidBy; $('exSplit').value = ex.split || 'half'; }
+  $('exSplit').value = ex ? ex.split || 'half' : lastSplit();
+  if (ex) $('exPaid').value = ex.paidBy;
 }
 // Acepta "5000", "5.000", "5,000", "12,50", "1.234,56" o "1,234.56".
 export function parseAmount(s) {
@@ -288,6 +300,7 @@ function saveExpense() {
   const desc = $('exDesc').value.trim(), amount = parseAmount($('exAmount').value);
   if (!desc || !(amount > 0)) return toast('Pon en qué y un monto válido');
   const o = outing(), cat = $('exCat').value;
+  if (!editingEx) keepSplit($('exSplit').value);
   if (editingEx && S.data.expenses.some(e => e.id === editingEx)) {
     write(updateDoc(ref('expenses', editingEx), { desc, amount: Math.round(amount * 100) / 100, paidBy: $('exPaid').value, split: $('exSplit').value, cat, date: $('exDate').value || todayKey(), tripId: $('exTrip')?.value || null }));
     editingEx = null; closeSheet(); return toast('Cambios guardados');

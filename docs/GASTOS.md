@@ -29,7 +29,7 @@ Pantalla completa desde el ícono 📈 de arriba en Gastos (entre 📖 y «+ Gas
   («Anotar gasto», `manifest.json` → `./?gasto`) y el **aviso del banco** (`#banco=<texto>`, abajo).
 - Teclado de números propio (no sale el del teléfono), monto grande arriba, **tocar la categoría guarda** (sin botón
   «Guardar» ni confirmación). Después sale una barra con **Deshacer** 5 s (`undoBar`).
-- Por defecto: pagó quien anota · a medias · hoy (chips para cambiarlos: pagó el otro; «todo lo debe el otro» o «solo
+- Por defecto: pagó quien anota · la última forma de dividir que se eligió en ese teléfono (localStorage `futari-split`; la primera vez «a medias») · hoy. El chip ➗ dice la deuda en palabras (`debtTxt`: «Beto te debe la mitad», «Le debes todo a…», «Nadie debe nada») (chips para cambiarlos: pagó el otro; «todo lo debe el otro» o «solo
   mío» = `split: 'none'`, no cuenta en el balance; ayer/antier). Descripción opcional (si no, el nombre de la categoría).
 - Gastos frecuentes (misma descripción, categoría y monto ≥ 2 veces en 120 días), «Repetir el último» y botones
   +1.000 / +5.000 / +10.000 (+1/+5/+10 si la moneda no es colones). «⋯ Más» abre todas las categorías.
