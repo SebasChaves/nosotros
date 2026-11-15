@@ -121,3 +121,18 @@ problema es el Cron en Cloudflare (*Settings → Triggers*, `* * * * *`) o sus *
 5. *Settings* → *Triggers* (o *Trigger Events*) → *Cron Triggers* → *Add* → `* * * * *` (cada minuto) → guardar.
 6. Abre la dirección del Worker: debe decir `"scheduled":true`.
 
+
+## Chef con IA (`/chef`, Worker v9)
+
+«👩‍🍳 Pregúntale al chef» (`recipes.js`) manda lo que escriben al Worker (con la sesión de la pareja) y el Worker arma la
+receta con IA. No guarda nada; la app la guarda solo si tocan «Guardar».
+
+- **Gratis (lo que está activo):** Workers AI de Cloudflare. Se activa una vez: Cloudflare → Workers & Pages →
+  `futari-push` → *Settings* → *Bindings* → *Add* → **Workers AI** → nombre de la variable **`AI`** → guardar (y *Deploy*
+  si lo pide). Modelo: `@cf/meta/llama-3.3-70b-instruct-fp8-fast` (se cambia con la variable `CHEF_CF_MODEL`). Tiene un
+  límite gratis diario; al pasarlo responde `limit` y la app dice «se acabó lo gratis de hoy».
+- **Claude (opcional, mejores recetas):** agregar el secreto `ANTHROPIC_API_KEY` (cuenta en console.anthropic.com con
+  crédito prepagado; sin cuota mensual). Si existe, el Worker usa Claude (`claude-opus-5-5`, esfuerzo `low`, salida JSON
+  con esquema, `fallbacks: "default"`) en vez de Workers AI. `CHEF_MODEL` cambia el modelo de Claude. **Sin probar con
+  una clave real**: revisar la primera vez.
+- Errores: `old-worker` (falta pegar v9), `no-ai` (falta el binding), `limit`, `ai` (otro error; detalle en *Logs*).

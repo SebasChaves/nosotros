@@ -16,7 +16,7 @@
 //   COUPLE_ID          (texto, opcional) por defecto nosotros
 // Ver docs/NOTIFICACIONES.md. Sin dependencias: se pega tal cual en el editor de Cloudflare.
 
-const WORKER_VERSION = 8; // súbelo al cambiar este archivo (la app lo muestra en el diagnóstico)
+const WORKER_VERSION = 9; // súbelo al cambiar este archivo (la app lo muestra en el diagnóstico)
 const enc = new TextEncoder();
 const b64u = buf => btoa(String.fromCharCode(...new Uint8Array(buf))).replace(/\+/g, '-').replace(/\//g, '_').replace(/=+$/, '');
 const unb64u = s => Uint8Array.from(atob(s.replace(/-/g, '+').replace(/_/g, '/') + '==='.slice((s.length + 3) % 4)), c => c.charCodeAt(0));
@@ -32,7 +32,7 @@ export default {
     if (req.method === 'OPTIONS') return new Response(null, { status: 204, headers: cors });
     const url = new URL(req.url);
     if (req.method === 'GET') return json({ ok: true, service: 'futari-push', version: WORKER_VERSION, ready: !!(env.VAPID_PUBLIC_KEY && env.VAPID_PRIVATE_KEY && env.FIREBASE_PROJECT_ID && env.ALLOWED_UIDS), scheduled: !!env.FIREBASE_SA });
-    if (req.method !== 'POST' || !['/notify', '/diagnostico', '/link'].includes(url.pathname)) return json({ error: 'not-found' }, 404);
+    if (req.method !== 'POST' || !['/notify', '/diagnostico', '/link', '/chef'].includes(url.pathname)) return json({ error: 'not-found' }, 404);
 
     // 1. ¿Quién pide? Sesión de Firebase válida y de la pareja
     let who;
@@ -41,6 +41,11 @@ export default {
     const allowed = (env.ALLOWED_UIDS || '').split(',').map(s => s.trim()).filter(Boolean);
     if (!allowed.includes(who)) return json({ error: 'forbidden' }, 403);
     if (url.pathname === '/diagnostico') return json(await diagnose(env, who));
+    if (url.pathname === '/chef') { // «Pregúntale al chef» (recipes.js): arma una receta con IA
+      let b3; try { b3 = await req.json(); } catch { return json({ error: 'bad-json' }, 400); }
+      try { return json(await chef(env, b3)); }
+      catch (e) { const m = String(e.message || e); return json({ error: m.startsWith('no-ai') ? 'no-ai' : /limit|429|quota|neurons/i.test(m) ? 'limit' : 'ai', detail: m.slice(0, 300) }, m.startsWith('no-ai') ? 501 : 502); }
+    }
     if (url.pathname === '/link') { // abre un enlace corto de Google Maps (maps.app.goo.gl) y devuelve a dónde lleva
       let b2; try { b2 = await req.json(); } catch { return json({ error: 'bad-json' }, 400); }
       return json({ url: await resolveMapLink(String(b2.url || '')) });
@@ -69,6 +74,61 @@ export default {
     ctx.waitUntil(runSchedule(env, event.scheduledTime).catch(e => console.error('programados', e)));
   },
 };
+
+/* ---------- Chef con IA ----------
+   Usa Claude si hay un secreto ANTHROPIC_API_KEY; si no, Workers AI (binding «AI», gratis con límite diario).
+   Devuelve { recipe: { name, emoji, min, servings, ingredients[], steps[], tips }, engine }. No guarda nada. */
+const RECIPE_SCHEMA = { type: 'object', additionalProperties: false, required: ['name', 'emoji', 'min', 'servings', 'ingredients', 'steps', 'tips'],
+  properties: { name: { type: 'string' }, emoji: { type: 'string' }, min: { type: 'integer' }, servings: { type: 'integer' },
+    ingredients: { type: 'array', items: { type: 'string' } }, steps: { type: 'array', items: { type: 'string' } }, tips: { type: 'string' } } };
+const CHEF_SYSTEM = `Eres un chef de cocina casera para una pareja en Costa Rica. Escribe en español claro de Costa Rica.
+Devuelve una sola receta realista y que funcione, con:
+- name: nombre corto del plato
+- emoji: un emoji de comida
+- min: minutos totales aproximados
+- servings: porciones
+- ingredients: cada ingrediente con su cantidad en unidades caseras o métricas (ej. «250 g de pasta», «1 taza de leche», «2 dientes de ajo»)
+- steps: pasos cortos en orden, con tiempos y temperaturas concretos cuando importan (ej. «Sella el ribeye 3 minutos por lado a fuego alto»)
+- tips: un consejo corto (o cadena vacía)
+Usa ingredientes que se consiguen en un supermercado de Costa Rica. Si piden algo peligroso o que no es comida, devuelve una receta sencilla de lo más cercano que sí sea comida.`;
+function chefPrompt(b) {
+  const ask = String(b.ask || '').slice(0, 400), parts = [];
+  if (b.base && b.change) parts.push(`Esta es la receta actual (JSON): ${JSON.stringify(b.base).slice(0, 4000)}\nCámbiala así: ${String(b.change).slice(0, 300)}`);
+  else parts.push(`Quiero cocinar: ${ask}`);
+  if (b.pantry) parts.push(`En la casa tenemos: ${String(b.pantry).slice(0, 400)}. Úsalo si sirve.`);
+  if (b.servings) parts.push(`Para ${Number(b.servings) || 2} porciones.`);
+  return parts.join('\n');
+}
+function cleanRecipe(r) {
+  if (!r || typeof r !== 'object') throw new Error('bad-recipe');
+  const list = (a, n) => (Array.isArray(a) ? a : []).map(x => String(x).trim()).filter(Boolean).slice(0, n);
+  const out = { name: String(r.name || 'Receta').slice(0, 80), emoji: String(r.emoji || '🍽️').slice(0, 4), min: Math.min(600, Math.max(1, parseInt(r.min) || 30)),
+    servings: Math.min(20, Math.max(1, parseInt(r.servings) || 2)), ingredients: list(r.ingredients, 30), steps: list(r.steps, 25), tips: String(r.tips || '').slice(0, 300) };
+  if (!out.ingredients.length || !out.steps.length) throw new Error('bad-recipe');
+  return out;
+}
+const firstJson = t => { const s = String(t || ''), a = s.indexOf('{'), z = s.lastIndexOf('}'); if (a < 0 || z <= a) throw new Error('bad-recipe'); return JSON.parse(s.slice(a, z + 1)); };
+async function chef(env, b) {
+  const user = chefPrompt(b);
+  if (env.ANTHROPIC_API_KEY) {
+    // Claude (raw HTTP: el editor de Cloudflare no instala paquetes). Salida estructurada con el esquema de la receta.
+    const r = await fetch('https://api.anthropic.com/v1/messages', { method: 'POST',
+      headers: { 'content-type': 'application/json', 'x-api-key': env.ANTHROPIC_API_KEY, 'anthropic-version': '2026-10-21', 'anthropic-beta': 'server-side-fallback-2026-07-01' },
+      body: JSON.stringify({ model: env.CHEF_MODEL || 'claude-opus-5-5', max_tokens: 8000, fallbacks: 'default', system: CHEF_SYSTEM,
+        output_config: { effort: 'low', format: { type: 'json_schema', schema: RECIPE_SCHEMA } }, messages: [{ role: 'user', content: user }] }) });
+    const d = await r.json().catch(() => ({}));
+    if (!r.ok) throw new Error(`claude ${r.status} ${d?.error?.message || ''}`);
+    if (d.stop_reason === 'refusal') throw new Error('refusal');
+    const text = (d.content || []).filter(c => c.type === 'text').map(c => c.text).join('');
+    return { recipe: cleanRecipe(firstJson(text)), engine: 'claude' };
+  }
+  if (!env.AI) throw new Error('no-ai: falta el binding «AI» (Workers AI) en Cloudflare');
+  const model = env.CHEF_CF_MODEL || '@cf/meta/llama-3.3-70b-instruct-fp8-fast';
+  const res = await env.AI.run(model, { max_tokens: 1800,
+    messages: [{ role: 'system', content: CHEF_SYSTEM + '\nResponde SOLO con un objeto JSON con las claves name, emoji, min, servings, ingredients, steps, tips. Sin texto antes ni después.' }, { role: 'user', content: user }] });
+  const raw = res?.response ?? res;
+  return { recipe: cleanRecipe(typeof raw === 'object' ? raw : firstJson(raw)), engine: 'workers-ai' };
+}
 
 /* ---------- Enlaces de mapas ---------- */
 // Solo sigue redirecciones de dominios de Google Maps / Waze (no es un abridor de enlaces cualquiera).

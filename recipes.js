@@ -1,7 +1,8 @@
 // Recetas (incluidas + propias), favoritas y menú semanal con envío de ingredientes al Súper.
 import { setDoc, updateDoc, deleteDoc, deleteField, writeBatch, increment } from 'https://www.gstatic.com/firebasejs/11.0.2/firebase-firestore.js';
 import { $, S, db, esc, icon, paint, on, onShow, expose, toast, openSheet, closeSheet, write, ref, newRef, ask, pick, celebrate,
-         today, dayKey, parseDate, plural, uid, syncBack } from './core.js';
+         today, dayKey, parseDate, plural, uid, syncBack, auth } from './core.js';
+import { PUSH } from './push-config.js';
 import { RECIPES, RECIPE_TAGS } from './recipes-data.js';
 import { backBar } from './lists.js';
 
@@ -37,6 +38,7 @@ function renderList() {
     <input id="recSearch" type="search" placeholder="Buscar receta o ingrediente…" aria-label="Buscar receta" value="${esc(q)}" oninput="recSearch(this.value)">
     <div class="chips scroll"><button class="chip ${onlyFav ? 'on' : ''}" onclick="recFav()">${icon('heart-f')} Favoritas</button>
       ${RECIPE_TAGS.map(([k, l]) => `<button class="chip ${tag === k ? 'on' : ''}" onclick="recTag('${k}')">${l}</button>`).join('')}</div>
+    <button class="btn" onclick="chefOpen()">👩‍🍳 Pregúntale al chef: «quiero hacer…»</button>
     <div class="grid2"><button class="btn ghost" onclick="recRandom()">${icon('dice')} ¿Qué cocinamos hoy?</button><button class="btn ghost" onclick="recHave()">🧺 Con lo que tengo</button></div>
     <div class="glass" style="padding:6px 14px">${list.length ? list.map(r => `
       <button class="result-row" onclick="openRecipe('${esc(r.id)}')"><span class="e" style="font-size:22px">${esc(r.emoji || '🍽️')}</span>
@@ -77,6 +79,66 @@ function openRecipe(id, lucky = false) {
 }
 const cap = s => s.charAt(0).toUpperCase() + s.slice(1);
 
+/* ---------- Pregúntale al chef (IA en el Worker de avisos: /chef) ----------
+   Escriben lo que quieren cocinar y el Worker arma la receta (Workers AI gratis, o Claude si se pone una clave).
+   La receta no se guarda hasta que tocan «Guardar»; se puede pedir cambios, mandar al Súper o cocinar en el modo cocina. */
+let chefR = null, chefAsk = '';
+const CHEF_IDEAS = ['Pasta en salsa blanca con ribeye', 'Algo rápido con pollo y arroz', 'Cena romántica fácil', 'Postre sin horno', 'Desayuno típico para el domingo'];
+function chefOpen() {
+  openSheet(`<div class="stack"><h2>👩‍🍳 Pregúntale al chef</h2>
+    <textarea id="chefAsk" rows="2" maxlength="300" placeholder="Ej: quiero hacer pasta en salsa blanca con ribeye">${esc(chefAsk)}</textarea>
+    <div class="chips">${CHEF_IDEAS.map(t => `<button class="chip" onclick="document.getElementById('chefAsk').value=this.textContent">${esc(t)}</button>`).join('')}</div>
+    <div class="grid2"><select id="chefServ" aria-label="Porciones">${[1, 2, 3, 4, 6, 8].map(n => `<option value="${n}" ${n === 2 ? 'selected' : ''}>${plural(n, 'porción', 'porciones')}</option>`).join('')}</select>
+      <label class="check" style="margin:0"><input type="checkbox" id="chefPantry"> Usar lo que tengo</label></div>
+    <button class="btn" id="chefGo" onclick="chefRun()">✨ Armar la receta</button>
+    <div id="chefOut" class="stack"></div>
+    <p class="tiny muted" style="margin:0">La escribe una inteligencia artificial: revisen cantidades y tiempos (sobre todo con carnes). Lo que escriben se manda solo para armar la receta.</p></div>`);
+  setTimeout(() => $('chefAsk')?.focus(), 80);
+}
+async function chefCall(body) {
+  if (!PUSH?.url) throw new Error('no-worker');
+  const r = await fetch(PUSH.url.replace(/\/$/, '') + '/chef', { method: 'POST', headers: { Authorization: 'Bearer ' + await auth.currentUser.getIdToken(), 'Content-Type': 'application/json' }, body: JSON.stringify(body) });
+  const d = await r.json().catch(() => ({}));
+  if (r.status === 404) throw new Error('old-worker');
+  if (!r.ok) throw new Error(d.error || 'ai');
+  return d.recipe;
+}
+const CHEF_ERR = { 'old-worker': 'Falta pegar el servicio de avisos nuevo (versión 9) en Cloudflare.', 'no-ai': 'Falta activar la IA en Cloudflare: en el servicio futari-push → Settings → Bindings → Workers AI, con el nombre AI.', limit: 'Se acabó lo gratis de hoy 😅. Mañana el chef vuelve a cocinar.', 'no-worker': 'Falta configurar el servicio de avisos.', ai: 'El chef no pudo con esa. Prueben de nuevo o escríbanlo de otra forma.' };
+async function chefRun(change) {
+  const out = $('chefOut'); if (!out) return;
+  const ask = change ? chefAsk : ($('chefAsk')?.value || '').trim();
+  if (!ask) return toast('Escribe qué quieren cocinar');
+  chefAsk = ask;
+  let pantry = ''; if ($('chefPantry')?.checked) { try { pantry = localStorage.getItem('futari-have') || ''; } catch {} if (!pantry) toast('Escribe primero lo que tienen en «Con lo que tengo»'); }
+  out.innerHTML = '<p class="small muted center" style="margin:0">El chef está pensando… 🍳 (puede tardar unos segundos)</p>';
+  ['chefGo', 'chefChangeBtn'].forEach(id => { const b = $(id); if (b) b.disabled = true; });
+  try {
+    chefR = await chefCall(change ? { base: chefR, change } : { ask, servings: Number($('chefServ')?.value) || 2, pantry });
+    chefShow();
+  } catch (e) { out.innerHTML = `<p class="small center" style="margin:0">😕 ${esc(CHEF_ERR[e.message] || CHEF_ERR.ai)}</p>`; }
+  finally { ['chefGo', 'chefChangeBtn'].forEach(id => { const b = $(id); if (b) b.disabled = false; }); }
+}
+function chefShow() {
+  const r = chefR, out = $('chefOut'); if (!r || !out) return;
+  out.innerHTML = `<div class="glass stack" style="gap:8px"><div class="row start" style="gap:10px"><span style="font-size:40px">${esc(r.emoji)}</span><div><h2 style="margin:0">${esc(r.name)}</h2>
+      <span class="small muted">${r.min} min · ${plural(r.servings, 'porción', 'porciones')}</span></div></div>
+    <span class="label">Ingredientes</span><ul class="list">${r.ingredients.map(i => `<li style="padding:6px 0"><span class="txt small">${esc(i)}</span></li>`).join('')}</ul>
+    <span class="label">Preparación</span><ol style="margin:0;padding-left:20px;line-height:1.55;font-size:14.5px">${r.steps.map(s => `<li style="margin-bottom:6px">${esc(s)}</li>`).join('')}</ol>
+    ${r.tips ? `<p class="small" style="margin:0">💡 ${esc(r.tips)}</p>` : ''}</div>
+    <div class="grid2"><button class="btn" onclick="chefSave()">💾 Guardar</button><button class="btn ghost" onclick="chefCook()">👩‍🍳 Cocinar</button></div>
+    <button class="btn ghost" onclick="chefGrocery()">${icon('cart')} Ingredientes al Súper</button>
+    <div class="add-row"><input id="chefChange" maxlength="200" placeholder="Pedir un cambio: sin crema, para 4, más fácil…" onkeydown="if(event.key==='Enter')chefChangeRun()"><button class="btn" id="chefChangeBtn" aria-label="Pedir cambio" onclick="chefChangeRun()">✏️</button></div>`;
+  out.scrollIntoView({ behavior: 'smooth', block: 'start' });
+}
+function chefChangeRun() { const c = ($('chefChange')?.value || '').trim(); if (!c) return toast('Escribe qué cambiar'); if (!chefR) return; chefRun(c); }
+function chefSave() {
+  if (!chefR) return;
+  write(setDoc(newRef('recipes'), { name: chefR.name, emoji: chefR.emoji, min: chefR.min, servings: chefR.servings, ingredients: chefR.ingredients, steps: chefR.steps, tags: [], by: uid(), createdAt: Date.now(), chef: true, ...(chefR.tips ? { note: chefR.tips } : {}) }));
+  toast('Receta guardada en sus recetas 💾'); celebrate('hearts');
+}
+function chefGrocery() { if (!chefR) return; const n = addIngredients(chefR.ingredients); toast(n ? `${plural(n, 'ingrediente agregado', 'ingredientes agregados')} al súper` : 'Ya estaban en el súper'); }
+function chefCook() { if (chefR) cookMode({ ...chefR, id: 'chef' }); }
+
 /* ---------- ¿Qué cocino con lo que tengo? ---------- */
 function recHave() {
   let saved = ''; try { saved = localStorage.getItem('futari-have') || ''; } catch {}
@@ -106,7 +168,7 @@ function recHaveRun() {
 // Pantalla completa: un paso grande a la vez, la pantalla no se apaga (Wake Lock) y temporizador si el paso dice minutos
 let ck = null;
 async function cookMode(id) {
-  const r = recipe(id); if (!r) return;
+  const r = typeof id === 'object' ? id : recipe(id); if (!r) return;
   closeSheet();
   const el = document.createElement('div'); el.className = 'dialog mt-view ck-view'; el.setAttribute('role', 'dialog'); el.setAttribute('aria-modal', 'true'); el.setAttribute('aria-label', 'Modo cocina');
   document.body.appendChild(el); syncBack();
@@ -247,5 +309,5 @@ function menuFill() {
 on('recipes recipefav menu groceries', () => { if ($('recBody')) render(); });
 onShow('s-recipes', render);
 window.__allRecipes = allRecipes;
-expose({ recHave, recHaveRun, cookMode, cookGo, cookTimer, cookClose, recTab, recSearch, recTag, recFav, recRandom, openRecipe, recipeToGrocery, recipeToMenu, toggleFav, delRecipe, recipeForm, saveRecipe,
+expose({ chefOpen, chefRun, chefChangeRun, chefSave, chefGrocery, chefCook, recHave, recHaveRun, cookMode, cookGo, cookTimer, cookClose, recTab, recSearch, recTag, recFav, recRandom, openRecipe, recipeToGrocery, recipeToMenu, toggleFav, delRecipe, recipeForm, saveRecipe,
   menuWeek, menuSlot, menuFilter, menuSet, menuSetText, menuClear, menuToGrocery, menuFill });
