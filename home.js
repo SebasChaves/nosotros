@@ -18,7 +18,7 @@ import { guessCard, guessWaiting } from './guess.js';
 import { weekCard } from './week.js';
 import { cravingsCard, partnerCravings } from './cravings.js';
 import { giftCard } from './gifts.js';
-import { moneyCard } from './money.js';
+import { moneyCard, moneyTodayRows } from './money.js';
 import { notify, meForPartner } from './push.js';
 
 /* ---------- Racha y "Pensando en ti" ---------- */
@@ -75,6 +75,9 @@ function todayCard() {
   const crav = partnerCravings().filter(c => !c.urgent); if (crav.length) row(crav[0].emoji || '🍓', crav.length === 1 ? `${pn} tiene un antojo: ${esc(crav[0].text)}` : `${pn} tiene ${crav.length} antojos pendientes`, "openCravings('now')");
   const thanked = S.data.cravings.filter(c => !c.fav && c.done && c.by === uid() && c.doneBy !== uid() && !c.doneSeen); if (thanked.length) row('🎉', `${pn} cumplió ${thanked.length === 1 ? 'tu antojo: ' + esc(thanked[0].text) : plural(thanked.length, 'antojo tuyo', 'antojos tuyos')}`, "openCravings('done')");
   const ded = songDedication(); if (ded) row('💌', `<b>${esc(nameOf(ded.dedication.by))}</b> te dedicó una canción: ${esc(ded.title)}`, 'openDedication()');
+  if (!S.data.moods.find(m => m.id === tk)?.[uid()]) row('🙂', '¿Cómo te sientes hoy? Marca tu ánimo', `document.querySelector('.moods')?.scrollIntoView({behavior:'smooth',block:'center'})`);
+  const sup = p && profile(p).superAt; if (sup && Date.now() - sup < 3 * 3600e3) row('🛒', `<b>${pn} está en el súper</b>: ¿falta algo?`, "go('s-grocery')");
+  for (const [e, t, a] of moneyTodayRows()) row(e, t, a);
   const ans = todayAnswers();
   if (!ans?.answers?.[uid()]) row('💬', p && ans?.answers?.[p] ? `Responde la pregunta del día (${pn} ya respondió)` : 'Responde la pregunta del día', `document.getElementById('answerText')?.scrollIntoView({block:'center'});document.getElementById('answerText')?.focus()`);
   if (guessWaiting()) row('🔮', `${pn} ya respondió «¿Qué respondería ${pn}?»: adivina qué dijo`, `document.querySelector('.guess-card')?.scrollIntoView({behavior:'smooth',block:'center'})`);

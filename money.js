@@ -48,6 +48,13 @@ const tone = pct => pct >= 1 ? 'over' : pct >= 0.8 ? 'warn' : 'ok';
 const catsTxt = cats => cats.map(c => catOf(c)[0]).join('');
 
 /* ---------- Tarjeta de Inicio y termómetro ---------- */
+// Filas para la tarjeta «Hoy» de Inicio: presupuesto de la semana en amarillo/rojo y salida en curso
+export function moneyTodayRows() {
+  const out = [], w = weekState(), o = outing();
+  if (o) { const t = spends().filter(e => e.outing === o.oid).reduce((s, e) => s + e.amount, 0); out.push(['🎉', `<b>${esc(o.name)}</b> en curso: ${fmtMoney(t)}${o.limit ? ` de ${fmtMoney(o.limit)}` : ''}`, 'quickSpend()']); }
+  if (w.budget && w.pct >= 0.8) out.push([w.pct >= 1 ? '🔴' : '🟡', w.pct >= 1 ? `Se pasaron ${fmtMoney(-w.left)} del presupuesto de la semana` : `Quedan ${fmtMoney(w.left)} del presupuesto de la semana (${w.daysLeft === 1 ? 'último día' : `${w.daysLeft} días`})`, "go('s-money')"]);
+  return out;
+}
 function thermo(w) {
   return `<div class="thermo ${tone(w.pct)}"><i style="width:${Math.min(100, Math.round(w.pct * 100))}%"></i></div>
     <div class="row small"><span><b class="num">${fmtMoney(w.spent)}</b> <span class="muted">de ${fmtMoney(w.budget)}</span></span>
@@ -77,13 +84,13 @@ function render() {
   const byCat = EXPENSE_CATS.map(([e, l]) => [e, l, thisMonth.filter(x => x.cat === e).reduce((s, x) => s + x.amount, 0)]).filter(c => c[2] > 0).sort((a, b) => b[2] - a[2]);
   const w = weekState(), o = outing();
   // Lista: los gastos de una misma salida van juntos en una fila que se abre
-  const items = [...S.data.expenses].sort((a, b) => (b.date || '').localeCompare(a.date || '') || b.createdAt - a.createdAt).slice(0, 120);
+  const fq = norm(mvF.q), items = [...S.data.expenses].filter(e => (!mvF.cat || e.cat === mvF.cat) && (!mvF.who || e.paidBy === mvF.who) && (!fq || norm(e.desc).includes(fq) || norm(catOf(e.cat)[1]).includes(fq))).sort((a, b) => (b.date || '').localeCompare(a.date || '') || b.createdAt - a.createdAt).slice(0, 120);
   const seenOut = new Set();
   let lastMonth = null, list = '';
   const row = e => {
     const [ce, cl] = e.type === 'settle' ? ['🤝', 'Pago'] : catOf(e.cat);
     const trip = e.tripId && S.data.trips.find(t => t.id === e.tripId);
-    return `<li><span style="font-size:22px">${ce}</span><div class="txt">${esc(e.type === 'settle' ? `${nameOf(e.paidBy)} saldó cuentas` : e.desc || cl)}
+    return `<li><span style="font-size:22px">${ce}</span><div class="txt" role="button" tabindex="0" style="cursor:pointer" ${e.type === 'settle' ? '' : `onclick="openExpense({id:'${e.id}'})"`}>${esc(e.type === 'settle' ? `${nameOf(e.paidBy)} saldó cuentas` : e.desc || cl)}
       <span class="sub">${fmtShort(parseDate(e.date))} · ${e.type === 'settle' ? '' : `pagó ${esc(nameOf(e.paidBy))} · ${SPLITS[e.split] || SPLITS.half}`}${trip ? ` · ${esc(trip.name)}` : ''}</span></div>
       <b class="num">${fmtMoney(e.amount)}</b><button class="del" aria-label="Borrar" onclick="delExpense('${e.id}')">${icon('trash')}</button></li>`;
   };
@@ -117,11 +124,30 @@ function render() {
       <span class="label" style="justify-content:center">Balance</span>
       <div class="money ${bal ? 'grad-text' : ''}">${bal === 0 ? 'Están a mano' : fmtMoney(Math.abs(bal))}</div>
       <p class="muted" style="margin:0">${bal > 0 ? `${pn} te debe` : bal < 0 ? `Le debes a ${pn}` : 'Nadie le debe nada a nadie'}</p>
+      ${(() => { const last = S.data.expenses.filter(e => e.type === 'settle').sort((a, b) => b.createdAt - a.createdAt)[0]; if (!last) return ''; const since = S.data.expenses.filter(e => e.type !== 'settle' && e.createdAt > last.createdAt && e.split !== 'none'); return `<p class="tiny muted" style="margin:0">Desde que saldaron el ${fmtShort(parseDate(last.date))}: ${since.length} ${since.length === 1 ? 'gasto compartido' : 'gastos compartidos'} por ${fmtMoney(since.reduce((s, e) => s + e.amount, 0))}</p>`; })()}
       ${bal ? `<button class="btn ghost" onclick="settleUp()">Saldar cuentas</button>` : ''}</div>
     <div class="glass stack"><div class="row"><span class="label">Este mes</span><b class="num">${fmtMoney(total)}</b></div>
       ${byCat.length ? `<div class="bars">${byCat.map(([e, l, v]) => `<div class="bar"><span>${e} ${l}</span><div class="progress"><i style="width:${Math.round(v / total * 100)}%"></i></div><span class="num">${fmtMoney(v)}</span></div>`).join('')}</div>`
         : '<p class="small muted" style="margin:0">Sin gastos este mes</p>'}</div>
-    <div class="glass"><div class="row"><span class="label">Movimientos</span><button class="link" onclick="openExpense()">Con más detalle</button></div><ul class="list">${list || '<li class="empty">Anoten el primer gasto con el botón de arriba</li>'}</ul></div>`);
+    <div class="glass"><div class="row"><span class="label">Movimientos</span><button class="link" onclick="openExpense()">Con más detalle</button></div>
+      <input id="mvQ" placeholder="Buscar: pizza, Uber…" aria-label="Buscar movimientos" value="${esc(mvF.q)}" oninput="mvFilter('q', this.value)" style="margin-top:8px">
+      <div class="chips scroll" style="margin-top:8px"><button class="chip ${!mvF.cat && !mvF.who ? 'on' : ''}" onclick="mvFilter('all')">Todos</button>
+        ${[uid(), partnerUid()].filter(Boolean).map(u => `<button class="chip ${mvF.who === u ? 'on' : ''}" onclick="mvFilter('who','${u}')">Pagó ${u === uid() ? 'yo' : esc(nameOf(u))}</button>`).join('')}
+        ${[...new Set(S.data.expenses.map(e => e.cat).filter(Boolean))].map(c => `<button class="chip ${mvF.cat === c ? 'on' : ''}" onclick="mvFilter('cat','${c}')">${catOf(c).join(' ')}</button>`).join('')}</div>
+      ${mvF.cat || mvF.who || mvF.q ? `<p class="small" style="margin:8px 0 0">Total de lo filtrado: <b class="num">${fmtMoney(items.filter(e => e.type !== 'settle').reduce((s, e) => s + e.amount, 0))}</b> · ${items.length} ${items.length === 1 ? 'movimiento' : 'movimientos'}</p>` : ''}
+      <ul class="list">${list || `<li class="empty">${mvF.cat || mvF.who || mvF.q ? 'Nada con ese filtro' : 'Anoten el primer gasto con el botón de arriba'}</li>`}</ul>
+      <p class="tiny muted center" style="margin:6px 0 0">Toca un gasto para editarlo</p></div>`);
+}
+
+// Filtros de Movimientos (en memoria, por teléfono)
+const mvF = { q: '', cat: '', who: '' };
+const norm = t => String(t || '').normalize('NFD').replace(/[\u0300-\u036f]/g, '').toLowerCase();
+let mvTimer = null;
+function mvFilter(k, v) {
+  if (k === 'all') { mvF.cat = ''; mvF.who = ''; mvF.q = ''; }
+  else if (k === 'q') { mvF.q = v; clearTimeout(mvTimer); mvTimer = setTimeout(() => { render(); const i = $('mvQ'); if (i) { i.focus(); i.setSelectionRange(i.value.length, i.value.length); } }, 300); return; }
+  else mvF[k] = mvF[k] === v ? '' : v;
+  render();
 }
 
 /* ---------- Anotar rápido ---------- */
@@ -229,21 +255,26 @@ function undoBar(text, undo) {
 }
 
 /* ---------- Formulario completo (viajes y detalles) ---------- */
+let editingEx = null;
 export function openExpense(preset = {}) {
   const p = partnerUid();
-  const today = todayKey();
+  const today = todayKey(), ex = preset.id ? S.data.expenses.find(e => e.id === preset.id) : null;
+  editingEx = ex ? ex.id : null;
+  if (ex) preset = { ...preset, cat: ex.cat, tripId: ex.tripId };
   const trips = S.data.trips.filter(t => !t.end || t.end >= today || t.id === preset.tripId);
-  openSheet(`<div class="stack"><h2>Nuevo gasto</h2>
-    <input id="exDesc" placeholder="¿En qué?" maxlength="60" aria-label="Descripción">
-    <input id="exAmount" inputmode="decimal" placeholder="Monto" aria-label="Monto">
+  openSheet(`<div class="stack"><h2>${ex ? 'Editar gasto' : 'Nuevo gasto'}</h2>
+    <input id="exDesc" placeholder="¿En qué?" maxlength="60" aria-label="Descripción" value="${esc(ex?.desc || '')}">
+    <input id="exAmount" inputmode="decimal" placeholder="Monto" aria-label="Monto" value="${ex ? ex.amount : ''}">
     <div class="grid2">
       <div><label class="f" for="exPaid">Pagó</label><select id="exPaid"><option value="${uid()}">Yo</option>${p ? `<option value="${p}">${esc(nameOf(p))}</option>` : ''}</select></div>
       <div><label class="f" for="exSplit">Se divide</label><select id="exSplit">${Object.entries(SPLITS).map(([k, l]) => `<option value="${k}">${l}</option>`).join('')}</select></div>
       <div><label class="f" for="exCat">Categoría</label><select id="exCat">${EXPENSE_CATS.map(([e, l]) => `<option value="${e}" ${preset.cat === e ? 'selected' : ''}>${e} ${l}</option>`).join('')}</select></div>
-      <div><label class="f" for="exDate">Fecha</label><input type="date" id="exDate" value="${today}"></div>
+      <div><label class="f" for="exDate">Fecha</label><input type="date" id="exDate" value="${ex?.date || today}"></div>
     </div>
     ${trips.length ? `<div><label class="f" for="exTrip">Viaje (opcional)</label><select id="exTrip"><option value="">Ninguno</option>${trips.map(t => `<option value="${t.id}" ${preset.tripId === t.id ? 'selected' : ''}>${esc(t.name)}</option>`).join('')}</select></div>` : ''}
-    <button class="btn" onclick="saveExpense()">Guardar gasto</button></div>`);
+    <button class="btn" onclick="saveExpense()">${ex ? 'Guardar cambios' : 'Guardar gasto'}</button>
+    ${ex ? `<button class="btn ghost danger" onclick="delExpense('${ex.id}')">${icon('trash')} Borrar gasto</button>` : ''}</div>`);
+  if (ex) { $('exPaid').value = ex.paidBy; $('exSplit').value = ex.split || 'half'; }
 }
 // Acepta "5000", "5.000", "5,000", "12,50", "1.234,56" o "1,234.56".
 export function parseAmount(s) {
@@ -257,6 +288,10 @@ function saveExpense() {
   const desc = $('exDesc').value.trim(), amount = parseAmount($('exAmount').value);
   if (!desc || !(amount > 0)) return toast('Pon en qué y un monto válido');
   const o = outing(), cat = $('exCat').value;
+  if (editingEx && S.data.expenses.some(e => e.id === editingEx)) {
+    write(updateDoc(ref('expenses', editingEx), { desc, amount: Math.round(amount * 100) / 100, paidBy: $('exPaid').value, split: $('exSplit').value, cat, date: $('exDate').value || todayKey(), tripId: $('exTrip')?.value || null }));
+    editingEx = null; closeSheet(); return toast('Cambios guardados');
+  }
   write(setDoc(newRef('expenses'), {
     desc, amount: Math.round(amount * 100) / 100, paidBy: $('exPaid').value, split: $('exSplit').value,
     cat, date: $('exDate').value || todayKey(), tripId: $('exTrip')?.value || null, createdAt: Date.now(), by: uid(),
@@ -272,7 +307,7 @@ async function settleUp() {
   write(setDoc(newRef('expenses'), { type: 'settle', amount: Math.abs(bal), paidBy: debtor, date: todayKey(), createdAt: Date.now(), by: uid() }));
   toast('¡Quedaron a mano!'); celebrate();
 }
-async function delExpense(id) { if (await ask('¿Borrar este movimiento?')) write(deleteDoc(ref('expenses', id))); }
+async function delExpense(id) { if (await ask('¿Borrar este movimiento?')) { write(deleteDoc(ref('expenses', id))); if (editingEx === id) { editingEx = null; closeSheet(); } } }
 
 /* ---------- Salida en curso ---------- */
 function startOuting() {
@@ -456,6 +491,6 @@ function bankTry() {
 function bankTryOpen() { const b = parseBank($('bankTry').value); quickSpend({ amount: b.amount, desc: b.place, note: 'Prueba del aviso del banco' }); }
 
 on('expenses trips money', () => { render(); rollWeek(); });
-expose({ openExpense, saveExpense, settleUp, delExpense, quickSpend, qsKey, qsAdd, qsToggle, qsMore, qsBack, qsFreq, qsRepeat, qsSave, qsDescIn,
+expose({ mvFilter, openExpense, saveExpense, settleUp, delExpense, quickSpend, qsKey, qsAdd, qsToggle, qsMore, qsBack, qsFreq, qsRepeat, qsSave, qsDescIn,
   startOuting, saveOuting, endOuting, budgetSheet, saveBudget, goalSheet, saveGoal, goalAdd, saveGoalAdd, goalStar, goalDel,
   bankTutorial, copyBankUrl, bankTry, bankTryOpen });
