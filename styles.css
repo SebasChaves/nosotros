@@ -1107,3 +1107,13 @@ body:not([data-theme="light"]) .map-box .leaflet-tile-pane { filter: invert(1) h
 .ck-ing summary { cursor: pointer; color: var(--muted); }
 .ck-ing ul { margin: 6px 0 0; padding-left: 18px; line-height: 1.5; font-size: 14px; }
 .map-cluster { width: 40px; height: 40px; border-radius: 50%; display: grid; place-items: center; background: var(--grad); color: var(--on-grad); font-weight: 800; font-size: 15px; box-shadow: 0 0 0 4px color-mix(in srgb, var(--g1) 35%, transparent), 0 4px 10px rgba(0,0,0,.35); }
+/* Botón flotante de la salida en curso (money.js → syncOutFab) */
+.out-fab { position: fixed; right: 16px; bottom: calc(env(safe-area-inset-bottom) + 96px); z-index: 60; display: flex; align-items: center; gap: 10px;
+  padding: 10px 18px 10px 10px; border: 0; border-radius: 999px; background: var(--grad); color: var(--on-grad); cursor: pointer;
+  box-shadow: 0 10px 28px rgba(0,0,0,.45), 0 0 0 4px color-mix(in srgb, var(--g1) 25%, transparent); animation: pop .25s; -webkit-tap-highlight-color: transparent; }
+.out-fab:active { transform: scale(.96); }
+.out-fab.over { background: linear-gradient(100deg, #FF5A6E, #FF3B6B); color: #fff; }
+.out-fab-ic { width: 44px; height: 44px; border-radius: 50%; display: grid; place-items: center; background: rgba(255,255,255,.35); font-size: 28px; font-weight: 800; line-height: 1; }
+.out-fab-txt { display: flex; flex-direction: column; align-items: flex-start; line-height: 1.15; }
+.out-fab-txt b { font-size: 16px; } .out-fab-txt small { font-size: 12px; font-weight: 700; opacity: .85; }
+body:has(#sheet.show) .out-fab, body:has(.dialog) .out-fab { display: none; }

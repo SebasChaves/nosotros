@@ -503,7 +503,17 @@ function bankTry() {
 }
 function bankTryOpen() { const b = parseBank($('bankTry').value); quickSpend({ amount: b.amount, desc: b.place, note: 'Prueba del aviso del banco' }); }
 
-on('expenses trips money', () => { render(); rollWeek(); });
+// Botón flotante mientras hay una salida en curso: en cualquier pantalla, un toque y a anotar (muestra el total)
+function syncOutFab() {
+  const o = outing(); let el = $('outFab');
+  if (!o || !S.me) { el?.remove(); return; }
+  const total = spends().filter(e => e.outing === o.oid).reduce((s, e) => s + e.amount, 0), over = o.limit && total > o.limit;
+  if (!el) { el = document.createElement('button'); el.id = 'outFab'; el.className = 'out-fab'; el.onclick = () => quickSpend(); document.body.appendChild(el); }
+  el.classList.toggle('over', !!over);
+  el.setAttribute('aria-label', `Anotar un gasto en ${o.name}`);
+  el.innerHTML = `<span class="out-fab-ic">＋</span><span class="out-fab-txt"><b>Anotar</b><small>🎉 ${fmtMoney(total)}${o.limit ? ` de ${fmtMoney(o.limit)}` : ''}</small></span>`;
+}
+on('expenses trips money', () => { render(); rollWeek(); syncOutFab(); });
 expose({ mvFilter, openExpense, saveExpense, settleUp, delExpense, quickSpend, qsKey, qsAdd, qsToggle, qsMore, qsBack, qsFreq, qsRepeat, qsSave, qsDescIn,
   startOuting, saveOuting, endOuting, budgetSheet, saveBudget, goalSheet, saveGoal, goalAdd, saveGoalAdd, goalStar, goalDel,
   bankTutorial, copyBankUrl, bankTry, bankTryOpen });
