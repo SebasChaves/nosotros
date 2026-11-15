@@ -41,6 +41,7 @@ manifest.json   PWA (nombre, íconos, colores)
 | `places.js` | Restaurantes (ubicación, cerca de mí, Google Maps/Waze, calificaciones, visitas) |
 | `trips.js`, `booking.js` | Viajes (itinerario, maleta, presupuesto) y búsqueda de hospedaje/vuelos con enlaces a Airbnb, Booking, etc. |
 | `calendar.js` | Calendario compartido, planes que se repiten, exportar a calendario del teléfono (.ics / Google) |
+| `location.js` | Buscador de lugares de toda la app (`placeField`): lo guardado primero, Photon al escribir, Nominatim al buscar, enlaces de Google Maps/Waze (`placeFromLink`), «Estoy aquí» (Overpass), pin arrastrable (`pickPoint`) y lugares compartidos a Futari (`shareShortcut`, `share_target` del manifest, Android) |
 | `shows.js` | Pelis y series con TMDB (póster, dónde verla, sugerencias) |
 | `shows-finder.js` | «¿Qué vemos?»: buscador por tipo, estilos (géneros), plataformas de su país y extras, usando sus calificaciones (4-5 ★ suben, 1-2 ★ bajan); 20 por tanda con «Cargar más». Prefs por persona en `prefs.watch` |
 | `music.js` | Playlist: búsqueda en iTunes (portada + adelanto), nuestra canción, dedicatorias, botones a Spotify/YT Music/Apple |

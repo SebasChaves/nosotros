@@ -4,9 +4,10 @@ import { $, S, esc, icon, paint, on, onShow, expose, go, toast, openSheet, close
          todayKey, parseDate, fmtShort, nameOf, plural, uid } from './core.js';
 import { backBar } from './lists.js';
 import { myDailyDone } from './daily.js';
+import { loadLeaflet, placeField, initPlace } from './location.js';
 
 export const PIN_KINDS = [['📍', 'Lugar'], ['💞', 'Especial'], ['✈️', 'Viaje'], ['🍽️', 'Restaurante'], ['📸', 'Momento'], ['🏨', 'Hospedaje'], ['🌋', 'Naturaleza']];
-let map = null, layer = null, leaflet = null, filter = '', picking = false, draft = null, flyNext = null;
+let map = null, layer = null, filter = '', picking = false, draft = null, flyNext = null;
 // Fotos con ubicación (momentos y fotos del día). La foto del día de la pareja de hoy no se muestra hasta subir la propia.
 const photoSpots = () => {
   const out = [], tk = todayKey();
@@ -20,14 +21,6 @@ const photoSpots = () => {
 };
 const countries = () => [...new Set(S.data.pins.map(p => p.country).filter(Boolean))];
 
-function loadLeaflet() {
-  if (leaflet) return leaflet;
-  leaflet = new Promise((ok, bad) => {
-    const css = document.createElement('link'); css.rel = 'stylesheet'; css.href = 'https://unpkg.com/leaflet@1.9.4/dist/leaflet.css'; document.head.appendChild(css);
-    const s = document.createElement('script'); s.src = 'https://unpkg.com/leaflet@1.9.4/dist/leaflet.js'; s.onload = () => ok(window.L); s.onerror = bad; document.head.appendChild(s);
-  });
-  return leaflet;
-}
 // Mapas de OpenStreetMap (libres, con atribución). En modo oscuro se oscurecen con un filtro (ver .map-box en styles.css).
 const tileUrl = () => 'https://tile.openstreetmap.org/{z}/{x}/{y}.png';
 
@@ -94,26 +87,13 @@ function showOnMap(lat, lng) { flyNext = [lat, lng]; if (map && $('s-map').class
 
 /* ---------- Agregar ---------- */
 function addPin() {
-  openSheet(`<div class="stack"><h2>Agregar un lugar</h2>
-    <div class="add-row"><input id="pinQ" placeholder="Busca: Playa Tamarindo, París, un restaurante…" aria-label="Buscar lugar" onkeydown="if(event.key==='Enter')searchPlace()">
-      <button class="btn" aria-label="Buscar" onclick="searchPlace()">${icon('search')}</button></div>
-    <div id="pinResults" class="stack" style="gap:2px"></div>
-    <div class="grid2"><button class="btn ghost small" style="width:100%" onclick="myLocation()">📍 Dónde estoy</button>
-      <button class="btn ghost small" style="width:100%" onclick="pickOnMap()">🗺️ Tocar el mapa</button></div></div>`);
+  openSheet(`<div class="stack"><h2>Agregar un lugar</h2>${placeField('pinPl')}
+    <button class="btn ghost small" style="width:100%" onclick="pickOnMap()">🗺️ Tocar el mapa grande</button></div>`);
+  initPlace('pinPl', null, { open: true, onPick: (_, x) => pinFromPlace(x) });
 }
-async function searchPlace() {
-  const qv = $('pinQ').value.trim(); if (qv.length < 2) return;
-  $('pinResults').innerHTML = '<p class="small muted center">Buscando…</p>';
-  try {
-    const r = await (await fetch(`https://nominatim.openstreetmap.org/search?format=json&limit=6&addressdetails=1&accept-language=es&q=${encodeURIComponent(qv)}`)).json();
-    window.__pinResults = r;
-    $('pinResults').innerHTML = r.length ? r.map((x, i) => `<button class="result-row" onclick="choosePlace(${i})"><span class="e">📍</span><span class="grow small">${esc(x.display_name)}</span></button>`).join('')
-      : '<p class="small muted center">Sin resultados. Prueba con otro nombre o toca el mapa.</p>';
-  } catch { $('pinResults').innerHTML = '<p class="small muted center">No se pudo buscar. Revisa la conexión.</p>'; }
-}
-function choosePlace(i) {
-  const x = window.__pinResults[i];
-  pinForm({ lat: +x.lat, lng: +x.lon, title: x.name || x.display_name.split(',')[0], place: placeName(x.address), country: x.address?.country || '' });
+// Desde el buscador de lugares (o compartido a Futari): abre el formulario del pin con ese lugar
+function pinFromPlace(x) {
+  pinForm({ lat: x.lat, lng: x.lng, title: x.title || x.name.split(',')[0], place: x.area || x.name.split(',').slice(1).join(',').trim(), country: x.country || '' });
 }
 const placeName = a => a ? [a.city || a.town || a.village || a.county, a.state].filter(Boolean)[0] || '' : '';
 function myLocation() {
@@ -151,4 +131,4 @@ async function delPin(id) { if (await ask('¿Quitar este lugar del mapa?')) { wr
 
 on('pins moments daily places', () => { if ($('mapBox') && $('s-map').classList.contains('active')) render(); });
 onShow('s-map', render);
-expose({ showOnMap, addPin, searchPlace, choosePlace, myLocation, pickOnMap, cancelPick, savePin, delPin, flyPin, pinFilter });
+expose({ showOnMap, addPin, pinFromPlace, myLocation, pickOnMap, cancelPick, savePin, delPin, flyPin, pinFilter });

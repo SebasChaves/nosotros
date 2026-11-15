@@ -16,7 +16,7 @@
 //   COUPLE_ID          (texto, opcional) por defecto nosotros
 // Ver docs/NOTIFICACIONES.md. Sin dependencias: se pega tal cual en el editor de Cloudflare.
 
-const WORKER_VERSION = 6; // súbelo al cambiar este archivo (la app lo muestra en el diagnóstico)
+const WORKER_VERSION = 7; // súbelo al cambiar este archivo (la app lo muestra en el diagnóstico)
 const enc = new TextEncoder();
 const b64u = buf => btoa(String.fromCharCode(...new Uint8Array(buf))).replace(/\+/g, '-').replace(/\//g, '_').replace(/=+$/, '');
 const unb64u = s => Uint8Array.from(atob(s.replace(/-/g, '+').replace(/_/g, '/') + '==='.slice((s.length + 3) % 4)), c => c.charCodeAt(0));
@@ -32,7 +32,7 @@ export default {
     if (req.method === 'OPTIONS') return new Response(null, { status: 204, headers: cors });
     const url = new URL(req.url);
     if (req.method === 'GET') return json({ ok: true, service: 'futari-push', version: WORKER_VERSION, ready: !!(env.VAPID_PUBLIC_KEY && env.VAPID_PRIVATE_KEY && env.FIREBASE_PROJECT_ID && env.ALLOWED_UIDS), scheduled: !!env.FIREBASE_SA });
-    if (req.method !== 'POST' || !['/notify', '/diagnostico'].includes(url.pathname)) return json({ error: 'not-found' }, 404);
+    if (req.method !== 'POST' || !['/notify', '/diagnostico', '/link'].includes(url.pathname)) return json({ error: 'not-found' }, 404);
 
     // 1. ¿Quién pide? Sesión de Firebase válida y de la pareja
     let who;
@@ -41,6 +41,10 @@ export default {
     const allowed = (env.ALLOWED_UIDS || '').split(',').map(s => s.trim()).filter(Boolean);
     if (!allowed.includes(who)) return json({ error: 'forbidden' }, 403);
     if (url.pathname === '/diagnostico') return json(await diagnose(env, who));
+    if (url.pathname === '/link') { // abre un enlace corto de Google Maps (maps.app.goo.gl) y devuelve a dónde lleva
+      let b2; try { b2 = await req.json(); } catch { return json({ error: 'bad-json' }, 400); }
+      return json({ url: await resolveMapLink(String(b2.url || '')) });
+    }
 
     // 2. Qué avisar y a qué teléfonos
     let body;
@@ -65,6 +69,23 @@ export default {
     ctx.waitUntil(runSchedule(env, event.scheduledTime).catch(e => console.error('programados', e)));
   },
 };
+
+/* ---------- Enlaces de mapas ---------- */
+// Solo sigue redirecciones de dominios de Google Maps / Waze (no es un abridor de enlaces cualquiera).
+const MAP_HOSTS = /^(maps\.app\.goo\.gl|goo\.gl|g\.co|maps\.google\.[a-z.]+|(www\.)?google\.[a-z.]+|consent\.google\.[a-z.]+|(www\.|ul\.)?waze\.com)$/i;
+async function resolveMapLink(raw) {
+  let u; try { u = new URL(raw); } catch { return null; }
+  for (let i = 0; i < 6; i++) {
+    if (!MAP_HOSTS.test(u.hostname) || u.protocol !== 'https:') return null;
+    if (/^consent\./i.test(u.hostname) && u.searchParams.get('continue')) { u = new URL(u.searchParams.get('continue')); continue; }
+    if (/[@!]3d|@-?\d+\.\d+,-?\d+\.\d+|[?&](q|ll|query)=-?\d/.test(decodeURIComponent(u.href))) return u.href;
+    const r = await fetch(u.href, { redirect: 'manual', headers: { 'User-Agent': 'Mozilla/5.0 (Linux; Android 14) AppleWebKit/537.36 Chrome/124 Mobile Safari/537.36', 'Accept-Language': 'es' } });
+    const loc = r.headers.get('Location');
+    if (!loc) return u.href;
+    u = new URL(loc, u);
+  }
+  return u.href;
+}
 
 /* ---------- Sesión de Firebase (token de identidad, RS256) ---------- */
 let jwksCache = null, jwksUntil = 0;

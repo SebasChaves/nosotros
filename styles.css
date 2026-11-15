@@ -1085,3 +1085,12 @@ body:not([data-theme="light"]) .map-box .leaflet-tile-pane { filter: invert(1) h
 .fd-prov { display: flex; gap: 4px; flex-wrap: wrap; min-height: 4px; }
 .fd-prov img { width: 24px; height: 24px; border-radius: 6px; }
 .fd-ov { margin: 4px 0 0 !important; line-height: 1.45; color: color-mix(in srgb, var(--text) 85%, transparent); }
+
+/* Buscar lugares (location.js) */
+.pl-tools { display: grid; grid-template-columns: repeat(3, 1fr); gap: 6px; }
+.pl-tools .btn { padding: 8px 4px; font-size: 12px; }
+.place-chip .link { padding: 0 4px; white-space: nowrap; }
+.dialog.pick-view { background: var(--bg); display: flex; flex-direction: column; align-items: stretch; justify-content: flex-start; gap: 10px;
+  padding: calc(env(safe-area-inset-top) + 12px) 14px calc(env(safe-area-inset-bottom) + 16px); }
+.pick-view .pick-map { flex: 1; min-height: 0; height: auto; border-radius: 18px; overflow: hidden; }
+.pick-pin { font-size: 32px; line-height: 36px; text-align: center; filter: drop-shadow(0 3px 2px rgba(0,0,0,.4)); }

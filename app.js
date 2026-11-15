@@ -10,6 +10,7 @@ import './love.js';
 import './moments.js';
 import { snapShortcut } from './snaps.js';
 import { moneyShortcut } from './money.js';
+import { shareShortcut } from './location.js';
 import './money-tour.js';
 import './money-charts.js';
 import './shows-finder.js';
@@ -42,7 +43,7 @@ import { logVisit } from './tracking.js';
 import { maybeStartTour, resetTourCheck } from './tour.js';
 
 // Versión de esta copia de la app. Súbela junto con version.json y la caché de sw.js al publicar.
-export const APP_VERSION = '63';
+export const APP_VERSION = '64';
 window.FUTARI_VERSION = APP_VERSION; // lo guarda el registro de ingresos (panel de administración)
 
 // Si la app estuvo abierta hace poco (Android la cierra sola al salir), se vuelve rápido a la misma pantalla.
@@ -81,6 +82,7 @@ else onAuthStateChanged(auth, user => {
   listen();
   snapShortcut(); // acceso directo «Instantánea» del ícono
   moneyShortcut(); // «Anotar gasto» del ícono y el atajo del aviso del banco (#banco=…)
+  shareShortcut(); // lugar compartido a Futari desde Google Maps o Waze (Android)
   handleOpenParam(); // al tocar una notificación (?open=…)
 });
 

@@ -27,7 +27,7 @@
   app instalada); en iPhone no existen esos accesos directos.
 
 - Avisos programados: confirmado en los dos teléfonos (recordatorios a su hora con la app cerrada y el teléfono bloqueado,
-  desde el Worker v4 con prioridad alta). Worker v5 pegado en Cloudflare (resumen del domingo). Falta ver llegar el de las
+  desde el Worker v4 con prioridad alta). Worker v5 pegado en Cloudflare (resumen del domingo). **Falta pegar el Worker v7** (v6: resumen de gastos del domingo 19:30; v7: `/link` para enlaces cortos de Google Maps). Falta ver llegar el de las
   20:00 (racha/mascota), fechas especiales y el primer resumen del domingo.
   Ojo: un cambio en el Cron de Cloudflare puede tardar hasta 15 minutos en activarse.
 - Mascota (v38): probar en los teléfonos los juegos con el dedo (Atrapa y Salta) y que se vea fluido.
@@ -65,7 +65,10 @@
 |---|---|---|
 | TMDB | buscar pelis/series, pósters, dónde verlas, sugerencias | clave de solo lectura en `tmdb-config.js`; mostrar el aviso de atribución |
 | OpenStreetMap tiles + Leaflet 1.9.4 (unpkg) | mapa | en modo oscuro se oscurece con un filtro CSS. CARTO pide clave: no usar |
-| Nominatim | buscar lugares y nombre de un punto | priorizar el país con `countrycodes` (según la moneda); sin abusar (1 búsqueda por acción) |
+| Nominatim | buscar lugares (al tocar 🔎) y nombre de un punto | priorizar el país con `countrycodes` (según la moneda); **no permite buscar letra por letra**: solo al tocar 🔎 / Enter |
+| Photon (komoot) | buscar lugares mientras escriben (OpenStreetMap, tolera errores) | `bbox` de Costa Rica y cerca de la última posición conocida; sin clave |
+| Overpass API | «Estoy aquí»: restaurantes, cafés, bares… a ~250 m | un pedido por toque; sin clave |
+| Worker `/link` | abre enlaces cortos de Google Maps (`maps.app.goo.gl`) y devuelve a dónde llevan | solo dominios de Google Maps/Waze y con sesión de la pareja (Worker v7) |
 | iTunes Search API | portada y adelanto de 30 s de canciones | CORS abierto; artwork `100x100bb` → `600x600bb` |
 | noembed.com | (antes) datos de un enlace de canción | ya casi no se usa |
 | Google Fonts | Sora (texto) y Pacifico (logo "Futari") | |

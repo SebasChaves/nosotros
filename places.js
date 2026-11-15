@@ -72,7 +72,7 @@ function openPlace(id) {
   initPlace('plLoc', p?.loc || null, {
     label: '📍 Buscar dónde queda',
     query: () => $('plName')?.value.trim(),
-    onPick: (place, x) => { if (!$('plName').value.trim()) $('plName').value = (x.name || place.name.split(',')[0]).slice(0, 50); },
+    onPick: (place, x) => { if (!$('plName').value.trim()) $('plName').value = (x.title || place.name.split(',')[0]).slice(0, 50); },
   });
 }
 function savePlace() {
