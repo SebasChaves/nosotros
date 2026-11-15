@@ -2,9 +2,10 @@
 // tanda, «Cargar más»). Con «Usar nuestros gustos» también toma lo que calificaron con 4-5 ★ (recomendaciones de TMDB de
 // esas, y los géneros que más les gustan suben en la lista; los de 1-2 ★ bajan). Nunca sugiere lo que ya está en su lista.
 // Las preferencias del buscador se guardan por persona en profiles/<uid>.prefs.watch { type, styles, providers, extras, gustos }.
-import { setDoc } from 'https://www.gstatic.com/firebasejs/11.0.2/firebase-firestore.js';
+import { setDoc, updateDoc } from 'https://www.gstatic.com/firebasejs/11.0.2/firebase-firestore.js';
 import { $, S, esc, icon, expose, toast, write, ref, uid, profile, nameOf, syncBack, on } from './core.js';
 import { tmdb, IMG, region, addFromTmdb, HAS_TMDB } from './shows.js';
+import { createList } from './decide.js';
 
 // Estilos → géneros de TMDB [película, serie] (varios estilos = cualquiera de ellos)
 const STYLES = [
@@ -166,6 +167,7 @@ function paintResults(busy) {
         <div class="row" style="gap:8px;justify-content:flex-start;margin-top:4px">
           <button class="btn small" ${r._added ? 'disabled' : ''} onclick="fdAdd(${i})">${r._added ? '✓ En Por ver' : `${icon('plus')} Por ver`}</button>
           <button class="link small" onclick="fdMore(${i})">${r._open ? 'Menos' : 'De qué trata'}</button></div></div></div>`).join('')}</div>
+    ${!busy && items.length >= 4 ? `<button class="btn" onclick="fdTogether()">💞 Elegir juntos: votan sí o no en su teléfono</button>` : ''}
     ${busy ? '<p class="small muted center">Buscando… 🍿</p>' : items.length ? `<button class="btn ghost" onclick="fdSearch(true)">Cargar más</button>`
       : `<p class="small muted center">No encontré nada con esos filtros. Prueben con menos estilos, otras plataformas o sin extras.</p>`}
     <p class="tiny muted center" style="margin:8px 0 0">Datos y plataformas por TMDB y JustWatch. Este producto usa la API de TMDB pero no está avalado ni certificado por TMDB.</p>`;
@@ -186,7 +188,15 @@ async function fdAdd(i) {
   r._added = true; paintResults();
   await addFromTmdb(r); toast(`«${r.title || r.name}» quedó en Por ver 🍿`);
 }
+// Las primeras 15 sugerencias van a una lista de Decidir en modo «Match»: cada uno vota en su teléfono y quedan las coincidencias
+function fdTogether() {
+  const opts = [...new Set(results.slice(0, 15).map(r => `${r.media_type === 'tv' ? '📺' : '🎬'} ${r.title || r.name}`))];
+  const name = '¿Qué vemos hoy?', ex = S.data.lists.find(l => l.name === name);
+  if (ex) write(updateDoc(ref('lists', ex.id), { options: opts, votes: {}, history: ex.history || [] })); else createList(name, '🍿', opts);
+  closeFinder();
+  setTimeout(() => { window.go('s-decide'); window.decideTab('lists'); const l = S.data.lists.find(x => x.name === name); if (l) { window.selectList(l.id); window.setMode('match'); } toast('Voten sí ❤️ o no ✕; quedan las que les gustan a los dos'); }, 300);
+}
 function closeFinder() { const el = view; view = null; if (!el) return; el.classList.add('out'); setTimeout(() => { el.remove(); syncBack(); }, 160); }
 // Si cambian las calificaciones, se recalculan sus gustos la próxima vez
 on('shows', () => { taste = null; });
-expose({ openFinder, closeFinder, fdSet, fdToggle, fdSearch, fdMore, fdAdd });
+expose({ fdTogether, openFinder, closeFinder, fdSet, fdToggle, fdSearch, fdMore, fdAdd });

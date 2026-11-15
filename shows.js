@@ -34,13 +34,33 @@ function render() {
     ${HAS_TMDB ? `<button class="btn" onclick="openFinder()">🔎 ¿Qué vemos? Buscar por estilo y plataforma</button>` : ''}
     ${list.length ? `<div class="posters">${list.map(s => `<button class="poster" onclick="openShow('${s.id}')">
       <span class="img">${s.poster ? `<img src="${IMG(s.poster, 342)}" alt="" loading="lazy">` : (s.type === 'tv' ? '📺' : '🎬')}
-        ${s.status === 'watching' && s.type === 'tv' && s.progress ? `<span class="tag">T${s.progress.s} · E${s.progress.e}</span>` : ''}</span>
+        ${s.newSeason ? `<span class="tag new">🆕 Temporada ${s.newSeason}</span>` : s.status === 'watching' && s.type === 'tv' && s.progress ? `<span class="tag">T${s.progress.s} · E${s.progress.e}</span>` : ''}</span>
       <b>${esc(s.title)}</b><small>${[s.year, s.type === 'tv' ? 'Serie' : 'Película'].filter(Boolean).join(' · ')}</small></button>`).join('')}</div>`
       : `<div class="glass center"><p class="muted" style="margin:0">${tab === 'want' ? 'Agreguen pelis y series que quieren ver' : tab === 'watching' ? 'Nada en curso' : 'Cuando terminen una, aparece aquí'}</p></div>`}
     ${HAS_TMDB ? '<p class="tiny muted center" style="margin:0">Datos de películas por TMDB. Este producto usa la API de TMDB pero no está avalado ni certificado por TMDB.</p>' : ''}`);
 }
 function showsTab(t) { tab = t; render(); }
 function showsKind(k) { kind = k; render(); }
+
+/* ---------- Temporadas nuevas ----------
+   Una vez al día (por teléfono) revisa en TMDB las series que están viendo o vieron: si hay más temporadas que las
+   guardadas, se marca 🆕 y se avisa (con la fecha del próximo capítulo si se sabe). */
+async function checkSeasons() {
+  if (!HAS_TMDB) return;
+  try { if (localStorage.getItem('futari-seasons') === new Date().toDateString()) return; localStorage.setItem('futari-seasons', new Date().toDateString()); } catch {}
+  const list = S.data.shows.filter(s => s.type === 'tv' && s.tmdbId && (s.status === 'watching' || s.status === 'seen')).slice(0, 20);
+  for (const s of list) {
+    const d = await tmdb(`tv/${s.tmdbId}`).catch(() => null); if (!d) continue;
+    const n = d.number_of_seasons || 0, next = d.next_episode_to_air?.air_date || null;
+    const patch = {};
+    if (s.seasons && n > s.seasons && !s.newSeason) patch.newSeason = n;
+    if (!s.seasons && n) patch.seasons = n;
+    if ((s.nextEp || null) !== next) patch.nextEp = next;
+    if (Object.keys(patch).length) write(updateDoc(ref('shows', s.id), patch));
+    if (patch.newSeason) toast(`🆕 «${s.title}» tiene temporada ${n}`);
+  }
+}
+function seenNewSeason(id) { const s = S.data.shows.find(x => x.id === id); if (s?.newSeason) write(updateDoc(ref('shows', id), { seasons: s.newSeason, newSeason: null })); }
 
 /* ---------- Agregar ---------- */
 function openAddShow() {
@@ -145,6 +165,7 @@ async function openSuggestions() {
 /* ---------- Detalle ---------- */
 function openShow(id) {
   const s = S.data.shows.find(x => x.id === id); if (!s) { closeSheet(); return; }
+  if (s.newSeason) setTimeout(() => seenNewSeason(id), 4000);
   openId = id;
   const p = partnerUid(), mine = s.ratings?.[uid()] || 0, theirs = p ? s.ratings?.[p] : 0;
   const st = s.status || 'want', prog = s.progress || { s: 1, e: 1 };
@@ -152,6 +173,7 @@ function openShow(id) {
     <div class="show-head">${s.poster ? `<img src="${IMG(s.poster, 342)}" alt="">` : ''}
       <div class="stack" style="gap:6px"><h2>${esc(s.title)}</h2>
         <span class="small muted">${[s.year, s.type === 'tv' ? 'Serie' : 'Película', s.seasons ? `${s.seasons} temporadas` : ''].filter(Boolean).join(' · ')}</span>
+        ${s.newSeason ? `<span class="pill hot">🆕 Salió la temporada ${s.newSeason}</span>` : ''}${s.nextEp && s.nextEp >= new Date().toISOString().slice(0, 10) ? `<span class="tiny muted">Próximo capítulo: ${new Date(s.nextEp + 'T12:00').toLocaleDateString('es', { day: 'numeric', month: 'long' })}</span>` : ''}
         ${s.providers?.length ? `<div class="chips">${s.providers.map(x => `<span class="pill">${esc(x)}</span>`).join('')}</div>` : ''}
         <span class="tiny muted">La agregó ${esc(nameOf(s.by))}</span></div></div>
     ${s.overview ? `<p class="small" style="margin:0;line-height:1.5;color:color-mix(in srgb,var(--text) 85%,transparent)">${esc(s.overview)}</p>` : ''}
@@ -191,6 +213,7 @@ function showsToDecide() {
   window.decideTab('lists'); go('s-decide'); toast('Lista lista en Decidir');
 }
 
-on('shows', () => { render(); if (openId && $('showDetail') && $('sheet').classList.contains('show')) openShow(openId); });
+let seasonsChecked = false;
+on('shows', () => { if (!seasonsChecked && S.data.shows.length) { seasonsChecked = true; setTimeout(checkSeasons, 3000); } render(); if (openId && $('showDetail') && $('sheet').classList.contains('show')) openShow(openId); });
 expose({ openSuggestions, showsTab, showsKind, openAddShow, manualShow, saveManualShow, searchShows, pickShow, openShow,
   setShowStatus, stepShow, rateShow, delShow, showsToDecide });

@@ -87,12 +87,13 @@ de solo lectura** y manda, según la hora de Costa Rica (`TIME_ZONE`):
 | el minuto exacto del recordatorio (o 8:00) | recordatorios 🔔 de hoy no hechos, a quien le toca | `reminders` |
 | 8:00 / 9:00 | «Hoy es…» / «Mañana es…»: fechas especiales, aniversarios y mesiversarios | `dates` |
 | domingo 19:00 | «📊 Su semana en Futari»: días juntos, corazones e instantáneas o preguntas (como `week.js`) | `week` |
+| el minuto de `showTime` | «💌 … te dejó una nota para hoy»: notas del frasco programadas (`showDay`/`showTime`) a la pareja. Desde `WORKER_VERSION` 8 | `notes` |
 | domingo 19:30 | «🐷 ¡Les sobraron…!» / «💸 Se pasaron…»: gustos de la semana vs. presupuesto y vs. la semana pasada (lee solo `expenses` con `date` de las últimas 2 semanas y `money/cfg`). Desde `WORKER_VERSION` 6 | `money` |
 
 - La racha usa la misma regla que `home.js` (`didSomething`): `moods`, `answers`, `thinks`, `daily` y `activity`.
   Si cambias esa regla, cámbiala también en el Worker.
 - Para gastar pocas lecturas del plan gratis, cada minuto solo consulta los recordatorios de hoy (`date == hoy`); lo demás
-  (pareja, teléfonos, racha, fechas) se lee solo en punto o cuando hay un recordatorio que mandar. Unas 1.500 lecturas al día.
+  (pareja, teléfonos, racha, fechas) se lee solo en punto o cuando hay un recordatorio que mandar. Desde el Worker v8 también consulta cada minuto las notas programadas de hoy (`notes` con `showDay == hoy`): unas 3.000 lecturas al día en total (el plan gratis da 50.000).
 - El Worker no escribe nada en la base. Los teléfonos que ya no existen los limpia la app cuando manda un aviso.
 - Para cambiar horas o textos: edita `runSchedule` y vuelve a pegar el Worker en Cloudflare.
 - Prueba local: `runSchedule(env, fecha, { dryRun: true })` con `env.TEST_FIRESTORE = 'http://127.0.0.1:8080'`

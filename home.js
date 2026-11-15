@@ -6,7 +6,7 @@ import {
   nameOf, partnerUid, partnerName, myName, plural, uid, avatar, ask, celebrate } from './core.js';
 import { QUESTIONS, MOODS, CHALLENGES } from './data.js';
 import { itemsFor, nextEventDate, nextOccurrence } from './calendar.js';
-import { unreadNotes } from './love.js';
+import { unreadNotes, couponsExpiring } from './love.js';
 import { listNeedsMyVote } from './decide.js';
 import { quizWaiting } from './quiz.js';
 import { myDailyDone, partnerDailyDone } from './daily.js';
@@ -86,6 +86,7 @@ function todayCard() {
   if (dataCount > 10 && (!lb || Date.now() - lb > 30 * 864e5)) row('💾', lb ? `Hace ${Math.round((Date.now() - lb) / 864e5)} días que no descargan un respaldo` : 'Descarguen su primer respaldo', 'exportData()');
   const notes = unreadNotes(); if (notes) row('💌', `Tienes ${plural(notes, 'nota nueva', 'notas nuevas')} en el frasco`, `go('s-love');loveTab('notes')`);
   const toDo = S.data.coupons.filter(c => c.fromUid === uid() && c.redeemedAt && !c.doneAt).length; if (toDo) row('🎟️', `${pn} canjeó ${plural(toDo, 'cupón', 'cupones')}: te toca cumplir`, `go('s-love');loveTab('coupons')`);
+  for (const c of couponsExpiring().slice(0, 2)) row('⏳', `Tu cupón «${esc(c.text)}» vence ${c.expires === tk ? 'hoy' : 'pronto'}: ¡úsalo!`, `go('s-love');loveTab('coupons')`);
   const fresh = S.data.coupons.filter(c => c.fromUid !== uid() && !c.seenAt).length; if (fresh) row('🎁', `${pn} te regaló ${plural(fresh, 'cupón', 'cupones')}`, `go('s-love');loveTab('coupons')`);
   const votes = S.data.lists.filter(listNeedsMyVote).length; if (votes) row('🎲', `${pn} ya votó en ${plural(votes, 'lista', 'listas')}: falta tu voto`, `go('s-decide');decideTab('lists')`);
   if (quizWaiting()) row('🧠', `${pn} ya jugó el quiz: te toca`, `go('s-quiz')`);

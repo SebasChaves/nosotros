@@ -94,7 +94,9 @@ function renderDone() {
   paint('craveBody', `${list.length ? `<div class="glass row" style="justify-content:space-around;text-align:center">
       <div><b class="num">${count(uid())}</b><div class="tiny muted">cumpliste tú</div></div>
       ${p ? `<div><b class="num">${count(p)}</b><div class="tiny muted">cumplió ${esc(nameOf(p))}</div></div>` : ''}
-      <div><b class="num">${list.length}</b><div class="tiny muted">en total</div></div></div>` : ''}
+      <div><b class="num">${list.length}</b><div class="tiny muted">en total</div></div></div>
+    ${(() => { const t = id => { const l = list.filter(c => c.doneBy === id && c.at && c.doneAt > c.at && c.by !== id); return l.length ? l.reduce((s, c) => s + (c.doneAt - c.at), 0) / l.length : 0; }, f = ms => ms < 3600e3 ? `${Math.max(1, Math.round(ms / 60e3))} min` : ms < 864e5 ? `${Math.round(ms / 3600e3)} h` : `${Math.round(ms / 864e5)} días`;
+      const a = t(uid()), b = p ? t(p) : 0; return a || b ? `<p class="tiny muted center" style="margin:0">⏱️ En promedio cumplen en: ${a ? `tú ${f(a)}` : ''}${a && b ? ' · ' : ''}${b ? `${esc(nameOf(p))} ${f(b)}` : ''}</p>` : ''; })()}` : ''}
     ${list.length ? list.slice(0, 60).map(c => {
       const mine = c.by === uid();
       return `<div class="glass stack crave done" style="gap:8px"><div class="row start" style="gap:12px;align-items:flex-start"><span class="crave-e">${esc(c.emoji || '🍓')}</span>
@@ -103,7 +105,8 @@ function renderDone() {
         ${c.donePhoto ? `<img class="crave-photo" data-thumb="${cravedPhotoId(c.id)}" alt="" onclick="viewPhoto(this)">` : ''}</div>
         <div class="row" style="gap:8px">${mine && !c.thanks && c.doneBy !== uid() ? `<button class="btn small" style="flex:1" onclick="thankCraving('${c.id}')">❤️ Gracias</button>` : ''}
           ${c.donePhoto && !c.savedMoment ? `<button class="btn ghost small" style="flex:1" onclick="saveCravingMoment('${c.id}')">Guardar en Momentos</button>` : ''}
-          ${c.savedMoment ? '<span class="pill ok">✓ En Momentos</span>' : ''}<span class="grow"></span>
+          ${c.savedMoment ? '<span class="pill ok">✓ En Momentos</span>' : ''}
+          ${c.doneBy === uid() && !c.spent ? `<button class="btn ghost small" onclick="cravingSpent('${c.id}')">💸 Gastos</button>` : ''}<span class="grow"></span>
           <button class="del" aria-label="Borrar del historial" onclick="delCraving('${c.id}')">${icon('trash')}</button></div></div>`;
     }).join('') : '<p class="empty">Aquí van a quedar los antojos cumplidos</p>'}`);
 }
@@ -246,6 +249,12 @@ function confirmFulfill() {
   toast(mine ? 'Antojo cumplido 🎉' : `¡Cumpliste el antojo de ${partnerName()}! 💕`);
   donePhoto = null; doneId = null;
 }
+// Anotar en Gastos lo que costó cumplir el antojo (abre «Anotar» con la descripción puesta)
+function cravingSpent(id) {
+  const c = all().find(x => x.id === id); if (!c) return;
+  write(updateDoc(ref('cravings', id), { spent: true }));
+  window.quickSpend?.({ desc: `${c.emoji || '🍓'} ${c.text}`.slice(0, 60), note: 'Antojo cumplido: escribe cuánto costó' });
+}
 function thankCraving(id) {
   const c = all().find(x => x.id === id); if (!c) return;
   write(updateDoc(ref('cravings', id), { thanks: Date.now() })); celebrate('hearts');
@@ -318,5 +327,5 @@ on('cravings', () => setTimeout(urgentPopup, 1200));
 on('cravings events pet', () => { if ($('s-cravings').classList.contains('active')) render(); });
 onShow('s-cravings', render);
 window.openCravings = t => { if (t) tab = t; window.go('s-cravings'); };
-expose({ craveTab, craveEmoji, addCraving, openCraving, craveSheetEmoji, craveSheetKind, cravePhoto, saveCravingSheet, fulfillCraving, cravedPhoto,
+expose({ cravingSpent, craveTab, craveEmoji, addCraving, openCraving, craveSheetEmoji, craveSheetKind, cravePhoto, saveCravingSheet, fulfillCraving, cravedPhoto,
   confirmFulfill, thankCraving, saveCravingMoment, delCraving, planCraving, savePlanCraving, spinCravings, craveSpinFavs, addFav, craveDefaultFavs });

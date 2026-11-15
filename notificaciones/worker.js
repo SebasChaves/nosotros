@@ -16,7 +16,7 @@
 //   COUPLE_ID          (texto, opcional) por defecto nosotros
 // Ver docs/NOTIFICACIONES.md. Sin dependencias: se pega tal cual en el editor de Cloudflare.
 
-const WORKER_VERSION = 7; // súbelo al cambiar este archivo (la app lo muestra en el diagnóstico)
+const WORKER_VERSION = 8; // súbelo al cambiar este archivo (la app lo muestra en el diagnóstico)
 const enc = new TextEncoder();
 const b64u = buf => btoa(String.fromCharCode(...new Uint8Array(buf))).replace(/\+/g, '-').replace(/\//g, '_').replace(/=+$/, '');
 const unb64u = s => Uint8Array.from(atob(s.replace(/-/g, '+').replace(/_/g, '/') + '==='.slice((s.length + 3) % 4)), c => c.charCodeAt(0));
@@ -160,6 +160,7 @@ export async function encryptPayload(sub, payload, fixed = {}) {
 //   20:00 racha en peligro / mascota con hambre (a quien todavía no ha hecho nada hoy)
 //   8:00 «Hoy es…» y 9:00 «Mañana es…» para fechas especiales, aniversarios y mesiversarios
 //   domingo 19:00 resumen de la semana (lunes a domingo), como el de week.js en la app
+//   al minuto exacto las notas del frasco programadas (showDay/showTime)
 //   domingo 19:30 resumen de gastos de la semana (gustos vs. presupuesto y vs. la semana pasada), como el de money.js
 // Para gastar pocas lecturas: cada minuto solo consulta los recordatorios de hoy; el resto se lee solo si hay algo que mandar.
 // Devuelve la lista de avisos (sirve para las pruebas). La app usa la misma regla de racha que home.js.
@@ -179,7 +180,9 @@ export async function runSchedule(env, when = Date.now(), { dryRun = false } = {
   // Recordatorios de hoy que tocan en este minuto (los que no tienen hora, a las 8:00)
   const due = (await db.query('reminders', 'date', today)).filter(r => !r.done && (r.time ? String(r.time).slice(0, 5) === hhmm : onTheHour && hour === TODAY_HOUR));
   const moneyTime = weekday === 0 && hour === WEEK_HOUR && L.minute === '30';
-  if (!due.length && !onTheHour && !moneyTime) return [];
+  // Notas del frasco programadas para este minuto (love.js: showDay / showTime)
+  const notesDue = (await db.query('notes', 'showDay', today)).filter(n => !n.readAt && String(n.showTime || '08:00').slice(0, 5) === hhmm);
+  if (!due.length && !notesDue.length && !onTheHour && !moneyTime) return [];
   const couple = await db.get('');
   if (!couple) return [];
   const members = Object.keys(couple.members || {}).filter(u => (env.ALLOWED_UIDS || '').split(',').map(x => x.trim()).includes(u));
@@ -228,6 +231,9 @@ export async function runSchedule(env, when = Date.now(), { dryRun = false } = {
     const to = !r.for || r.for === 'ambos' ? members : members.filter(u => u === r.for);
     for (const u of to) add(u, 'reminders', { title: `${r.urgent ? '🔴' : '🔔'} ${r.text}`, body: [r.time, r.note].filter(Boolean).join(' · ') || 'Recordatorio de hoy', url: './?open=reminders', tag: 'rem-' + r.id });
   }
+
+  // 2b. Notas programadas: le llegan a la pareja a su hora
+  for (const n of notesDue) for (const u of members.filter(x => x !== n.fromUid)) add(u, 'notes', { title: `💌 ${n.fromName || couple.members[n.fromUid]?.name || 'Tu pareja'} te dejó una nota para hoy`, body: 'Sácala del frasco 🫙', url: './?open=notes', tag: 'note-' + n.id });
 
   // 3. Fechas especiales, aniversarios y mesiversarios: hoy (8:00) y mañana (9:00)
   if (onTheHour && (hour === TODAY_HOUR || hour === TOMORROW_HOUR)) {
