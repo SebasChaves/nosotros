@@ -1,5 +1,5 @@
 // Películas y series: por ver, viendo y vistas. Con clave de TMDB busca títulos con póster y dónde verlos.
-import { setDoc, updateDoc, deleteDoc } from 'https://www.gstatic.com/firebasejs/11.0.2/firebase-firestore.js';
+import { setDoc, updateDoc, deleteDoc, increment } from 'https://www.gstatic.com/firebasejs/11.0.2/firebase-firestore.js';
 import { $, S, esc, icon, paint, on, expose, toast, openSheet, closeSheet, write, ref, newRef, go,
          nameOf, partnerUid, uid, ask } from './core.js';
 import { TMDB_KEY } from './tmdb-config.js';
@@ -191,8 +191,10 @@ function setShowStatus(id, status) {
   const patch = { status };
   if (status === 'seen') patch.seenAt = Date.now();
   if (status === 'watching' && !S.data.shows.find(x => x.id === id)?.progress) patch.progress = { s: 1, e: 1 };
+  const sh = S.data.shows.find(x => x.id === id), pt = S.data.pet.find(p => p.id === 'main');
+  if (status === 'seen' && !sh?.coins && pt?.hatchedAt) { patch.coins = true; write(updateDoc(ref('pet', 'main'), { bonus: increment(3) })); }
   write(updateDoc(ref('shows', id), patch)); tab = status;
-  if (status === 'seen') toast('¡Vista! Pónganle nota');
+  if (status === 'seen') toast(patch.coins ? '¡Vista! Pónganle nota · +3 🪙 para su mascota' : '¡Vista! Pónganle nota');
 }
 function stepShow(id, k, d) {
   const s = S.data.shows.find(x => x.id === id); const p = { ...(s.progress || { s: 1, e: 1 }) };

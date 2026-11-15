@@ -47,6 +47,12 @@
 
 ## Ideas conversadas, no hechas
 
+- De la lista de mejoras (nov 2026), quedaron sin hacer: clima en el saludo, diario de la mascota, responder instantáneas
+  con texto, agrupar avisos que llegan seguidos, y una revisión general de tamaños de botones/textos y velocidad de fotos
+  en el Samsung. Ya existían (no se rehicieron): filtros de citas por presupuesto y lugar, ingredientes al Súper, portada
+  y adelanto en la playlist, instantáneas guardadas en Momentos, aciertos en «¿Qué respondería?», buscador global,
+  presupuesto y gastos por viaje, preguntas que no se repiten hasta dar la vuelta.
+
 - Mascota: más ropa y detalles en la tienda, más juegos, que el otro vea cuando la acariciaste, ropa por temporada
   (Navidad, San Valentín). Juego de a dos (récord en pareja).
 - Cartas «Ábrelo cuando…» (algunas bloqueadas hasta una fecha) y cápsula del tiempo.

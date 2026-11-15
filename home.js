@@ -263,7 +263,7 @@ function renderHome() {
   // Orden y tarjetas visibles que eligió cada uno en Ajustes (si aún no configuran, sale la tarjeta de bienvenida igual).
   const layout = homeLayout().filter(c => c.on || (c.id === 'counter' && !ready));
   paint('s-home', `
-    <div class="topbar"><div class="title"><span class="hi">Hola${greetName() ? ', ' + esc(greetName()) : ''}</span><h1 class="brand grad-text" style="font-size:30px">Futari</h1></div>
+    <div class="topbar"><div class="title"><span class="hi">${(h => h < 5 ? 'Buenas noches 🌙' : h < 12 ? 'Buenos días ☀️' : h < 19 ? 'Buenas tardes 🌤️' : 'Buenas noches 🌙')(new Date().getHours())}${greetName() ? ', ' + esc(greetName()) : ''}</span><h1 class="brand grad-text" style="font-size:30px">Futari</h1></div>
       <div class="row" style="gap:10px"><div class="avatars">${names.map(([id]) => avatar(id, 36)).join('')}</div>
       <button class="icon-btn" onclick="openSearch()" aria-label="Buscar">${icon('search')}</button>
       <button class="icon-btn" onclick="go('s-settings')" aria-label="Ajustes">${icon('gear')}</button></div></div>

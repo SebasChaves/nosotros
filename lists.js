@@ -1,6 +1,6 @@
 // Bucket list y lista del súper.
-import { setDoc, updateDoc, deleteDoc, writeBatch } from 'https://www.gstatic.com/firebasejs/11.0.2/firebase-firestore.js';
-import { $, S, db, esc, icon, paint, on, expose, toast, write, ref, newRef, fmtDate, nameOf, uid, ask, celebrate, partnerUid, partnerName, profile } from './core.js';
+import { setDoc, updateDoc, deleteDoc, writeBatch, increment } from 'https://www.gstatic.com/firebasejs/11.0.2/firebase-firestore.js';
+import { $, S, db, esc, icon, paint, on, expose, toast, write, ref, newRef, fmtDate, nameOf, uid, ask, celebrate, partnerUid, partnerName, profile, openSheet, closeSheet, todayKey, compressImage, photoError, makeThumb, thumbId, cachePhoto } from './core.js';
 import { notify, meForPartner } from './push.js';
 import { GROCERY_TPL } from './data.js';
 
@@ -30,8 +30,31 @@ function addBucket() {
 }
 function toggleBucket(id) {
   const b = S.data.bucket.find(x => x.id === id); if (!b) return;
-  write(updateDoc(ref('bucket', id), { done: !b.done, doneAt: b.done ? null : Date.now() }));
-  if (!b.done) { toast('¡Una menos!'); celebrate(); }
+  const batch = writeBatch(db);
+  batch.update(ref('bucket', id), { done: !b.done, doneAt: b.done ? null : Date.now() });
+  // Cumplir un sueño da 10 monedas a la mascota (una sola vez por sueño)
+  const pt = S.data.pet.find(p => p.id === 'main');
+  if (!b.done && !b.coins && pt?.hatchedAt) { batch.update(ref('pet', 'main'), { bonus: increment(10) }); batch.update(ref('bucket', id), { coins: true }); }
+  write(batch.commit());
+  if (!b.done) {
+    celebrate();
+    // Guardarlo como momento con foto
+    openSheet(`<div class="stack center"><div style="font-size:46px">🌟</div><h2>¡Sueño cumplido!</h2><p style="margin:0">${esc(b.text)}</p>
+      ${pt?.hatchedAt && !b.coins ? '<p class="small muted" style="margin:0">+10 🪙 para su mascota</p>' : ''}
+      <label class="btn">📸 Guardarlo en Momentos con una foto<input type="file" accept="image/*" hidden onchange="bucketMoment('${id}', this.files[0])"></label>
+      <button class="btn ghost" onclick="bucketMoment('${id}')">Guardarlo sin foto</button>
+      <button class="link" onclick="closeSheet()">Ahora no</button></div>`);
+  }
+}
+async function bucketMoment(id, f) {
+  const b = S.data.bucket.find(x => x.id === id); if (!b) return;
+  let photo = null;
+  if (f) { try { photo = await compressImage(f); } catch (e) { return photoError(e); } }
+  const r = newRef('moments'), batch = writeBatch(db);
+  if (photo) { const th = await makeThumb(photo).catch(() => null); batch.set(ref('photos', r.id), { data: photo }); cachePhoto(r.id, photo); if (th) { batch.set(ref('photos', thumbId(r.id)), { data: th }); cachePhoto(thumbId(r.id), th); } }
+  batch.set(r, { title: `🌟 ${b.text}`, date: todayKey(), note: 'Sueño de la bucket list cumplido', hasPhoto: !!photo, place: null, by: uid(), createdAt: Date.now(), fromBucket: id });
+  batch.update(ref('bucket', id), { moment: r.id });
+  write(batch.commit()); closeSheet(); toast('Guardado en Momentos 📸');
 }
 async function delBucket(id) { if (await ask('¿Borrar este elemento? Se borra para los dos.')) write(deleteDoc(ref('bucket', id))); }
 
@@ -101,4 +124,4 @@ function clearBought() {
 
 on('bucket', renderBucket);
 on('groceries profiles', renderGrocery);
-expose({ addBucket, toggleBucket, delBucket, addGrocery, toggleGrocery, delGrocery, clearBought, goingSuper, superToMoney });
+expose({ bucketMoment, addBucket, toggleBucket, delBucket, addGrocery, toggleGrocery, delGrocery, clearBought, goingSuper, superToMoney });

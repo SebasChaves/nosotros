@@ -29,6 +29,12 @@ function stats(y) {
     spent: D.expenses.filter(e => e.type !== 'settle' && dIn(e.date, y)).reduce((s, e) => s + e.amount, 0),
     moodMe: moodCount(me), moodThem: p && moodCount(p),
     quiz: quizRounds.length,
+    shows: D.shows.filter(s => s.status === 'seen' && inYear(s.seenAt, y)),
+    pins: D.pins.filter(x => dIn(x.date, y)),
+    cravings: D.cravings.filter(c => c.done && !c.fav && inYear(c.doneAt, y)).length,
+    gustos: D.expenses.filter(e => e.type !== 'settle' && dIn(e.date, y) && ['🍽️', '🎬', '🎉'].includes(e.cat)).reduce((s, e) => s + e.amount, 0),
+    saved: D.money.filter(g => g.kind === 'goal').reduce((s, g) => s + (g.log || []).filter(l => inYear(l.at, y)).reduce((a, l) => a + (Number(l.amount) || 0), 0), 0),
+    topPlace: (() => { const c = {}; D.places.forEach(pl => { const n = (pl.visits || []).filter(v => dIn(v.date, y)).length; if (n) c[pl.name] = n; }); return Object.entries(c).sort((a, b) => b[1] - a[1])[0]; })(),
   };
 }
 
@@ -46,15 +52,18 @@ function render() {
   if (s.notesMe + s.notesThem) parts.push(card(s.notesMe + s.notesThem, `notas de amor: ${mn} escribió ${s.notesMe} y ${pn} ${s.notesThem}`));
   if (s.answers) parts.push(card(s.answers, 'preguntas del día respondidas por los dos'));
   if (s.trips.length) parts.push(card(s.trips.length, `${s.trips.length === 1 ? 'viaje' : 'viajes'}: ${s.trips.map(t => esc(t.name)).join(', ')}`));
-  if (s.places) parts.push(card(s.places, 'salidas a comer registradas'));
+  if (s.places) parts.push(card(s.places, `salidas a comer registradas${s.topPlace ? `; su favorito: <b>${esc(s.topPlace[0])}</b> (${plural(s.topPlace[1], 'vez', 'veces')})` : ''}`));
+  if (s.shows.length) parts.push(card(s.shows.length, `pelis y series vistas${s.shows.length <= 4 ? ': ' + s.shows.map(x => esc(x.title)).join(', ') : ''}`));
+  if (s.pins.length) { const cs = new Set(s.pins.map(x => x.country).filter(Boolean)); parts.push(card(s.pins.length, `lugares nuevos en el mapa${cs.size ? ` en ${plural(cs.size, 'país', 'países')}` : ''}`)); }
+  if (s.saved > 0) parts.push(card(fmtMoney(s.saved), 'ahorrados en sus alcancías 🐷'));
   const small = [
-    [s.challenges, 'retos cumplidos'], [s.bucket, 'sueños de la bucket list cumplidos'], [s.coupons, 'cupones canjeados'], [s.quiz, 'rondas del quiz'],
+    [s.cravings, 'antojos cumplidos'], [s.challenges, 'retos cumplidos'], [s.bucket, 'sueños de la bucket list cumplidos'], [s.coupons, 'cupones canjeados'], [s.quiz, 'rondas del quiz'],
   ].filter(x => x[0]);
   if (small.length) parts.push(`<div class="grid2">${small.map(([n, t]) => `<div class="glass center"><div class="money grad-text">${n}</div><div class="small muted">${t}</div></div>`).join('')}</div>`);
   if (s.moodMe || s.moodThem) parts.push(`<div class="glass story"><span class="label" style="justify-content:center">Su ánimo más frecuente</span>
     <div class="grid2" style="margin-top:12px"><div><div style="font-size:46px">${s.moodMe || '·'}</div><div class="small muted">${mn}</div></div>
     <div><div style="font-size:46px">${s.moodThem || '·'}</div><div class="small muted">${pn}</div></div></div></div>`);
-  if (s.spent) parts.push(card(fmtMoney(s.spent), 'gastados juntos (según Gastos)'));
+  if (s.spent) parts.push(card(fmtMoney(s.spent), `gastados juntos (según Gastos)${s.gustos ? `, ${fmtMoney(s.gustos)} en comida, salidas y fiestas` : ''}`));
   paint('s-summary', `${backBar(`Su ${year}`)}
     <div class="chips scroll">${[...years].sort((a, b) => b - a).map(y => `<button class="chip ${y === year ? 'on' : ''}" onclick="setYear(${y})">${y}</button>`).join('')}</div>
     ${parts.join('')}
@@ -63,6 +72,6 @@ function render() {
 }
 function setYear(y) { year = y; render(); }
 
-on('moments notes coupons answers challenges bucket places trips expenses moods quiz', () => { if ($('s-summary').classList.contains('active')) render(); });
+on('moments notes coupons answers challenges bucket places trips expenses moods quiz shows pins cravings money', () => { if ($('s-summary').classList.contains('active')) render(); });
 onShow('s-summary', render);
 expose({ setYear });

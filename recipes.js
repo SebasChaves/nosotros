@@ -1,5 +1,5 @@
 // Recetas (incluidas + propias), favoritas y menú semanal con envío de ingredientes al Súper.
-import { setDoc, deleteDoc, deleteField, writeBatch } from 'https://www.gstatic.com/firebasejs/11.0.2/firebase-firestore.js';
+import { setDoc, updateDoc, deleteDoc, deleteField, writeBatch, increment } from 'https://www.gstatic.com/firebasejs/11.0.2/firebase-firestore.js';
 import { $, S, db, esc, icon, paint, on, onShow, expose, toast, openSheet, closeSheet, write, ref, newRef, ask, pick, celebrate,
          today, dayKey, parseDate, plural, uid, syncBack } from './core.js';
 import { RECIPES, RECIPE_TAGS } from './recipes-data.js';
@@ -144,7 +144,12 @@ function cookClose(done) {
   if (!ck) return;
   clearInterval(ck.timer); try { ck.lock?.release(); } catch {}
   const el = ck.el; ck = null; el.classList.add('out'); setTimeout(() => { el.remove(); syncBack(); }, 160);
-  if (done === true) { celebrate(); toast('¡Buen provecho! 🍽️'); }
+  if (done === true) {
+    celebrate();
+    const pt = S.data.pet.find(p => p.id === 'main'), k = 'futari-cooked-' + new Date().toDateString();
+    let first = true; try { first = !localStorage.getItem(k); localStorage.setItem(k, '1'); } catch {}
+    if (pt?.hatchedAt && first) { write(updateDoc(ref('pet', 'main'), { bonus: increment(5) })); toast('¡Buen provecho! 🍽️ +5 🪙 para su mascota'); } else toast('¡Buen provecho! 🍽️');
+  }
 }
 function addIngredients(list) {
   const have = new Set(S.data.groceries.filter(g => !g.done).map(g => norm(g.text)));

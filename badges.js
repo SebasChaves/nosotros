@@ -46,6 +46,12 @@ const BADGES = [
   ['shows-25', '🍿', 'Cinéfilos', '25 pelis o series vistas', () => D().shows.filter(s => s.status === 'seen').length, 25],
   ['songs-10', '🎵', 'Su banda sonora', '10 canciones en la playlist', () => D().songs.length, 10],
   ['plans-10', '🗓️', 'Agenda llena', '10 planes en el calendario', () => D().events.length, 10],
+  ['money-50', '💸', 'Cuentas claras', 'Anotar 50 gastos', () => D().expenses.filter(e => e.type !== 'settle').length, 50],
+  ['goal-1', '🐷', 'Primera alcancía llena', 'Llenar una alcancía', () => D().money.filter(g => g.kind === 'goal' && g.done).length, 1],
+  ['outing-5', '🎉', 'Salidas con control', '5 salidas con «Salimos»', () => new Set(D().expenses.map(e => e.outing).filter(Boolean)).size, 5],
+  ['crave-20', '🍓', 'Consentidores', 'Cumplir 20 antojos', () => D().cravings.filter(c => c.done && !c.fav).length, 20],
+  ['places-photo', '📷', 'Fotógrafos de platos', '5 visitas a restaurantes con foto', () => D().places.reduce((s, x) => s + (x.visits || []).filter(v => v.photo).length, 0), 5],
+  ['arrows-30', '🏹', 'Flechas maestras', 'Llegar al nivel 30 de Flechas (uno de los dos)', () => Math.max(0, ...D().arrows.filter(a => /^p-/.test(a.id)).map(a => (a.lv || 1) - 1)), 30],
   ['days-365', '💍', 'Un año juntos', '365 días juntos', daysTogether, 365],
   ['days-1000', '🎉', 'Mil días', '1.000 días juntos', daysTogether, 1000],
 ];
