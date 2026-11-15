@@ -1,7 +1,7 @@
 // Restaurantes: a dónde quieren ir, dónde ya fueron, calificaciones, qué pidieron, ubicación y "cerca de mí".
-import { setDoc, updateDoc, deleteDoc } from 'https://www.gstatic.com/firebasejs/11.0.2/firebase-firestore.js';
+import { setDoc, updateDoc, deleteDoc, writeBatch } from 'https://www.gstatic.com/firebasejs/11.0.2/firebase-firestore.js';
 import { $, S, esc, icon, paint, on, expose, toast, openSheet, closeSheet, write, ref, newRef, go,
-         parseDate, fmtShort, todayKey, nameOf, partnerUid, uid, ask } from './core.js';
+         parseDate, fmtShort, todayKey, nameOf, partnerUid, uid, ask, db, pick, celebrate, loadPhotos, cachePhoto, compressImage, photoError, makeThumb, thumbId } from './core.js';
 import { backBar } from './lists.js';
 import { createList } from './decide.js';
 import { placeField, initPlace, getPlace, distKm, fmtKm, myPosition, mapsUrl, wazeUrl } from './location.js';
@@ -25,6 +25,7 @@ function render() {
       <button class="${tab === 'been' ? 'on' : ''}" onclick="placesTab('been')">Ya fuimos · ${been.length}</button></div>
     <div class="chips scroll"><button class="chip ${near ? 'on' : ''}" onclick="placesNear()">📍 Cerca de mí</button>
       ${ks.length > 1 ? `<button class="chip ${!kindF ? 'on' : ''}" onclick="placesKind(-1)">Todo</button>${ks.map((k, i) => `<button class="chip ${kindF.toLowerCase() === k.toLowerCase() ? 'on' : ''}" onclick="placesKind(${i})">${esc(k)}</button>`).join('')}` : ''}</div>
+    ${want.length >= 2 ? `<button class="btn" onclick="placesLucky()">🎲 ¿A dónde vamos hoy?${near ? ' (cerca)' : ''}${kindF ? ` · ${esc(kindF)}` : ''}</button>` : ''}
     ${S.data.places.length ? `<div class="grid2"><button class="btn ghost small" style="width:100%" onclick="placesToDecide()">${icon('dice')} Elegir en Decidir</button>
       <button class="btn ghost small" style="width:100%" onclick="placesMap()">🗺️ Ver en el mapa</button></div>` : ''}
     ${list.length ? list.map(p => {
@@ -41,7 +42,7 @@ function render() {
           <div class="row"><span class="small muted">Tu nota</span><span class="stars">${[1, 2, 3, 4, 5].map(i =>
             `<button class="${i <= mine ? 'on' : ''}" aria-label="${i} estrellas" onclick="ratePlace('${p.id}',${i})">${icon('star')}</button>`).join('')}</span></div>
           ${theirs ? `<div class="row"><span class="small muted">Nota de ${esc(nameOf(pu))}</span>${starsView(theirs)}</div>` : ''}
-          ${visits.length ? `<ul class="list">${visits.slice(0, 3).map(v => `<li><div class="txt">${fmtShort(parseDate(v.date))}${v.note ? ` · ${esc(v.note)}` : ''}</div></li>`).join('')}</ul>` : ''}
+          ${visits.length ? `<ul class="list">${visits.slice(0, 3).map(v => `<li>${v.photo ? `<img class="visit-photo" data-thumb="${v.photo}" alt="" onclick="viewPhoto(this)">` : ''}<div class="txt">${fmtShort(parseDate(v.date))}${v.note ? ` · ${esc(v.note)}` : ''}</div></li>`).join('')}</ul>` : ''}
           <button class="btn ghost small" style="width:100%" onclick="openVisit('${p.id}')">${icon('plus')} Fuimos otra vez</button>`
         : `<button class="btn small" style="width:100%" onclick="openVisit('${p.id}')">${icon('check')} Ya fuimos</button>`}
       </div>`;
@@ -92,12 +93,23 @@ function openVisit(id) {
   openSheet(`<div class="stack"><h2>${esc(p.name)}</h2>
     <div><label class="f" for="vDate">¿Cuándo fueron?</label><input type="date" id="vDate" value="${todayKey()}"></div>
     <div><label class="f" for="vNote">¿Qué pidieron? (opcional)</label><input id="vNote" maxlength="120" placeholder="Ej: la pizza de la casa, muy rica"></div>
+    <label class="btn ghost small" style="width:100%">📸 Foto del plato (opcional)<input type="file" accept="image/*" hidden onchange="visitPhoto(this.files[0])"></label>
+    <img id="vPrev" class="visit-prev" alt="" hidden>
     <button class="btn" onclick="saveVisit('${id}')">Guardar visita</button></div>`);
+}
+let visitPic = null;
+async function visitPhoto(f) {
+  if (!f) return;
+  try { const full = await compressImage(f, 1080); visitPic = { full, thumb: await makeThumb(full).catch(() => null) }; const im = $('vPrev'); if (im) { im.src = full; im.hidden = false; } }
+  catch (e) { photoError(e); }
 }
 function saveVisit(id) {
   const p = S.data.places.find(x => x.id === id); if (!p) return;
-  const visits = [...(p.visits || []), { date: $('vDate').value || todayKey(), note: $('vNote').value.trim(), by: uid() }];
-  write(updateDoc(ref('places', id), { status: 'been', visits }));
+  const b = writeBatch(db), pid = visitPic ? `visit-${id}-${Date.now()}` : null;
+  if (visitPic) { b.set(ref('photos', pid), { data: visitPic.full }); cachePhoto(pid, visitPic.full); if (visitPic.thumb) { b.set(ref('photos', thumbId(pid)), { data: visitPic.thumb }); cachePhoto(thumbId(pid), visitPic.thumb); } }
+  const visits = [...(p.visits || []), { date: $('vDate').value || todayKey(), note: $('vNote').value.trim(), by: uid(), ...(pid ? { photo: pid } : {}) }];
+  b.update(ref('places', id), { status: 'been', visits });
+  write(b.commit()); visitPic = null;
   tab = 'been'; closeSheet(); toast('¡Visita guardada! Califíquenlo');
 }
 function ratePlace(id, n) { write(updateDoc(ref('places', id), { [`ratings.${uid()}`]: n })); }
@@ -118,5 +130,16 @@ function placesToDecide() {
   toast('Lista lista en Decidir');
 }
 
-on('places', render);
-expose({ placesTab, placesKind, placesNear, placesMap, openPlace, savePlace, openVisit, saveVisit, ratePlace, delPlace, placesToDecide });
+function placesLucky() {
+  let pool = S.data.places.filter(p => p.status !== 'been' && kindOk(p));
+  if (near) { const close = pool.filter(p => (dist(p) ?? 1e9) <= 10); if (close.length) pool = close; }
+  if (!pool.length) return toast('No hay lugares pendientes con ese filtro');
+  const p = pick(pool), d = dist(p); celebrate();
+  openSheet(`<div class="stack center"><span class="label" style="justify-content:center">Hoy van a…</span><div style="font-size:46px">🍽️</div><h2>${esc(p.name)}</h2>
+    <p class="small muted" style="margin:0">${[p.kind, PRICES[p.price || 0], d != null ? `a ${fmtKm(d)}` : ''].filter(Boolean).map(esc).join(' · ')}</p>
+    ${p.loc ? `<div class="grid2"><a class="btn ghost small" style="width:100%;text-decoration:none" href="${mapsUrl(p.loc)}" target="_blank" rel="noopener">Google Maps</a><a class="btn ghost small" style="width:100%;text-decoration:none" href="${wazeUrl(p.loc)}" target="_blank" rel="noopener">Waze</a></div>` : ''}
+    <div class="grid2"><button class="btn ghost" onclick="placesLucky()">🎲 Otro</button><button class="btn" onclick="closeSheet()">¡Vamos!</button></div></div>`);
+}
+
+on('places', () => { render(); loadPhotos($('s-places')); });
+expose({ placesLucky, visitPhoto, placesTab, placesKind, placesNear, placesMap, openPlace, savePlace, openVisit, saveVisit, ratePlace, delPlace, placesToDecide });

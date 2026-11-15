@@ -78,6 +78,8 @@ function todayCard() {
   if (!S.data.moods.find(m => m.id === tk)?.[uid()]) row('🙂', '¿Cómo te sientes hoy? Marca tu ánimo', `document.querySelector('.moods')?.scrollIntoView({behavior:'smooth',block:'center'})`);
   const sup = p && profile(p).superAt; if (sup && Date.now() - sup < 3 * 3600e3) row('🛒', `<b>${pn} está en el súper</b>: ¿falta algo?`, "go('s-grocery')");
   for (const [e, t, a] of moneyTodayRows()) row(e, t, a);
+  const nextTrip = S.data.trips.filter(t => t.start && t.start > tk).sort((a, b) => a.start.localeCompare(b.start))[0];
+  if (nextTrip) { const n = daysBetween(today(), parseDate(nextTrip.start)); if (n <= 14) { const pk = nextTrip.packing || [], pend = pk.filter(x => !x.done).length; row('✈️', `${n === 1 ? '¡Mañana' : `Faltan ${n} días para`} ${esc(nextTrip.name)}${n === 1 ? '!' : ''}${pk.length ? ` · maleta: ${pk.length - pend} de ${pk.length}` : ''}`, `openTrip('${nextTrip.id}')`); } }
   const ans = todayAnswers();
   if (!ans?.answers?.[uid()]) row('💬', p && ans?.answers?.[p] ? `Responde la pregunta del día (${pn} ya respondió)` : 'Responde la pregunta del día', `document.getElementById('answerText')?.scrollIntoView({block:'center'});document.getElementById('answerText')?.focus()`);
   if (guessWaiting()) row('🔮', `${pn} ya respondió «¿Qué respondería ${pn}?»: adivina qué dijo`, `document.querySelector('.guess-card')?.scrollIntoView({behavior:'smooth',block:'center'})`);

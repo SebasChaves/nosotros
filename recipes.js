@@ -1,7 +1,7 @@
 // Recetas (incluidas + propias), favoritas y menú semanal con envío de ingredientes al Súper.
 import { setDoc, deleteDoc, deleteField, writeBatch } from 'https://www.gstatic.com/firebasejs/11.0.2/firebase-firestore.js';
 import { $, S, db, esc, icon, paint, on, onShow, expose, toast, openSheet, closeSheet, write, ref, newRef, ask, pick, celebrate,
-         today, dayKey, parseDate, plural, uid } from './core.js';
+         today, dayKey, parseDate, plural, uid, syncBack } from './core.js';
 import { RECIPES, RECIPE_TAGS } from './recipes-data.js';
 import { backBar } from './lists.js';
 
@@ -37,7 +37,7 @@ function renderList() {
     <input id="recSearch" type="search" placeholder="Buscar receta o ingrediente…" aria-label="Buscar receta" value="${esc(q)}" oninput="recSearch(this.value)">
     <div class="chips scroll"><button class="chip ${onlyFav ? 'on' : ''}" onclick="recFav()">${icon('heart-f')} Favoritas</button>
       ${RECIPE_TAGS.map(([k, l]) => `<button class="chip ${tag === k ? 'on' : ''}" onclick="recTag('${k}')">${l}</button>`).join('')}</div>
-    <button class="btn ghost" onclick="recRandom()">${icon('dice')} ¿Qué cocinamos hoy?</button>
+    <div class="grid2"><button class="btn ghost" onclick="recRandom()">${icon('dice')} ¿Qué cocinamos hoy?</button><button class="btn ghost" onclick="recHave()">🧺 Con lo que tengo</button></div>
     <div class="glass" style="padding:6px 14px">${list.length ? list.map(r => `
       <button class="result-row" onclick="openRecipe('${esc(r.id)}')"><span class="e" style="font-size:22px">${esc(r.emoji || '🍽️')}</span>
         <span class="grow" style="min-width:0"><b style="display:block">${esc(r.name)}</b><span class="tiny muted">${r.min ? `${r.min} min · ` : ''}${r.builtIn ? '' : 'Receta suya · '}${(r.tags || []).map(t => RECIPE_TAGS.find(x => x[0] === t)?.[1]).filter(Boolean).slice(0, 2).join(' · ')}</span></span>
@@ -62,6 +62,7 @@ function openRecipe(id, lucky = false) {
     ${lucky ? '<span class="label">Hoy toca…</span>' : ''}
     <div class="row start" style="gap:12px"><span style="font-size:44px">${esc(r.emoji || '🍽️')}</span><div><h2>${esc(r.name)}</h2>
       <span class="small muted">${r.min ? `${r.min} min · ` : ''}${plural(r.servings || 2, 'porción', 'porciones')}</span></div></div>
+    <button class="btn" onclick="cookMode('${esc(r.id)}')">👩‍🍳 Modo cocina: paso a paso, pantalla encendida y temporizador</button>
     <span class="label">Ingredientes</span>
     <ul class="list">${r.ingredients.map(i => `<li style="padding:7px 0"><span class="txt small">${esc(i)}</span>${pending.has(norm(i)) ? '<span class="pill">en el súper</span>' : ''}</li>`).join('')}</ul>
     <button class="btn ghost" onclick="recipeToGrocery('${esc(r.id)}')">${icon('cart')} Ingredientes al Súper</button>
@@ -75,6 +76,76 @@ function openRecipe(id, lucky = false) {
       ${r.builtIn ? '' : `<button class="btn danger small" style="width:100%" onclick="delRecipe('${esc(r.id)}')">${icon('trash')} Borrar</button>`}</div></div>`);
 }
 const cap = s => s.charAt(0).toUpperCase() + s.slice(1);
+
+/* ---------- ¿Qué cocino con lo que tengo? ---------- */
+function recHave() {
+  let saved = ''; try { saved = localStorage.getItem('futari-have') || ''; } catch {}
+  openSheet(`<div class="stack"><h2>🧺 Con lo que tengo</h2>
+    <p class="small muted" style="margin:0">Escribe lo que hay en la casa, separado por comas, y te digo qué pueden cocinar.</p>
+    <textarea id="haveTxt" rows="3" placeholder="Ej: huevos, arroz, pollo, tomate, queso" oninput="recHaveRun()">${esc(saved)}</textarea>
+    <div id="haveOut" class="stack" style="gap:2px"></div></div>`);
+  recHaveRun();
+}
+function recHaveRun() {
+  const t = $('haveTxt')?.value || ''; try { localStorage.setItem('futari-have', t); } catch {}
+  const have = t.split(/[,\n]/).map(x => norm(x).trim()).filter(x => x.length > 1);
+  const box = $('haveOut'); if (!box) return;
+  if (!have.length) { box.innerHTML = ''; return; }
+  const BASIC = /sal|pimienta|aceite|agua|azucar/;
+  const scored = allRecipes().map(r => {
+    const ing = r.ingredients.filter(i => !BASIC.test(norm(i).split(' ').slice(-1)[0] || '') || norm(i).length > 14);
+    const ok = ing.filter(i => have.some(h => norm(i).includes(h)));
+    return { r, ok: ok.length, total: ing.length || 1, miss: ing.filter(i => !ok.includes(i)) };
+  }).filter(x => x.ok).sort((a, b) => b.ok / b.total - a.ok / a.total || b.ok - a.ok).slice(0, 12);
+  box.innerHTML = scored.length ? scored.map(x => `<button class="result-row" onclick="openRecipe('${esc(x.r.id)}')"><span class="e" style="font-size:22px">${esc(x.r.emoji || '🍽️')}</span>
+    <span class="grow" style="min-width:0"><b style="display:block">${esc(x.r.name)}</b><span class="tiny muted">Tienes ${x.ok} de ${x.total}${x.miss.length ? ` · falta: ${x.miss.slice(0, 3).map(esc).join(', ')}${x.miss.length > 3 ? '…' : ''}` : ' · ¡tienes todo!'}</span></span></button>`).join('')
+    : '<p class="small muted center" style="margin:0">Ninguna receta usa eso todavía. Prueben con otros ingredientes.</p>';
+}
+
+/* ---------- Modo cocina ---------- */
+// Pantalla completa: un paso grande a la vez, la pantalla no se apaga (Wake Lock) y temporizador si el paso dice minutos
+let ck = null;
+async function cookMode(id) {
+  const r = recipe(id); if (!r) return;
+  closeSheet();
+  const el = document.createElement('div'); el.className = 'dialog mt-view ck-view'; el.setAttribute('role', 'dialog'); el.setAttribute('aria-modal', 'true'); el.setAttribute('aria-label', 'Modo cocina');
+  document.body.appendChild(el); syncBack();
+  ck = { r, i: 0, el, lock: null, timer: null, left: 0 };
+  try { ck.lock = await navigator.wakeLock?.request('screen'); } catch {}
+  cookPaint();
+}
+const stepMinutes = s => { const m = /(\d+)\s*(?:a\s*\d+\s*)?(min|minutos?|horas?|hrs?)\b/i.exec(s); return m ? Number(m[1]) * (/h/i.test(m[2]) ? 60 : 1) : 0; };
+function cookPaint() {
+  if (!ck) return;
+  const { r, i } = ck, step = r.steps[i], mins = stepMinutes(step), last = i === r.steps.length - 1;
+  const t = ck.left > 0 ? `${Math.floor(ck.left / 60)}:${String(ck.left % 60).padStart(2, '0')}` : '';
+  ck.el.innerHTML = `<div class="mt-top"><b>${esc(r.emoji || '🍽️')} ${esc(r.name)}</b><button class="link" onclick="cookClose()">Salir</button></div>
+    <div class="mt-body"><details class="ck-ing"><summary class="small">Ingredientes (${r.ingredients.length})</summary><ul>${r.ingredients.map(x => `<li>${esc(x)}</li>`).join('')}</ul></details>
+      <span class="label">Paso ${i + 1} de ${r.steps.length}</span><p class="ck-step">${esc(step)}</p>
+      ${t ? `<div class="ck-timer"><b>${t}</b><button class="btn ghost small" onclick="cookTimer(0)">Parar</button></div>` : mins ? `<button class="btn ghost" onclick="cookTimer(${mins})">⏲️ Temporizador de ${mins} min</button>` : ''}
+      <div class="ck-custom">${[1, 5, 10, 15, 20].map(n => `<button class="chip" onclick="cookTimer(${n})">⏲️ ${n} min</button>`).join('')}</div></div>
+    <div class="mt-dots">${r.steps.map((_, k) => `<i class="${k === i ? 'on' : ''}"></i>`).join('')}</div>
+    <div class="grid2 mt-nav"><button class="btn ghost" ${i ? '' : 'disabled'} onclick="cookGo(-1)">Atrás</button><button class="btn" onclick="${last ? 'cookClose(true)' : 'cookGo(1)'}">${last ? '¡Listo! 🎉' : 'Siguiente'}</button></div>`;
+}
+function cookGo(d) { if (!ck) return; ck.i = Math.max(0, Math.min(ck.r.steps.length - 1, ck.i + d)); cookPaint(); }
+function cookTimer(min) {
+  if (!ck) return;
+  clearInterval(ck.timer); ck.left = min * 60;
+  if (min) ck.timer = setInterval(() => {
+    if (!ck) return;
+    ck.left--;
+    if (ck.left <= 0) { clearInterval(ck.timer); ck.left = 0; navigator.vibrate?.([300, 150, 300, 150, 300]); beep(); toast('⏲️ ¡Se acabó el tiempo!'); }
+    const b = ck.el.querySelector('.ck-timer b'); if (b && ck.left > 0) b.textContent = `${Math.floor(ck.left / 60)}:${String(ck.left % 60).padStart(2, '0')}`; else cookPaint();
+  }, 1000);
+  cookPaint();
+}
+function beep() { try { const a = new AudioContext(), o = a.createOscillator(), g = a.createGain(); o.frequency.value = 880; o.connect(g); g.connect(a.destination); g.gain.setValueAtTime(0.25, a.currentTime); o.start(); [0.3, 0.6].forEach(t => { g.gain.setValueAtTime(0, a.currentTime + t - 0.1); g.gain.setValueAtTime(0.25, a.currentTime + t); }); o.stop(a.currentTime + 0.9); } catch {} }
+function cookClose(done) {
+  if (!ck) return;
+  clearInterval(ck.timer); try { ck.lock?.release(); } catch {}
+  const el = ck.el; ck = null; el.classList.add('out'); setTimeout(() => { el.remove(); syncBack(); }, 160);
+  if (done === true) { celebrate(); toast('¡Buen provecho! 🍽️'); }
+}
 function addIngredients(list) {
   const have = new Set(S.data.groceries.filter(g => !g.done).map(g => norm(g.text)));
   const toAdd = [...new Set(list)].filter(i => !have.has(norm(i)));
@@ -171,5 +242,5 @@ function menuFill() {
 on('recipes recipefav menu groceries', () => { if ($('recBody')) render(); });
 onShow('s-recipes', render);
 window.__allRecipes = allRecipes;
-expose({ recTab, recSearch, recTag, recFav, recRandom, openRecipe, recipeToGrocery, recipeToMenu, toggleFav, delRecipe, recipeForm, saveRecipe,
+expose({ recHave, recHaveRun, cookMode, cookGo, cookTimer, cookClose, recTab, recSearch, recTag, recFav, recRandom, openRecipe, recipeToGrocery, recipeToMenu, toggleFav, delRecipe, recipeForm, saveRecipe,
   menuWeek, menuSlot, menuFilter, menuSet, menuSetText, menuClear, menuToGrocery, menuFill });

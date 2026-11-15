@@ -119,7 +119,8 @@ function renderPack(t) {
       <div class="progress"><i style="width:${pack.length ? Math.round(done / pack.length * 100) : 0}%"></i></div>
       <div class="add-row"><input id="packText" placeholder="¿Qué hay que llevar?" maxlength="60" aria-label="Cosa para la maleta" onkeydown="if(event.key==='Enter')addPack()">
         <button class="btn" aria-label="Agregar" onclick="addPack()">${icon('plus')}</button></div>
-      <div class="chips scroll">${PACKING_TPL.filter(x => !have.has(x.toLowerCase())).map(x => `<button class="chip" onclick="addPack('${esc(x)}')">${icon('plus')} ${esc(x)}</button>`).join('')}</div></div>
+      <div class="chips scroll">${PACKING_TPL.filter(x => !have.has(x.toLowerCase())).map(x => `<button class="chip" onclick="addPack('${esc(x)}')">${icon('plus')} ${esc(x)}</button>`).join('')}</div>
+      ${S.data.trips.some(o => o.id !== t.id && (o.packing || []).length) ? `<select aria-label="Copiar la maleta de otro viaje" onchange="copyPack(this.value)"><option value="">🧳 Copiar la maleta de otro viaje…</option>${S.data.trips.filter(o => o.id !== t.id && (o.packing || []).length).map(o => `<option value="${o.id}">${esc(o.name)} (${o.packing.length})</option>`).join('')}</select>` : ''}</div>
     <div class="glass"><ul class="list">${pack.length ? [...pack].sort((a, b) => a.done - b.done).map(p => `<li class="${p.done ? 'done' : ''}">
       <button class="check-btn" aria-label="${p.done ? 'Desmarcar' : 'Marcar empacado'}" onclick="togglePack('${p.id}')">${p.done ? icon('check') : ''}</button>
       <div class="txt"><span class="main">${esc(p.text)}</span>${p.done && p.doneBy ? `<span class="sub">lo empacó ${esc(nameOf(p.doneBy))}</span>` : ''}</div>
@@ -129,6 +130,13 @@ function addPack(text) {
   const t = trip(), v = (text ?? $('packText').value).trim(); if (!v) return;
   write(updateDoc(ref('trips', t.id), { packing: [...(t.packing || []), { id: newId(), text: v, done: false }] }));
   if (text === undefined) $('packText').value = '';
+}
+// Copia lo de la maleta de otro viaje (sin repetir y sin marcar)
+function copyPack(from) {
+  const t = trip(), o = S.data.trips.find(x => x.id === from); if (!t || !o) return;
+  const have = new Set((t.packing || []).map(p => p.text.toLowerCase())), add = (o.packing || []).filter(p => !have.has(p.text.toLowerCase())).map(p => ({ id: newId(), text: p.text, done: false }));
+  if (!add.length) return toast('Ya tienen todo lo de esa maleta');
+  write(updateDoc(ref('trips', t.id), { packing: [...(t.packing || []), ...add] })); toast(`${add.length} cosas copiadas de «${o.name}» 🧳`);
 }
 function togglePack(id) {
   const t = trip();
@@ -160,4 +168,4 @@ async function delTrip() {
 }
 
 on('trips expenses', () => { renderTrips(); if (current) renderTrip(); });
-expose({ newTrip, editTrip, saveTrip, openTrip, tripTab, addPlan, delPlan, addPack, togglePack, delPack, setBudget, delTrip });
+expose({ copyPack, newTrip, editTrip, saveTrip, openTrip, tripTab, addPlan, delPlan, addPack, togglePack, delPack, setBudget, delTrip });

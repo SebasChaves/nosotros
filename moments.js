@@ -6,18 +6,23 @@ import { dailyHTML, myDailyDone, partnerDailyDone } from './daily.js';
 import { snapsHTML, unseenSnaps } from './snaps.js';
 import { placeField, initPlace, getPlace, placeFromPhoto } from './location.js';
 
-let tab = 'timeline';
+let tab = 'timeline', mq = '', my = '';
+const normT = t => String(t || '').normalize('NFD').replace(/[\u0300-\u036f]/g, '').toLowerCase();
 function momTab(t) { tab = t; render(); }
 
 function render() {
-  const items = [...S.data.moments].sort((a, b) => b.date.localeCompare(a.date) || b.createdAt - a.createdAt);
+  const allM = [...S.data.moments].sort((a, b) => b.date.localeCompare(a.date) || b.createdAt - a.createdAt), years = [...new Set(allM.map(m => m.date.slice(0, 4)))];
+  const q = normT(mq), items = allM.filter(m => (!my || m.date.startsWith(my)) && (!q || normT(`${m.title} ${m.note} ${m.place?.name}`).includes(q)));
   const dot = !myDailyDone() && partnerDailyDone() ? '<b class="dot">1</b>' : '';
   const nSnaps = unseenSnaps().length, snapDot = nSnaps ? `<b class="dot">${nSnaps > 9 ? '9+' : nSnaps}</b>` : '';
   let html = `${mainTop('s-moments', 'Momentos', `<div class="row" style="gap:8px"><button class="icon-btn" aria-label="Galería" onclick="go('s-gallery')">${icon('grid')}</button>${tab === 'timeline' ? `<button class="btn small" onclick="openMoment()">${icon('plus')} Agregar</button>` : ''}</div>`)}
     <div class="seg"><button class="${tab === 'timeline' ? 'on' : ''}" onclick="momTab('timeline')">Línea de tiempo</button><button class="${tab === 'daily' ? 'on' : ''}" onclick="momTab('daily')">Foto del día${dot}</button><button class="${tab === 'snaps' ? 'on' : ''}" onclick="momTab('snaps')">Instantáneas${snapDot}</button></div>`;
   if (tab === 'daily') { paint('s-moments', html + dailyHTML()); loadPhotos($('s-moments')); return; }
   if (tab === 'snaps') { paint('s-moments', html + snapsHTML()); loadPhotos($('s-moments')); return; }
-  if (!items.length) {
+  if (allM.length > 3) html += `<input id="momQ" type="search" placeholder="Buscar: playa, cumpleaños, un lugar…" aria-label="Buscar momentos" value="${esc(mq)}" oninput="momSearch(this.value)">
+    ${years.length > 1 ? `<div class="chips scroll"><button class="chip ${!my ? 'on' : ''}" onclick="momYear('')">Todos</button>${years.map(y => `<button class="chip ${my === y ? 'on' : ''}" onclick="momYear('${y}')">${y} · ${allM.filter(m => m.date.startsWith(y)).length}</button>`).join('')}</div>` : ''}`;
+  if (allM.length && !items.length) html += '<p class="empty">Ningún momento con esa búsqueda</p>';
+  if (!allM.length) {
     html += `<div class="glass center stack"><div style="font-size:46px">📸</div><h2>Su historia empieza aquí</h2>
       <p class="muted" style="margin:0">Guarden momentos importantes con foto: la primera cita, viajes, logros…</p>
       <button class="btn" onclick="openMoment()">Agregar el primero</button></div>`;
@@ -35,6 +40,10 @@ function render() {
   paint('s-moments', html);
   loadPhotos($('s-moments'));
 }
+
+let momTimer = null;
+function momSearch(v) { mq = v; clearTimeout(momTimer); momTimer = setTimeout(() => { render(); const i = $('momQ'); if (i) { i.focus(); i.setSelectionRange(i.value.length, i.value.length); } }, 300); }
+function momYear(y) { my = y; render(); }
 
 let pendingPhoto = null;
 function openMoment() {
@@ -104,4 +113,4 @@ function renderGallery() {
 on('moments daily profiles snaps', render);
 on('moments', () => { if ($('s-gallery').classList.contains('active')) renderGallery(); });
 onShow('s-gallery', renderGallery);
-expose({ momTab, openMoment, pickPhoto, saveMoment, delMoment });
+expose({ momSearch, momYear, momTab, openMoment, pickPhoto, saveMoment, delMoment });
