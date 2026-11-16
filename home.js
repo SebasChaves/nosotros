@@ -261,18 +261,41 @@ function renderHome() {
         <span class="when">${whenText(daysBetween(today(), m.date))}</span></div>`).join('') : '<p class="empty">Agreguen cumpleaños, viajes o eventos</p>'}</div></div>`,
   };
   // Orden y tarjetas visibles que eligió cada uno en Ajustes (si aún no configuran, sale la tarjeta de bienvenida igual).
-  const layout = homeLayout().filter(c => c.on || (c.id === 'counter' && !ready));
+  const all = homeLayout().filter(c => c.on || (c.id === 'counter' && !ready));
+  const hidden = staleCards(all.map(c => c.id));
+  const layout = all.filter(c => !hidden.includes(c.id));
   paint('s-home', `
     <div class="topbar"><div class="title"><span class="hi">${(h => h < 5 ? 'Buenas noches 🌙' : h < 12 ? 'Buenos días ☀️' : h < 19 ? 'Buenas tardes 🌤️' : 'Buenas noches 🌙')(new Date().getHours())}${greetName() ? ', ' + esc(greetName()) : ''}</span><h1 class="brand grad-text" style="font-size:30px">Futari</h1></div>
       <div class="row" style="gap:10px"><div class="avatars">${names.map(([id]) => avatar(id, 36)).join('')}</div>
       <button class="icon-btn" onclick="openSearch()" aria-label="Buscar">${icon('search')}</button>
       <button class="icon-btn" onclick="go('s-settings')" aria-label="Ajustes">${icon('gear')}</button></div></div>
     ${giftCard()}
-    ${layout.map(c => cards[c.id]?.() || '').join('\n')}
-    ${layout.length < 3 ? '<p class="tiny muted center" style="margin:0">Puedes mostrar más tarjetas en Ajustes → Tu Inicio</p>' : ''}
+    ${layout.map(c => { const h = cards[c.id]?.() || ''; return h && `<div class="hc" data-card="${c.id}">${h}</div>`; }).join('\n')}
+    ${hidden.length ? `<p class="tiny muted center" style="margin:0">🙈 Escondimos ${hidden.map(id => `«${esc(cardName(id))}»`).join(', ')} porque no la${hidden.length > 1 ? 's' : ''} usaban · <button class="link" onclick="homeUnhide()">Mostrar</button></p>`
+      : layout.length < 3 ? '<p class="tiny muted center" style="margin:0">Puedes mostrar más tarjetas en Ajustes → Tu Inicio</p>' : ''}
   `);
   loadPhotos($('s-home'));
 }
+
+/* ---------- Tarjetas que no usan: se esconden solas ----------
+   En este teléfono se anota la última vez que se tocó cada tarjeta (localStorage, nada se sube). Las tarjetas de
+   AUTO_HIDE que no se tocan en STALE_DAYS se esconden y al final de Inicio queda «Mostrar» para traerlas de vuelta.
+   Las de avisos (urgentes, antojos, Hoy) y el contador nunca se esconden solas. */
+const AUTO_HIDE = ['week', 'pet', 'snaps', 'money', 'memory', 'mood', 'question', 'guess', 'challenge', 'upcoming'], STALE_DAYS = 21;
+const cardUse = () => { try { return JSON.parse(localStorage.getItem('futari-hc-use')) || {}; } catch { return {}; } };
+const saveUse = u => { try { localStorage.setItem('futari-hc-use', JSON.stringify(u)); } catch {} };
+const cardName = id => (HOME_CARDS.find(c => c[0] === id)?.[1] || id).replace(/^\S+\s/, '').replace(/:.*$/, '').replace(/ \(.*\)$/, '');
+function staleCards(ids) {
+  const u = cardUse(), now = Date.now(); let changed = false;
+  for (const id of ids) if (!u[id]) { u[id] = now; changed = true; } // la primera vez que se ve cuenta como uso
+  if (changed) saveUse(u);
+  return ids.filter(id => AUTO_HIDE.includes(id) && now - u[id] > STALE_DAYS * 864e5);
+}
+document.addEventListener('click', e => {
+  const c = e.target.closest?.('#s-home [data-card]'); if (!c) return;
+  const u = cardUse(); u[c.dataset.card] = Date.now(); saveUse(u);
+}, true);
+export function homeUnhide() { const u = cardUse(), now = Date.now(); for (const id of AUTO_HIDE) u[id] = now; saveUse(u); renderHome(); toast('Listo, volvieron todas las tarjetas'); }
 
 /* ---------- Personalización de Inicio ---------- */
 export const HOME_CARDS = [['urgent', '🔴 Recordatorios urgentes'], ['cravings', '🚨 Antojos urgentes de tu pareja'], ['counter', '💞 Contador'], ['week', '📊 Resumen de la semana (domingo y lunes)'], ['pet', '🥚 Su mascota'], ['snaps', '📸 Instantáneas'], ['money', '💸 Gastos: anotar rápido y presupuesto de la semana'], ['today', '📌 Hoy'], ['memory', '📸 Un día como hoy'],
@@ -327,4 +350,4 @@ setInterval(() => {
 on('dates moments moods answers challenges trips profiles events thinks notes coupons lists quiz daily reminders songs snaps activity pet guess cravings expenses money', renderHome);
 window.rerenderHome = () => { if ($('s-home').classList.contains('active')) renderHome(); };
 on('thinks', checkIncomingThink);
-expose({ sendThink, openFechas, answerQuestion, openAnswers, setMood, skipChallenge, doneChallenge });
+expose({ homeUnhide, sendThink, openFechas, answerQuestion, openAnswers, setMood, skipChallenge, doneChallenge });

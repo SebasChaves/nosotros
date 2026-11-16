@@ -3,7 +3,7 @@ import { onAuthStateChanged, signInWithEmailAndPassword, sendPasswordResetEmail,
   from 'https://www.gstatic.com/firebasejs/11.0.2/firebase-auth.js';
 import { onSnapshot, disableNetwork, enableNetwork, query, where, documentId, getDocs, waitForPendingWrites } from 'https://www.gstatic.com/firebasejs/11.0.2/firebase-firestore.js';
 import { $, S, auth, db, go, esc, openSheet, configured, placeTabPill, coupleRef, col, privCol, COLLECTIONS, PRIVATE, toast, expose, rerender, rerenderAll,
-         partnerUid, profile, uid, ask, inBar, setBar, barIds, dayKey, EMU } from './core.js';
+         partnerUid, profile, uid, ask, inBar, setBar, barIds, dayKey, EMU, dataReady } from './core.js';
 if (EMU) window.__S = S; // solo emulador: para las pruebas automáticas
 import { todayAnswers } from './home.js';
 import './decide.js';
@@ -31,7 +31,7 @@ import './summary.js';
 import './calendar.js';
 import './shows.js';
 import './games.js';
-import { applyAccent, applyTheme, uploadData } from './settings.js';
+import { applyAccent, applyTheme, applyTextSize, uploadData } from './settings.js';
 import './search.js';
 import './admin.js';
 import './recipes.js';
@@ -44,7 +44,7 @@ import { logVisit } from './tracking.js';
 import { maybeStartTour, resetTourCheck } from './tour.js';
 
 // Versión de esta copia de la app. Súbela junto con version.json y la caché de sw.js al publicar.
-export const APP_VERSION = '74';
+export const APP_VERSION = '75';
 window.FUTARI_VERSION = APP_VERSION; // lo guarda el registro de ingresos (panel de administración)
 
 // Si la app estuvo abierta hace poco (Android la cierra sola al salir), se vuelve rápido a la misma pantalla.
@@ -177,6 +177,8 @@ function listen() {
     rerenderAll(); updateBadges();
     if (!snap.metadata.fromCache) maybeMigrate();
   }, fail));
+  const pending = new Set(COLLECTIONS);
+  setTimeout(dataReady, 4000); // sin internet y sin nada guardado: igual se muestra lo que haya
   for (const name of COLLECTIONS) {
     const byDay = DAY_COLS.includes(name), cut = byDay && cutoffKey();
     if (byDay) loadOld(name, cut);
@@ -184,7 +186,8 @@ function listen() {
       const docs = s.docs.map(d => ({ id: d.id, ...d.data() }));
       S.data[name] = byDay ? [...(oldDays[name] || []), ...docs] : docs;
       if (byDay) recent[name] = docs;
-      if (name === 'profiles') { applyAccent(profile(uid()).prefs?.accent, profile(uid()).prefs?.customAccent); applyTheme(profile(uid()).prefs?.theme); if (!s.metadata.fromCache || profile(uid()).prefs) maybeStartTour(); }
+      if (pending.delete(name) && !pending.size) setTimeout(dataReady, 0);
+      if (name === 'profiles') { applyAccent(profile(uid()).prefs?.accent, profile(uid()).prefs?.customAccent); applyTheme(profile(uid()).prefs?.theme); applyTextSize(profile(uid()).prefs?.textSize); if (!s.metadata.fromCache || profile(uid()).prefs) maybeStartTour(); }
       if (name === 'profiles') rerenderAll(); else rerender(name); // los apodos cambian nombres en toda la app
       updateBadges();
     }, fail));

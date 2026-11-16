@@ -399,9 +399,26 @@ export function openCamera(accept, onFile) {
 sheetDrag(); viewerDrag(); rowSwipe(); // los módulos corren cuando el HTML ya está listo
 
 // Repinta un contenedor sin perder lo que el usuario está escribiendo (valores y foco por id).
+// Esqueleto gris mientras llegan los datos la primera vez (teléfono nuevo o sin nada guardado): así no aparece
+// «Aún no tienen…» por un momento cuando sí tienen. Cuando todo llega (dataReady), se repinta.
+const SKEL_SKIP = new Set(['s-arrows', 's-bus', 's-game', 's-search', 's-settings', 's-admin', 's-map']);
+const skeleton = () => `<div class="skel-top"><i class="skel" style="width:46%;height:30px"></i><i class="skel" style="width:40px;height:40px;border-radius:14px"></i></div>
+  ${[120, 84, 160, 96].map(h => `<div class="glass skel-card"><i class="skel" style="width:38%"></i><i class="skel" style="width:82%"></i><i class="skel" style="width:64%;height:${h - 70}px"></i></div>`).join('')}`;
+const skelOn = new Set();
+export function dataReady() {
+  if (S.ready) return; S.ready = true;
+  const act = document.querySelector('.screen.active')?.id;
+  rerenderAll();
+  if (act && skelOn.has(act)) showHooks[act]?.();
+  skelOn.clear();
+}
 export function paint(target, html) {
   const el = typeof target === 'string' ? $(target) : target;
   if (!el) return;
+  if (S.me && !S.ready && el.classList?.contains('screen') && !SKEL_SKIP.has(el.id)) {
+    skelOn.add(el.id); el.setAttribute('aria-busy', 'true'); el.innerHTML = skeleton(); return;
+  }
+  el.removeAttribute?.('aria-busy');
   const keep = {};
   el.querySelectorAll('input[id],textarea[id],select[id]').forEach(i => {
     if (i.type === 'file' || 'fresh' in i.dataset) return;

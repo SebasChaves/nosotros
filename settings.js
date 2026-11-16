@@ -76,6 +76,9 @@ function renderSettings() {
       <p class="tiny muted" style="margin:0">${esc((ACCENTS.find(x => x[0] === accent) || [, 'Tu color'])[1])} · toca el último cuadro para elegir tu propio color.</p>
       <span class="label" style="margin-top:6px">Apariencia</span>
       <div class="seg">${[['dark', 'Oscuro'], ['light', 'Claro'], ['auto', 'Automático']].map(([k, l]) => `<button class="${(prefs.theme || 'dark') === k ? 'on' : ''}" onclick="setTheme('${k}')">${l}</button>`).join('')}</div>
+      <span class="label" style="margin-top:6px">Tamaño de letra y botones</span>
+      <div class="seg">${TEXT_SIZES.map(([k, l]) => `<button class="${(prefs.textSize || 'n') === k ? 'on' : ''}" onclick="setTextSize('${k}')">${l}</button>`).join('')}</div>
+      <p class="tiny muted" style="margin:0">Agranda todo en este teléfono (menos los juegos y el mapa).</p>
       <span class="label" style="margin-top:6px">Foto de fondo del contador</span>
       ${prefs.bg ? `<img data-photo="bg-${uid()}" alt="" style="width:100%;max-height:180px;object-fit:cover;border-radius:16px">` : ''}
       <div class="grid2"><label class="btn ghost small" style="width:100%">${icon('photo')} ${prefs.bg ? 'Cambiar' : 'Elegir foto'}<input type="file" accept="image/*" hidden onchange="pickBg(this)"></label>
@@ -151,7 +154,7 @@ function homePrefsCard(prefs, p) {
     <button class="btn ghost small" onclick="saveCounter()">Guardar contador</button>
 
     <span class="label" style="margin-top:8px">Tarjetas de Inicio</span>
-    <p class="tiny muted" style="margin:0">Elige cuáles ves y en qué orden.</p>
+    <p class="tiny muted" style="margin:0">Elige cuáles ves y en qué orden. Las que no tocan en 3 semanas se esconden solas en este teléfono; al final de Inicio aparece «Mostrar» para traerlas.</p>
     <ul class="list home-cards">${layout.map((x, i) => `<li><input type="checkbox" ${x.on ? 'checked' : ''} aria-label="Mostrar ${esc(cardName(x.id))}" onchange="toggleHomeCard('${x.id}', this.checked)">
       <span class="txt ${x.on ? '' : 'muted'}">${esc(cardName(x.id))}</span>
       <button class="del" aria-label="Subir" ${i === 0 ? 'disabled' : ''} onclick="moveHomeCard(${i},-1)">▲</button><button class="del" aria-label="Bajar" ${i === layout.length - 1 ? 'disabled' : ''} onclick="moveHomeCard(${i},1)">▼</button></li>`).join('')}</ul>
@@ -167,7 +170,9 @@ function saveCounter() {
   if (from === 'custom' && parseDate(date) > today()) return toast('La fecha no puede ser futura');
   savePrefs({ counter: { ...(profile(uid()).prefs?.counter || {}), from, date, label: $('cntLabel')?.value.trim() || '' } }); toast('Contador guardado');
 }
-function toggleHomeCard(id, on) { savePrefs({ home: homeLayout().map(c => c.id === id ? { ...c, on } : c) }); }
+function toggleHomeCard(id, on) {
+  if (on) try { const u = JSON.parse(localStorage.getItem('futari-hc-use') || '{}'); u[id] = Date.now(); localStorage.setItem('futari-hc-use', JSON.stringify(u)); } catch {}
+  savePrefs({ home: homeLayout().map(c => c.id === id ? { ...c, on } : c) }); }
 function moveHomeCard(i, d) {
   const l = homeLayout(), j = i + d; if (j < 0 || j >= l.length) return;
   [l[i], l[j]] = [l[j], l[i]]; savePrefs({ home: l });
@@ -195,6 +200,16 @@ export function applyAccent(a, custom) {
 }
 // Tema claro u oscuro; "auto" sigue al teléfono.
 const darkMQ = matchMedia('(prefers-color-scheme: dark)');
+// Tamaño de letra: agranda las pantallas con zoom de CSS (los juegos y el mapa se quedan igual, ver styles.css).
+const TEXT_SIZES = [['n', 'Normal'], ['g', 'Grande'], ['xg', 'Más grande']], TZ = { n: 1, g: 1.1, xg: 1.2 };
+export function applyTextSize(k) {
+  k = TZ[k] ? k : (localStorage.getItem('futari-text') || 'n');
+  document.documentElement.style.setProperty('--tz', TZ[k]);
+  document.documentElement.dataset.ts = k;
+  try { localStorage.setItem('futari-text', k); } catch {}
+}
+applyTextSize();
+function setTextSize(k) { applyTextSize(k); write(setDoc(ref('profiles', uid()), { prefs: { textSize: k } }, { merge: true })); renderSettings(); }
 export function applyTheme(th) {
   th = th || localStorage.getItem('nosotros-theme') || 'dark';
   const real = th === 'auto' ? (darkMQ.matches ? 'dark' : 'light') : th;
@@ -334,4 +349,4 @@ on('ideas profiles push', () => { if ($('s-settings').classList.contains('active
 onShow('s-settings', renderSettings);
 window.rerenderSettings = () => { if ($('s-settings').classList.contains('active')) renderSettings(); };
 onShow('s-more', renderMore);
-expose({ openMenuPrefs, enablePush, disablePush, testPush, setNotif, previewCustomAccent, setCustomAccent, saveNicks, setCounterUnit, saveCounter, toggleHomeCard, moveHomeCard, resetHome, saveSettings, setTheme, setAccent, pickAvatar, removeAvatar, pickBg, removeBg, delIdea, logout, exportData, importData });
+expose({ setTextSize, openMenuPrefs, enablePush, disablePush, testPush, setNotif, previewCustomAccent, setCustomAccent, saveNicks, setCounterUnit, saveCounter, toggleHomeCard, moveHomeCard, resetHome, saveSettings, setTheme, setAccent, pickAvatar, removeAvatar, pickBg, removeBg, delIdea, logout, exportData, importData });
