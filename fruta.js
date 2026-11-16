@@ -25,6 +25,15 @@ const myLevel = () => progress().lv || 1;
 const daily = (day = todayKey()) => doc('d-' + day) || {};
 const duelDoc = () => doc('duel');
 const cfg = () => doc('cfg') || {};
+// Ayuda disimulada: si un nivel de la escalera se pierde varias veces seguidas (progress().fl[nivel]), el motor arma un
+// tablero inicial con mejor suerte y algunas frutas caen «con suerte». No se muestra; nunca en el reto del día ni en duelos.
+// Se apaga desde Administración → Juegos (fruta/cfg.assist = false). Al pasar el nivel, el contador vuelve a cero.
+export const assistLevel = fails => fails >= 7 ? 3 : fails >= 5 ? 2 : fails >= 3 ? 1 : 0;
+function assistFor(spec) {
+  if (spec.test || spec.day || spec.duel || !spec.num || cfg().assist === false) return 0;
+  return assistLevel(progress().fl?.[spec.num] || 0);
+}
+const lostOnce = L => write(setDoc(ref('fruta', 'p-' + uid()), { fl: { [L]: increment(1) } }, { merge: true }));
 const statInc = (k, L) => write(setDoc(ref('fruta', 'stats'), { [k]: { [L]: increment(1) } }, { merge: true }));
 const stars = n => '★'.repeat(n) + '☆'.repeat(3 - n);
 // Niveles extra (101, 102…) creados en Administración → Juegos: cuentan mientras estén publicados y seguidos
@@ -138,7 +147,7 @@ export function playFruta(what, seed) {
   if (spec.day && daily()[uid()]) return toast('Ya hiciste el reto de hoy');
   if (spec.duel && duelDoc()?.p?.[uid()]) return toast('Ya jugaste este duelo');
   if (!spec.test && !spec.day && !spec.duel && spec.num) statInc('a', spec.num);
-  const st = E.createGame(spec, seed ?? (spec.day || spec.duel ? spec.seed : spec.seed + Math.floor(Math.random() * 1e6)));
+  const st = E.createGame(spec, seed ?? (spec.day || spec.duel ? spec.seed : spec.seed + Math.floor(Math.random() * 1e6)), assistFor(spec));
   G = { spec, st, els: new Map(), pos: new Map(), help: 0, startAt: Date.now() };
   view?.remove();
   view = document.createElement('div'); view.className = 'dialog fr-view'; view.setAttribute('role', 'dialog'); view.setAttribute('aria-modal', 'true'); view.setAttribute('aria-label', 'Pura fruta');
@@ -322,7 +331,7 @@ function end() {
   clearHint();
   if (spec.test) { G.over = true; return overlay(`<div style="font-size:46px">${win ? '🧪' : '😅'}</div><h2>${win ? '¡Prueba superada!' : 'Se acabaron los movimientos'}</h2><p style="margin:0">${win ? stars(s) + ' · ' : ''}${st.score.toLocaleString('es')} puntos<br><span class="small muted">No se guardó nada</span></p><div class="grid2"><button class="btn ghost" onclick="closeFruta()">Salir</button><button class="btn" onclick="frutaRetry()">Otra vez</button></div>`); }
   if (!win && !spec.day && !spec.duel && !G.offered) { // ¿seguir con 5 más?
-    G.offered = true;
+    G.offered = true; lostOnce(spec.num);
     return overlay(`<div style="font-size:46px">😮</div><h2>¡Casi!</h2><p style="margin:0">${E.goalList(st).filter(g => g.have < g.need).map(g => `Faltan ${g.need - g.have} ${g.label}`).join(' · ')}</p>
       <div class="grid2"><button class="btn ghost" onclick="closeFruta()">Salir</button><button class="btn" onclick="frutaRetry()">Reintentar</button></div>
       <button class="btn ghost small pay" onclick="frutaMore()">o seguir con 5 movimientos más · ${helpCost('plus')} 🪙</button>`);
@@ -348,7 +357,7 @@ function end() {
   if (!win) { G.over = true; return overlay(`<div style="font-size:46px">😅</div><h2>Se acabaron los movimientos</h2><p style="margin:0">${E.goalList(st).filter(g => g.have < g.need).map(g => `Faltaron ${g.need - g.have} ${g.label}`).join(' · ')}</p><div class="grid2"><button class="btn ghost" onclick="closeFruta()">Salir</button><button class="btn" onclick="frutaRetry()">Reintentar</button></div>`); }
   const L = spec.num, pr = progress(), had = pr.ls?.[L] || 0, coinsWon = coinsFor(L), msgDoc = doc('msg-' + L);
   statInc('w', L);
-  b.set(ref('fruta', 'p-' + uid()), { lv: Math.max(pr.lv || 1, L + 1), ls: { [L]: Math.max(had, s) }, best: { [L]: Math.max(pr.best?.[L] || 0, st.score) } }, { merge: true });
+  b.set(ref('fruta', 'p-' + uid()), { lv: Math.max(pr.lv || 1, L + 1), ls: { [L]: Math.max(had, s) }, best: { [L]: Math.max(pr.best?.[L] || 0, st.score) }, fl: { [L]: 0 } }, { merge: true });
   if (!had && pt?.hatchedAt) b.update(ref('pet', 'main'), { bonus: increment(coinsWon) });
   write(b.commit());
   if (!had && (spec.boss || L === E.LEVELS)) notify('fruta', { title: L === E.LEVELS ? `🏆 ${meForPartner()} completó los ${E.LEVELS} niveles de Pura fruta` : `👑 ${meForPartner()} pasó el jefe del nivel ${L} de Pura fruta`, body: `${stars(s)} · ${st.score.toLocaleString('es')} puntos`, url: './?open=fruta', tag: 'fruta-l' + L });

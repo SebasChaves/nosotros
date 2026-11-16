@@ -16,27 +16,43 @@ export const hash = s => { let h = 2166136261; for (const c of String(s)) h = Ma
 const str = (s, n, d = 0) => Array.from({ length: n }, (_, i) => s ? Number(s[i]) || 0 : d);
 
 /* ---------- Crear una partida ---------- */
-export function createGame(level, seed = 1) {
+// assist (0-3): ayuda disimulada cuando un nivel se pierde varias veces seguidas (fruta.js decide el nivel de ayuda).
+// No cambia nada visible: el tablero inicial es el mejor de varios y algunas frutas nuevas caen «con suerte».
+export function createGame(level, seed = 1, assist = 0) {
   const { w, h } = level, n = w * h, R = rng(seed);
   const st = {
     w, h, n, R, colors: level.colors || 5, movesMax: level.moves, moves: level.moves, score: 0, idc: 1, chain: 0,
     mask: level.mask ? str(level.mask, n) : Array(n).fill(1), stone: str(level.stone, n), leaf: str(level.leaf, n), vine: str(level.vine, n).map(Boolean),
     cells: Array(n).fill(null), goals: level.goals || {}, got: { c: [0, 0, 0, 0, 0, 0], leaf: 0, stone: 0, pinas: 0 },
-    pinasTotal: level.goals?.pinas ? (level.pinas || 3) : 0, pinasSpawned: 0, events: [],
+    pinasTotal: level.goals?.pinas ? (level.pinas || 3) : 0, pinasSpawned: 0, events: [], assist: Math.max(0, Math.min(3, assist | 0)),
   };
   for (let i = 0; i < n; i++) if (!st.mask[i]) { st.stone[i] = 0; st.leaf[i] = 0; st.vine[i] = false; }
   st.leafTotal = st.leaf.filter(x => x > 0).length; st.stoneTotal = st.stone.filter(x => x > 0).length;
   // Fruta inicial sin combinaciones hechas; las piñas empiezan arriba
-  for (let tries = 0; tries < 60; tries++) {
-    for (let i = 0; i < n; i++) st.cells[i] = holds(st, i) ? newPiece(st, colorNoMatch(st, i)) : null;
-    if (hasMove(st)) break;
+  let best = null, bestV = -1;
+  for (let cand = 0; cand < 1 + st.assist * 3; cand++) { // con ayuda: el mejor de varios tableros
+    for (let tries = 0; tries < 60; tries++) {
+      for (let i = 0; i < n; i++) st.cells[i] = holds(st, i) ? newPiece(st, colorNoMatch(st, i)) : null;
+      if (hasMove(st)) break;
+    }
+    if (!st.assist) { best = st.cells; break; }
+    const v = boardValue(st);
+    if (v > bestV) { bestV = v; best = st.cells.slice(); }
   }
+  st.cells = best;
   const startP = Math.min(st.pinasTotal, level.pinasStart ?? Math.min(2, st.pinasTotal));
   for (let k = 0, x = 0; k < startP && x < w * 3; x++) {
     const c = (Math.floor(w / (startP + 1)) * (k + 1) + x) % w, i = firstRow(st, c);
     if (i >= 0 && !st.vine[i]) { st.cells[i] = { id: st.idc++, t: 'P', sp: null }; st.pinasSpawned++; k++; }
   }
   return st;
+}
+// Qué tan «buena» es una mano: jugadas posibles, frutas del objetivo y jugadas que ya arman especiales
+function boardValue(st) {
+  const moves = allMoves(st); let v = moves.length;
+  for (const [a, b] of moves) { swapCells(st, a, b); for (const g of findGroups(st, [a, b])) { if (g.sp) v += 4; if (st.goals['c' + g.color]) v += 1; } swapCells(st, a, b); }
+  for (const p of st.cells) if (p && st.goals['c' + p.t]) v += 0.5;
+  return v;
 }
 export const holds = (st, i) => !!st.mask[i] && !st.stone[i];
 const newPiece = (st, t, sp = null) => ({ id: st.idc++, t: t ?? Math.floor(st.R() * st.colors), sp });
@@ -252,7 +268,7 @@ function fall(st, steps) {
       const i = y * w + x; if (!holds(st, i) || st.cells[i]) continue;
       const up = i - w;
       if (y > 0 && movable(st, up)) { st.cells[i] = st.cells[up]; st.cells[up] = null; moves.push({ id: st.cells[i].id, to: i }); changed = true; continue; }
-      if (y === 0 || !st.mask[up] && isTopOpen(st, x, y)) { st.cells[i] = spawn(st); born.push({ id: st.cells[i].id, to: i, t: st.cells[i].t }); changed = true; continue; }
+      if (y === 0 || !st.mask[up] && isTopOpen(st, x, y)) { st.cells[i] = spawn(st, i); born.push({ id: st.cells[i].id, to: i, t: st.cells[i].t }); changed = true; continue; }
       if (y > 0 && !feedsFromAbove(st, x, y)) {
         for (const dx of [-1, 1]) { const j = up + dx; if (x + dx >= 0 && x + dx < w && movable(st, j) && !(holds(st, j + w) && !st.cells[j + w])) { st.cells[i] = st.cells[j]; st.cells[j] = null; moves.push({ id: st.cells[i].id, to: i }); changed = true; break; } }
       }
@@ -271,9 +287,16 @@ function feedsFromAbove(st, x, y) {
   return true;
 }
 function isTopOpen(st, x, y) { for (let yy = y - 1; yy >= 0; yy--) if (st.mask[yy * st.w + x]) return false; return true; }
-function spawn(st) {
-  const onBoard = st.cells.filter(p => p?.t === 'P').length;
-  if (st.pinasSpawned < st.pinasTotal && onBoard < 2 && st.R() < 0.4) { st.pinasSpawned++; return { id: st.idc++, t: 'P', sp: null }; }
+function spawn(st, i) {
+  const onBoard = st.cells.filter(p => p?.t === 'P').length, a = st.assist;
+  if (st.pinasSpawned < st.pinasTotal && onBoard < 2 && st.R() < 0.4 + a * 0.08) { st.pinasSpawned++; return { id: st.idc++, t: 'P', sp: null }; }
+  // Con ayuda, algunas frutas caen «con suerte»: del color del objetivo que falta o igual a la de abajo/al lado (más cascadas)
+  if (a && st.R() < [0, 0.1, 0.17, 0.25][a]) {
+    const need = []; for (let c = 0; c < st.colors; c++) if (st.goals['c' + c] && st.got.c[c] < st.goals['c' + c]) need.push(c);
+    const near = [i + st.w, i - 1, i + 1].filter(j => j >= 0 && j < st.n && adjacent(st, i, j)).map(j => colorOf(st.cells[j])).filter(c => c >= 0);
+    const pool = need.length && st.R() < 0.5 ? need : near.length ? near : need;
+    if (pool.length) return newPiece(st, pool[Math.floor(st.R() * pool.length)]);
+  }
   return newPiece(st);
 }
 
@@ -327,10 +350,10 @@ export function botMove(st, noise = 0.35) {
   }
   return best;
 }
-export function simulate(level, runs = 200, seed0 = 1) {
+export function simulate(level, runs = 200, seed0 = 1, assist = 0) {
   let wins = 0, stars = 0, leftSum = 0;
   for (let r = 0; r < runs; r++) {
-    const st = createGame(level, seed0 + r * 7919);
+    const st = createGame(level, seed0 + r * 7919, assist);
     while (!won(st) && st.moves > 0) { const m = botMove(st); if (!m) { shuffle(st); continue; } play(st, m[0], m[1]); }
     if (won(st)) { wins++; stars += starsOf(st); leftSum += st.leftAtWin || 0; }
   }

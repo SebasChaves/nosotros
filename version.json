@@ -1,7 +1,8 @@
 {
-  "version": "1.7.1",
-  "notes": ["🪙 En los juegos ya no se gastan monedas sin querer: seguir pagando quedó como opción discreta abajo, siempre pregunta antes de cobrar, y los botones del final se activan después de un momento para que el último toque no caiga en uno"],
+  "version": "1.7.2",
+  "notes": ["🍍 Pura fruta: ajustes de equilibrio en los niveles"],
   "history": [
+    { "version": "1.7.2", "notes": ["🍍 Pura fruta: ajustes de equilibrio en los niveles"] },
     { "version": "1.7.1", "notes": ["🪙 En los juegos ya no se gastan monedas sin querer: seguir pagando quedó como opción discreta abajo, siempre pregunta antes de cobrar, y los botones del final se activan después de un momento para que el último toque no caiga en uno"] },
     { "version": "1.7.0", "notes": ["✨ Los juegos ahora pueden tener niveles nuevos después del último: cuando aparezcan, están al final del mapa en «Niveles nuevos» y les llega un aviso si ya habían terminado todos"] },
     { "version": "1.6.0", "notes": ["🎮 Mejoras por dentro en los tres juegos (Pura fruta, Flechas y La parada): los niveles se pueden ir afinando sin esperar una versión nueva"] },

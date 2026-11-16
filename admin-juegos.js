@@ -52,6 +52,9 @@ function panel(G) {
   return `<div class="glass stack"><span class="label">${G.e} ${G.name}: en qué van</span>${row(me)}${p ? row(p) : ''}</div>
     <div class="glass stack"><label class="row"><span>Mostrar el juego a los dos</span><input type="checkbox" ${c.off ? '' : 'checked'} onchange="ajCfg('off', !this.checked)"></label>
       <p class="tiny muted" style="margin:0">Si lo apagas, desaparece de Más, de la barra y de los juegos de la mascota (el progreso no se pierde).</p>
+      ${game === 'fruta' ? `<label class="row"><span>🤫 Ayuda disimulada</span><input type="checkbox" ${c.assist === false ? '' : 'checked'} onchange="ajCfg('assist', this.checked)"></label>
+        <p class="tiny muted" style="margin:0">Si alguien pierde un nivel 3, 5 o 7 veces seguidas, el siguiente intento trae un tablero con mejor suerte y algunas frutas caen «con suerte». No se ve ni se avisa; no aplica al reto del día ni a los duelos.</p>
+        ${assistRows()}` : ''}
       ${game === 'arrows' ? `<label class="row"><span>🧊 Figuras con etiqueta BETA</span><input type="checkbox" ${c.beta?.cube === false ? '' : 'checked'} onchange="ajCfg('beta.cube', this.checked)"></label>
         <label class="row"><span>🔀 Mixto con etiqueta BETA</span><input type="checkbox" ${c.beta?.mix === false ? '' : 'checked'} onchange="ajCfg('beta.mix', this.checked)"></label>` : ''}</div>
     ${game !== 'fruta' ? giftAdminCards() : ''}
@@ -59,6 +62,15 @@ function panel(G) {
       <div class="add-row"><input id="ajJump" type="number" min="1" max="${totalOf(game)}" inputmode="numeric" placeholder="Saltar al nivel…" aria-label="Saltar al nivel"><button class="btn small" onclick="ajJump()">Saltar</button></div>
       <button class="btn ghost small danger" onclick="ajReset()">Reiniciar mi progreso en ${G.name}</button>
       <p class="tiny muted" style="margin:0">Solo cambia tu progreso, no el de tu pareja.</p></div>`;
+}
+// En qué niveles tiene ayuda cada uno ahora mismo
+function assistRows() {
+  const out = [];
+  for (const who of [uid(), partnerUid()].filter(Boolean)) {
+    const fl = prog('fruta', who).fl || {}, on = Object.entries(fl).filter(([, n]) => n >= 3).map(([L, n]) => `${L} (${n} seguidas)`);
+    if (on.length) out.push(`<p class="tiny" style="margin:0">${esc(who === uid() ? 'Tú' : nameOf(who))}: ayuda en el nivel ${on.join(', ')}</p>`);
+  }
+  return out.join('');
 }
 async function ajCfg(path, v) {
   const [a, b] = path.split('.'), data = b ? { [a]: { [b]: v } } : { [a]: v };

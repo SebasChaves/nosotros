@@ -58,3 +58,13 @@ Para Pura fruta, Flechas y La parada:
 `<juego>/lv-<n>` con `on: true`. Cuentan mientras estén publicados y seguidos (`totalLevels` / `busTotal` / `arrowsTotal`):
 salen en «✨ Niveles nuevos» al final del mapa y se desbloquean en orden. Solo se puede quitar el último. Si la pareja ya había
 terminado todos, le llega un aviso (La parada solo si ya se regaló). En Flechas se juegan antes del modo infinito.
+
+## Ayuda disimulada (1.7.2) — no mencionarla en Novedades ni en la guía
+Si un nivel de la escalera se pierde varias veces seguidas (`fruta/p-<uid>.fl{nivel}`: sube al salir el «¡Casi!» y vuelve a
+0 al ganar), el siguiente intento lleva `assist` (3 seguidas → 1, 5 → 2, 7+ → 3) en `createGame(level, seed, assist)`:
+- tablero inicial = el mejor de 1 + 3·assist candidatos (`boardValue`: jugadas posibles, especiales a mano, frutas del objetivo);
+- 10/17/25 % de las frutas nuevas caen del color del objetivo que falta o igual a la vecina (más cascadas);
+- piñas un poco más seguido.
+Nada visible cambia (movimientos, objetivos, obstáculos). Nunca en el reto del día, duelos ni pruebas. Se apaga en
+Administración → Juegos → Panel (`fruta/cfg.assist = false`), donde también se ve en qué niveles tiene ayuda cada uno.
+Medido con el jugador automático: en niveles difíciles pasa de ~25-45 % de victorias a ~80-90 % con la ayuda máxima.
