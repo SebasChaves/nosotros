@@ -38,8 +38,8 @@ Casi todos los docs llevan `by: uid` (quién lo creó) y `createdAt: ms`. Fechas
 | `places` | restaurantes: `name, kind, price 0-4, loc?{name,lat,lng}, status 'want'|'been', ratings{uid:1-5}, visits[{date,note,by}]` |
 | `trips` | viajes con itinerario, maleta, presupuesto y opciones de hospedaje/vuelo (`stays`, `flights` con votos). Desde 1.3.0 además: `currency?, goalId?` (alcancía en `money`), `dreamId?, geo?{lat,lng,name,country}` (clima), `ideas[], todo[], bookings[], journal[]` (fotos `tj-<id>`), `savedMoment?`. Gastos en otra moneda: `expenses.orig {cur, amount, rate}` (el `amount` queda convertido) |
 | `events` | planes: `title, date, time, who 'ambos'|uid, note, repeat none/weekly/biweekly/monthly/yearly, until` |
-| `snaps` | instantáneas: `by, at (ms), text, replyTo?, seen{uid: ms}, reacts{uid: {e, at}}, reactSeen?, saved?(id del momento)` — foto en `photos/snap-<id>` (+ miniatura). Duran 24 h: al abrir la app, `snaps.js` borra las vencidas y sus fotos. «Guardar en Momentos» copia la foto a un momento (`fromSnap: true`); chat [{by, t, at}] y chatSeen.<uid> (1.2.0) |
-| `activity` | id = día: `{ <uid>: true }` — ese día hizo algo que no queda guardado en otro lado (instantánea, nota, cupón, canción); `markActive()` en `core.js`. Cuenta para la racha |
+| `snaps` | historias (antes «instantáneas»): `by, at (ms), text, replyTo?, seen{uid: ms}, reacts{uid: {e, at}}, reactSeen?, saved?(id del momento), chat?[{by, t, at}], chatSeen?{uid: ms}` — foto en `photos/snap-<id>` (+ miniatura). Duran 24 h: al abrir la app, `snaps.js` borra las vencidas y sus fotos. «Guardar en Momentos» copia la foto a un momento (`fromSnap: true`); chat [{by, t, at}] y chatSeen.<uid> (1.2.0) |
+| `activity` | id = día: `{ <uid>: true }` — ese día hizo algo que no queda guardado en otro lado (historia, nota, cupón, canción); `markActive()` en `core.js`. Cuenta para la racha |
 | `pet` | doc `main`: `start (día de adopción), createdAt, by, species? (emoji), name?, hatchedAt?, hatchedBy?, namedBy?, bonus, spent, owned{prenda:true}, wear{head,face,neck,body,room}, best{juego:{uid:récord}}, gameDay{uid:{day,n}}, lastBuy?` — el crecimiento se calcula con los días de racha desde `start`; monedas = 10 × días comidos + `bonus` − `spent` (`pet.js`) |
 | `usage` | id = `<día>_<uid>`: `uid, day, total, secs{pantalla: segundos}` — tiempo con la app a la vista por sección (`tracking.js`). Solo para Administración |
 | `stats` | id = día: `day, sent{uid:{tipo:n}}, opened{uid:{tipo:n}}, acts{uid:{snap,react}}` — avisos mandados/abiertos y acciones que no quedan guardadas (`countStat` en `core.js`). Solo para Administración |
@@ -76,7 +76,7 @@ teléfono no lo ve hasta borrar esas claves.
 - Cada foto de momento/foto del día tiene una **miniatura** `t-<id>` (~30 KB, 480 px) para listas y galería.
   `loadPhotos()` usa `data-thumb` y crea la miniatura si falta.
 - Ids: momento = id del momento; foto del día = `d-<día>-<uid>`; avatar = `avatar-<uid>-<ms>`; fondo = `bg-<uid>`;
-  portada de canción = `song-<id>-<ms>`; instantánea = `snap-<id>`. Al borrar el dueño, borra también su foto (y miniatura).
+  portada de canción = `song-<id>-<ms>`; historia = `snap-<id>`; receta hecha = `cook-<id>`; lugar por conocer = `dream-<id>`; diario de viaje = `tj-<id>`. Al borrar el dueño, borra también su foto (y miniatura).
 - Espacio gratis: 1 GB. El panel de administración muestra una estimación del uso.
 
 ## Registro de uso (`visits`, `errors`)
@@ -99,3 +99,15 @@ dueño en la consola: dale el texto, no lo publiques tú.
 `nosotros-accent`, `nosotros-theme` (tema antes de cargar), `futari-pin-<uid>` (huella del PIN), `futari-badges-<uid>`
 (logros ya avisados), `futari-version` (última versión vista, para las novedades), `futari-resume` (pantalla para
 volver rápido), `futari-last-visit-<uid>`. Firestore además usa su caché persistente (IndexedDB) para funcionar sin internet.
+
+## Juegos: datos de Administración (1.6.0+)
+
+En las colecciones `fruta`, `arrows` y `bus` (además del progreso `p-<uid>`, reto `d-<día>` y `duel`):
+`cfg` (economía, `off` para ocultar, BETA de Flechas, `assist` en Pura fruta), `lv-<n>` (nivel editado o nivel nuevo
+después del último), `day-<día> { num }` (reto programado), `msg-<n>` (mensaje sorpresa) y `stats { a{n}, w{n} }`
+(intentos y ganados). En Pura fruta `p-<uid>.fl{n}` = derrotas seguidas en ese nivel (ayuda disimulada). Ver docs/FRUTA.md.
+
+## Respaldo automático (Worker v11)
+
+No vive en Firestore: el Worker copia cada noche la base a Cloudflare KV (`RESPALDOS`). Ver docs/NOTIFICACIONES.md.
+Quedan fuera `push`, lo privado de cada uno (`private/…`) y las cartas «Solo nosotros».

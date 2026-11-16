@@ -16,7 +16,7 @@ Lee estos documentos antes de cambiar algo:
 | [docs/DATOS.md](docs/DATOS.md) | Firestore: colecciones, campos, fotos, reglas de seguridad |
 | [docs/PRUEBAS.md](docs/PRUEBAS.md) | Emulador local con dos cuentas de prueba; qué solo se puede probar en el teléfono |
 | [docs/PUBLICAR.md](docs/PUBLICAR.md) | Versiones, aviso de actualización, novedades y cómo publicar |
-| [docs/NOTIFICACIONES.md](docs/NOTIFICACIONES.md) | Avisos al teléfono: Worker de Cloudflare, cómo agregar un aviso, configuración |
+| [docs/NOTIFICACIONES.md](docs/NOTIFICACIONES.md) | Avisos al teléfono y respaldo automático de cada noche: Worker de Cloudflare, cómo agregar un aviso, configuración |
 | [docs/GASTOS.md](docs/GASTOS.md) | Gastos: anotar rápido, salidas, presupuesto, alcancías, aviso del banco y su tutorial |
 | [docs/FLECHAS.md](docs/FLECHAS.md) | Juego Flechas (sorpresa del dueño): modos, regalo, generador, figuras 3D |
 | [docs/FRUTA.md](docs/FRUTA.md) | Juego Pura fruta (combinar 3): motor, niveles, especiales, datos y calibración |
@@ -27,6 +27,9 @@ Lee estos documentos antes de cambiar algo:
 
 Flechas ya **se regaló** (noviembre 2026): ya no es secreto y la pareja lo usa. Figuras y Mixto siguen en **BETA** hasta
 que el dueño diga. Ver [docs/FLECHAS.md](docs/FLECHAS.md).
+
+**Pura fruta** (1.5.0) es para los dos desde el principio (no es sorpresa). Su **ayuda disimulada** (1.7.2) no se
+menciona en Novedades ni en la guía. Los tres juegos se administran en Administración → 🎮 Juegos (`admin-juegos.js`).
 
 **La parada** (v56) es la nueva **sorpresa**: no la menciones en novedades ni en la guía hasta que el dueño la regale.
 Los juegos sorpresa comparten `gifts.js` (regalo envuelto, `gates`). Ver [docs/PARADA.md](docs/PARADA.md).

@@ -23,11 +23,11 @@
 - Calendario de Samsung (compartir .ics), cámara y fotos pesadas en el Android de la pareja.
 - Cámara propia (v31) en los dos teléfonos: permiso de cámara en la app instalada (iPhone puede volver a pedirlo),
   cambiar adelante/atrás, espejo, y que la foto salga derecha (no de lado).
-- Instantáneas (v32): acceso directo «Instantánea» del ícono en Android (puede tardar hasta un día en aparecer en la
+- Historias (antes instantáneas, v32): acceso directo «Mandar historia» del ícono en Android (puede tardar hasta un día en aparecer en la
   app instalada); en iPhone no existen esos accesos directos.
 
 - Avisos programados: confirmado en los dos teléfonos (recordatorios a su hora con la app cerrada y el teléfono bloqueado,
-  desde el Worker v4 con prioridad alta). Worker v5 pegado en Cloudflare (resumen del domingo). **Falta pegar el Worker v10** y activar Workers AI (binding `AI`, ver NOTIFICACIONES.md → Chef) (v6: resumen de gastos del domingo 19:30; v7: `/link` para enlaces cortos de Google Maps; v8: notas programadas del frasco; v9: `/chef` de Recetas; v10: avisos de viajes 30/7/1 días antes y textos «historia»). Falta ver llegar el de las
+  desde el Worker v4 con prioridad alta). Worker v5 pegado en Cloudflare (resumen del domingo). **Falta pegar el Worker v11** (y crear el KV `RESPALDOS` para el respaldo automático) y activar Workers AI (binding `AI`, ver NOTIFICACIONES.md → Chef) (v6: resumen de gastos del domingo 19:30; v7: `/link` para enlaces cortos de Google Maps; v8: notas programadas del frasco; v9: `/chef` de Recetas; v10: avisos de viajes 30/7/1 días antes y textos «historia»; v11: respaldo automático cada noche a KV). Falta ver llegar el de las
   20:00 (racha/mascota), fechas especiales y el primer resumen del domingo.
   Ojo: un cambio en el Cron de Cloudflare puede tardar hasta 15 minutos en activarse.
 - Mascota (v38): probar en los teléfonos los juegos con el dedo (Atrapa y Salta) y que se vea fluido.
@@ -45,13 +45,18 @@
   v47 🧊 Cubo: confirmado en iPhone que se ve bien. v48 Figuras: probar en los teléfonos las figuras con rincones (L,
   escalera, dona) y que tocar elija la flecha de adelante; fluidez en la figura 30 (~580 flechas) y en el Samsung. Cuando se regale, se puede anotar aquí y en novedades si quieren.
 
+- 1.x (nov 2026), confirmar en los teléfonos: Pura fruta (deslizar el dedo, fluidez, vibración); historias con chat
+  (teclado del iPhone tapando la barrita); clima y tipo de cambio de Viajes; arrastrar planes en la vista de semana; las
+  Novedades al actualizar; respaldo automático la primera noche después de pegar el Worker v11.
+- Ayuda disimulada de Pura fruta: si funciona bien, hacer algo parecido en La parada y Flechas.
+
 ## Ideas conversadas, no hechas
 
 - Pura fruta, segunda tanda: 🌊 marea (sube una fila cada tantos movimientos) y 📦 cajas sorpresa. Para recalibrar los
   movimientos de `fruta-engine.js` (`MOVES`): búsqueda binaria por nivel con `simulate(level, 36)` contra la tasa objetivo de
   docs/FRUTA.md (≈5 min en 4 procesos de Node).
 
-- De la lista de mejoras (nov 2026), quedaron sin hacer: clima en el saludo, responder instantáneas con texto, agrupar avisos
+- De la lista de mejoras (nov 2026), quedaron sin hacer: clima en el saludo, agrupar avisos
   que llegan seguidos, horas de silencio, cargar los módulos pesados solo al entrar y miniaturas en todas las listas.
   (El diario de la mascota y el tamaño de letra/botones se hicieron en v75–v76.) Falta revisar en los dos teléfonos
   reales: deslizar filas, arrastrar planes en la vista de semana y el zoom de «Más grande». Ya existían (no se rehicieron): filtros de citas por presupuesto y lugar, ingredientes al Súper, portada
@@ -63,7 +68,7 @@
 - Cartas «Ábrelo cuando…» (algunas bloqueadas hasta una fecha) y cápsula del tiempo.
 
 - Más accesos directos al mantener presionado el ícono (solo Android; `shortcuts` en `manifest.json`). Ya está
-  «Mandar instantánea» (`./?snap`, v32). Hay maqueta (`accesos-directos-futari.html`). Widgets reales no son posibles en una app web.
+  «Mandar historia» (`./?snap`, v32). Hay maqueta (`accesos-directos-futari.html`). Widgets reales no son posibles en una app web.
 - Ligar una canción a un momento. Actualizar la guía (`tour.js`) con lo nuevo (deslizar pestañas, recordatorios, urgentes).
 - Panel de administración: secciones más usadas, tiempo por visita, quién agrega qué, velocidad de carga, aviso de
   errores nuevos, mensaje para la pareja.

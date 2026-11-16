@@ -14,7 +14,7 @@ dibujos propios. **Es sorpresa:** mientras el dueño no lo regale (Administraci�
   parada**. La fila de pasajeros (figuritas en U arriba) sube sola, en orden, al vehículo de su color que llegó primero;
   cuando se llena, se va y libera el lugar.
 - **7 lugares:** 4 abiertos y 3 con candado 🔒. Un lugar con candado se abre **solo durante ese nivel**: mandándole una
-  foto a la pareja (cámara elegida o galería → `sendPhotoSnap()` de `snaps.js`, le llega como instantánea normal; el texto
+  foto a la pareja (cámara elegida o galería → `sendPhotoSnap()` de `snaps.js`, le llega como historia normal; el texto
   es opcional y no menciona el juego) o con 15 🪙. En el duelo no se abren. Al perder se ofrece abrir uno y seguir.
 - **Se pierde** si todos los lugares abiertos están ocupados y el siguiente pasajero no tiene vehículo de su color.
 - **Ayudas** (monedas de la mascota): 🔀 acomodar la fila (20: pasa adelante a los colores que ya están en la parada),
@@ -53,7 +53,7 @@ de un vehículo que esa persona tiene en la parada. Probado: los 100 niveles se 
   todo el flujo pero la foto **no** se manda.
 
 Datos: `bus/p-<uid> { lv, ls{n}, lx{n}, dw }`, `bus/d-<día> { <uid>: { ms, moves, help, fails, at } }`, `bus/duel`.
-Las fotos para abrir lugares son instantáneas normales (`snaps`, `photos`). En el emulador `window.__busG()` devuelve el
+Las fotos para abrir lugares son historias normales (`snaps`, `photos`). En el emulador `window.__busG()` devuelve el
 estado del juego.
 
 ## Regalo
@@ -66,3 +66,8 @@ pareja y duelo completo).
 
 Que el 3D vaya fluido en los dos teléfonos con ~55 vehículos (nivel 100), que tocar los vehículos se sienta bien en los
 tableros grandes (11×15) y que abrir un lugar con la cámara (de Futari o del teléfono) funcione en iPhone y Android.
+
+## Administración → 🎮 Juegos (1.6.0+)
+Los niveles se pueden editar o agregar después del último desde `admin-juegos.js` (`liveBusLevel / busTotal` aplican lo publicado en
+`lv-<n>`); reto programado (`day-<día>`), mensajes sorpresa (`msg-<n>`), estadísticas (`stats`), economía y ocultar el
+juego (`cfg`). Seguir pagando con monedas es una opción discreta con confirmación (1.7.1). Ver docs/FRUTA.md.

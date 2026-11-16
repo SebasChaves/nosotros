@@ -1,10 +1,11 @@
 // Ajustes: datos de la pareja, personalización, respaldo y sesión. También la pantalla "Más".
 import { setDoc, deleteDoc, writeBatch, getDocs } from 'https://www.gstatic.com/firebasejs/11.0.2/firebase-firestore.js';
 import { signOut } from 'https://www.gstatic.com/firebasejs/11.0.2/firebase-auth.js';
-import { $, S, db, auth, esc, icon, paint, on, onShow, expose, toast, write, ref, col, privRef, coupleRef, go,
+import { $, S, db, auth, esc, icon, paint, on, onShow, expose, toast, write, ref, col, privRef, coupleRef, go, openSheet, closeSheet,
          COLLECTIONS, PRIVATE, cachePhoto, forgetPhoto, compressImage, photoError, loadPhotos, parseDate, today, dayKey,
          fmtMoney, nameOf, partnerUid, partnerName, myName, profile, plural, uid, avatar, ask, inBar, gateOn, softDelete } from './core.js';
 import { ACCENTS, CURRENCIES, accentFromColor } from './data.js';
+import { PUSH } from './push-config.js';
 import { backBar, groceryPending } from './lists.js';
 import { balance } from './money.js';
 import { badgeCount } from './badges.js';
@@ -97,7 +98,8 @@ function renderSettings() {
       <p class="small muted" style="margin:0">Todo está guardado en la nube. Igual pueden descargar una copia de todo: gastos, alcancías, recetas, momentos, viajes, juegos… «Con fotos» también guarda las fotos (pesa más y tarda). ${S.settings.lastBackup ? `Último respaldo: ${new Date(S.settings.lastBackup).toLocaleDateString('es', { day: 'numeric', month: 'long', year: 'numeric' })}.` : 'Aún no han descargado ninguno.'}</p>
       <div class="grid2"><button class="btn ghost small" style="width:100%" onclick="exportData()">Descargar</button>
         <button class="btn ghost small" style="width:100%" onclick="exportData(true)">Descargar con fotos</button></div>
-      <label class="btn ghost small" style="width:100%">Restaurar desde un respaldo<input type="file" accept="application/json,.json" hidden onchange="importData(this)"></label></div></div>
+      <label class="btn ghost small" style="width:100%">Restaurar desde un respaldo<input type="file" accept="application/json,.json" hidden onchange="importData(this)"></label>
+      <button class="btn ghost small" style="width:100%" onclick="autoBackups()">🌙 Respaldos automáticos de cada noche</button></div></div>
 
     <div class="glass"><span class="label">Ideas propias de la ruleta</span>
       <ul class="list" style="margin-top:6px">${S.data.ideas.length ? S.data.ideas.map(i => `<li><span class="txt">${esc(i.t)}</span>
@@ -299,6 +301,47 @@ function fromV1(d) {
     })),
   };
 }
+/* ---------- Respaldos automáticos (servicio de avisos v11 + KV «RESPALDOS», ver docs/NOTIFICACIONES.md) ----------
+   Cada noche el servicio copia la base y las fotos nuevas. Aquí se ven los días guardados, se descargan (con o sin fotos)
+   o se restauran (se juntan con lo actual, igual que «Restaurar desde un respaldo»). */
+async function bkCall(body) {
+  if (!PUSH?.url) throw new Error('no-worker');
+  const r = await fetch(PUSH.url.replace(/\/$/, '') + '/respaldo', { method: 'POST', headers: { Authorization: 'Bearer ' + await auth.currentUser.getIdToken(), 'Content-Type': 'application/json' }, body: JSON.stringify(body) });
+  if (r.status === 404) throw new Error('old-worker');
+  if (r.status === 501) throw new Error('no-kv');
+  if (!r.ok) throw new Error('error');
+  return body.action === 'get' ? r.blob() : r.json();
+}
+const BK_ERR = { 'no-worker': 'Falta configurar el servicio de avisos.', 'old-worker': 'Falta pegar el servicio de avisos versión 11 en Cloudflare.',
+  'no-kv': 'Falta conectar el espacio «RESPALDOS» en Cloudflare (Settings → Bindings → KV namespace).', error: 'No se pudo hablar con el servicio. Revisa el internet.' };
+async function autoBackups() {
+  openSheet('<div class="stack"><h2>🌙 Respaldos automáticos</h2><p class="small muted" style="margin:0">Buscando…</p></div>');
+  let d; try { d = await bkCall({ action: 'list' }); } catch (e) { return openSheet(`<div class="stack"><h2>🌙 Respaldos automáticos</h2><p class="small" style="margin:0">😕 ${esc(BK_ERR[e.message] || BK_ERR.error)}</p></div>`); }
+  const fmt = m => new Date(m.at).toLocaleString('es', { weekday: 'long', day: 'numeric', month: 'short', hour: 'numeric', minute: '2-digit' });
+  const n = m => Object.values(m.counts || {}).reduce((a, b) => a + b, 0);
+  openSheet(`<div class="stack"><h2>🌙 Respaldos automáticos</h2>
+    <p class="small muted" style="margin:0">Cada noche, entre las 3 y las 6 a. m., se guarda una copia de todo. Quedan los últimos 7 días y un domingo de cada semana del último mes. Fotos guardadas: ${d.photos}${d.pendingPhotos ? ` (faltan ${d.pendingPhotos}, siguen las próximas noches)` : ''}.</p>
+    ${d.days.length ? `<ul class="list">${d.days.map(m => `<li><div class="txt"><span class="main">${esc(fmt(m))}</span><span class="sub">${n(m)} cosas guardadas</span></div>
+      <button class="btn ghost small" onclick="autoBackupGet('${m.day}', false)">Bajar</button><button class="btn ghost small" onclick="autoBackupGet('${m.day}', true)">+ fotos</button>
+      <button class="btn small" onclick="autoBackupRestore('${m.day}')">Restaurar</button></li>`).join('')}</ul>`
+      : '<p class="small" style="margin:0">Todavía no hay ninguno: el primero se hace esta noche 🌙</p>'}
+    <p class="tiny muted" style="margin:0">«Restaurar» junta ese día con lo que tienen ahora (no borra nada): sirve para recuperar algo que se borró sin querer.</p></div>`);
+}
+async function autoBackupGet(day, photos) {
+  toast(photos ? 'Bajando el respaldo con fotos… puede tardar' : 'Bajando el respaldo…');
+  try {
+    const blob = await bkCall({ action: 'get', day, photos }), a = document.createElement('a');
+    a.href = URL.createObjectURL(blob); a.download = `futari-respaldo-${day}${photos ? '-con-fotos' : ''}.json`; a.click();
+    setTimeout(() => URL.revokeObjectURL(a.href), 2000); toast('Respaldo descargado ✓');
+  } catch (e) { toast(BK_ERR[e.message] || BK_ERR.error); }
+}
+async function autoBackupRestore(day) {
+  if (!(await ask(`¿Restaurar el respaldo del ${day}? Se junta con lo que tienen ahora (no se borra nada) y se recuperan también las fotos que falten.`, { ok: 'Restaurar' }))) return;
+  toast('Restaurando…');
+  try { const d = JSON.parse(await (await bkCall({ action: 'get', day, photos: true })).text()); await uploadData(d); toast('Respaldo restaurado ✓'); closeSheet(); }
+  catch (e) { console.error(e); toast(BK_ERR[e.message] || 'No se pudo restaurar'); }
+}
+
 // Sube un respaldo. Usa los mismos IDs, así que subir el mismo respaldo dos veces no duplica nada.
 export async function uploadData(raw) {
   const d = raw.version ? raw : fromV1(raw);
@@ -350,4 +393,4 @@ on('ideas profiles push', () => { if ($('s-settings').classList.contains('active
 onShow('s-settings', renderSettings);
 window.rerenderSettings = () => { if ($('s-settings').classList.contains('active')) renderSettings(); };
 onShow('s-more', renderMore);
-expose({ setTextSize, openMenuPrefs, enablePush, disablePush, testPush, setNotif, previewCustomAccent, setCustomAccent, saveNicks, setCounterUnit, saveCounter, toggleHomeCard, moveHomeCard, resetHome, saveSettings, setTheme, setAccent, pickAvatar, removeAvatar, pickBg, removeBg, delIdea, logout, exportData, importData });
+expose({ autoBackups, autoBackupGet, autoBackupRestore, setTextSize, openMenuPrefs, enablePush, disablePush, testPush, setNotif, previewCustomAccent, setCustomAccent, saveNicks, setCounterUnit, saveCounter, toggleHomeCard, moveHomeCard, resetHome, saveSettings, setTheme, setAccent, pickAvatar, removeAvatar, pickBg, removeBg, delIdea, logout, exportData, importData });

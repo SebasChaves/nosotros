@@ -14,9 +14,11 @@
 //   FIREBASE_SA        (secreto) el JSON de una cuenta de servicio de SOLO LECTURA (rol "Cloud Datastore Viewer")
 //   TIME_ZONE          (texto, opcional) por defecto America/Costa_Rica
 //   COUPLE_ID          (texto, opcional) por defecto nosotros
+// Respaldo automático (v11): un espacio KV conectado con el nombre RESPALDOS (Settings → Bindings → KV namespace).
+//   Cada noche de 3:00 a 6:00 copia la base (una colección por minuto) y las fotos nuevas. Ver docs/NOTIFICACIONES.md.
 // Ver docs/NOTIFICACIONES.md. Sin dependencias: se pega tal cual en el editor de Cloudflare.
 
-const WORKER_VERSION = 10; // súbelo al cambiar este archivo (la app lo muestra en el diagnóstico)
+const WORKER_VERSION = 11; // súbelo al cambiar este archivo (la app lo muestra en el diagnóstico)
 const enc = new TextEncoder();
 const b64u = buf => btoa(String.fromCharCode(...new Uint8Array(buf))).replace(/\+/g, '-').replace(/\//g, '_').replace(/=+$/, '');
 const unb64u = s => Uint8Array.from(atob(s.replace(/-/g, '+').replace(/_/g, '/') + '==='.slice((s.length + 3) % 4)), c => c.charCodeAt(0));
@@ -32,7 +34,7 @@ export default {
     if (req.method === 'OPTIONS') return new Response(null, { status: 204, headers: cors });
     const url = new URL(req.url);
     if (req.method === 'GET') return json({ ok: true, service: 'futari-push', version: WORKER_VERSION, ready: !!(env.VAPID_PUBLIC_KEY && env.VAPID_PRIVATE_KEY && env.FIREBASE_PROJECT_ID && env.ALLOWED_UIDS), scheduled: !!env.FIREBASE_SA });
-    if (req.method !== 'POST' || !['/notify', '/diagnostico', '/link', '/chef'].includes(url.pathname)) return json({ error: 'not-found' }, 404);
+    if (req.method !== 'POST' || !['/notify', '/diagnostico', '/link', '/chef', '/respaldo'].includes(url.pathname)) return json({ error: 'not-found' }, 404);
 
     // 1. ¿Quién pide? Sesión de Firebase válida y de la pareja
     let who;
@@ -41,6 +43,12 @@ export default {
     const allowed = (env.ALLOWED_UIDS || '').split(',').map(s => s.trim()).filter(Boolean);
     if (!allowed.includes(who)) return json({ error: 'forbidden' }, 403);
     if (url.pathname === '/diagnostico') return json(await diagnose(env, who));
+    if (url.pathname === '/respaldo') { // respaldos automáticos (lista o descargar uno)
+      if (!env.RESPALDOS) return json({ error: 'no-kv' }, 501);
+      let b4; try { b4 = await req.json(); } catch { return json({ error: 'bad-json' }, 400); }
+      if (b4.action === 'get') return backupDownload(env, String(b4.day || ''), !!b4.photos, cors);
+      return json(await backupList(env));
+    }
     if (url.pathname === '/chef') { // «Pregúntale al chef» (recipes.js): arma una receta con IA
       let b3; try { b3 = await req.json(); } catch { return json({ error: 'bad-json' }, 400); }
       try { return json(await chef(env, b3)); }
@@ -72,8 +80,103 @@ export default {
   // Avisos programados: racha en peligro / mascota con hambre, recordatorios y fechas especiales
   async scheduled(event, env, ctx) {
     ctx.waitUntil(runSchedule(env, event.scheduledTime).catch(e => console.error('programados', e)));
+    if (env.RESPALDOS && env.FIREBASE_SA) ctx.waitUntil(backupStep(env, event.scheduledTime).catch(e => console.error('respaldo', e)));
   },
 };
+
+/* ---------- Respaldo automático (KV «RESPALDOS») ----------
+   Cada minuto entre las 3:00 y las 5:59 (hora local) se hace un paso chico (el plan gratis da 10 ms de CPU por vez):
+   1. Una colección por minuto → KV «d:<día>:<colección>» (JSON). Al terminar: «d:<día>:_meta» y se borran los días viejos
+      (quedan los últimos 7 y los domingos del último mes).
+   2. Después, fotos nuevas: se listan los ids (sin bajar las fotos) y se copian las que falten, ~8 por minuto y hasta
+      600 por noche (límite de escrituras de KV: 1000 al día). «p:<id>» = {"id","data"}; «photos-index» = ids ya copiados.
+   No se respaldan: «push» (direcciones de los teléfonos), lo privado de cada uno ni las cartas «Solo nosotros». */
+const BACKUP_COLS = ['bucket', 'ideas', 'notes', 'coupons', 'dates', 'moments', 'lists', 'answers', 'moods', 'challenges', 'groceries', 'expenses', 'places',
+  'trips', 'quiz', 'profiles', 'shows', 'events', 'cards', 'games', 'thinks', 'daily', 'pins', 'recipes', 'recipefav', 'menu', 'songs', 'reminders', 'snaps',
+  'activity', 'pet', 'guess', 'cravings', 'arrows', 'bus', 'money', 'cooked', 'dreams', 'vacations', 'fruta'];
+const kvJSON = async (env, k, d = null) => { const v = await env.RESPALDOS.get(k); return v ? JSON.parse(v) : d; };
+async function listAll(env, db, col, mask) {
+  const out = []; let token = '';
+  const base = db.base;
+  do {
+    const r = await fetch(`${base}/${col}?pageSize=300${mask ? '&mask.fieldPaths=__nada' : ''}${token ? '&pageToken=' + encodeURIComponent(token) : ''}`, { headers: db.auth });
+    if (!r.ok) throw new Error('list ' + col + ' ' + r.status);
+    const j = await r.json();
+    for (const d of j.documents || []) out.push(mask ? d.name.split('/').pop() : { id: d.name.split('/').pop(), ...fields(d.fields || {}) });
+    token = j.nextPageToken || '';
+  } while (token);
+  return out;
+}
+export async function backupStep(env, when = Date.now()) {
+  const tz = env.TIME_ZONE || 'America/Costa_Rica';
+  const L = Object.fromEntries(new Intl.DateTimeFormat('en-CA', { timeZone: tz, year: 'numeric', month: '2-digit', day: '2-digit', hour: '2-digit', hourCycle: 'h23' }).formatToParts(new Date(when)).map(p => [p.type, p.value]));
+  const hour = Number(L.hour), day = `${L.year}-${L.month}-${L.day}`;
+  if (!env.BACKUP_ANYTIME && (hour < 3 || hour > 5)) return null;
+  const st = await kvJSON(env, 'state', {});
+  const db = await firestoreReader(env);
+  if (st.day !== day) { st.day = day; st.idx = 0; st.dataDone = false; st.nightPhotos = 0; }
+  if (!st.dataDone) {
+    if (st.idx === 0) { const c = await db.get(''); await env.RESPALDOS.put(`d:${day}:_couple`, JSON.stringify({ start: c?.start || '', currency: c?.currency || '', members: c?.members || {} })); }
+    const col = BACKUP_COLS[st.idx];
+    let docs = await listAll(env, db, col);
+    if (col === 'cards') docs = docs.filter(x => x.level !== 'ours');
+    await env.RESPALDOS.put(`d:${day}:${col}`, JSON.stringify(docs));
+    (st.counts ||= {})[col] = docs.length;
+    st.idx++;
+    if (st.idx >= BACKUP_COLS.length) {
+      st.dataDone = true; st.lastAt = Date.now();
+      await env.RESPALDOS.put(`d:${day}:_meta`, JSON.stringify({ day, at: st.lastAt, counts: st.counts }));
+      const days = [...new Set([...(await kvJSON(env, 'days', [])), day])].sort();
+      const keep = days.filter((d, i) => i >= days.length - 7 || (new Date(d + 'T12:00').getDay() === 0 && (Date.parse(day) - Date.parse(d)) < 31 * 864e5));
+      for (const old of days.filter(d => !keep.includes(d))) for (const c of ['_couple', '_meta', ...BACKUP_COLS]) await env.RESPALDOS.delete(`d:${old}:${c}`);
+      await env.RESPALDOS.put('days', JSON.stringify(keep));
+      st.counts = {};
+    }
+    await env.RESPALDOS.put('state', JSON.stringify(st));
+    return { step: col };
+  }
+  // Fotos: se copian solo las nuevas (las que ya están en KV no se vuelven a leer)
+  if (st.nightPhotos >= 600 || st.photosDoneDay === day) return null; // ya se revisaron las fotos esta noche
+  const index = new Set(await kvJSON(env, 'photos-index', []));
+  let ids = await kvJSON(env, 'photo-todo', null);
+  if (!ids) ids = (await listAll(env, db, 'photos', true)).filter(id => !index.has(id));
+  if (!ids.length) { if (st.photosDoneDay !== day) { st.photosDoneDay = day; await env.RESPALDOS.put('state', JSON.stringify(st)); } return null; }
+  const batch = ids.splice(0, 8);
+  for (const id of batch) {
+    const d = await db.get('photos/' + id); if (!d?.data) continue;
+    await env.RESPALDOS.put('p:' + id, JSON.stringify({ id, data: d.data })); index.add(id); st.nightPhotos++;
+  }
+  await env.RESPALDOS.put('photos-index', JSON.stringify([...index]));
+  await env.RESPALDOS.put('photo-todo', JSON.stringify(ids.length ? ids : []));
+  if (!ids.length) await env.RESPALDOS.delete('photo-todo');
+  await env.RESPALDOS.put('state', JSON.stringify(st));
+  return { photos: batch.length };
+}
+async function backupList(env) {
+  const days = await kvJSON(env, 'days', []), st = await kvJSON(env, 'state', {}), metas = [];
+  for (const d of [...days].reverse()) { const m = await kvJSON(env, `d:${d}:_meta`); if (m) metas.push(m); }
+  return { ok: true, days: metas, photos: (await kvJSON(env, 'photos-index', [])).length, pendingPhotos: (await kvJSON(env, 'photo-todo', [])).length, state: { day: st.day, idx: st.idx, total: BACKUP_COLS.length, dataDone: st.dataDone } };
+}
+// Descarga en el mismo formato que «Descargar» de Ajustes (versión 5), armado sin volver a leer Firebase y en partes
+export function backupDownload(env, day, withPhotos, cors) {
+  const { readable, writable } = new TransformStream(), w = writable.getWriter(), put = s => w.write(enc.encode(s));
+  (async () => {
+    try {
+      const c = await kvJSON(env, `d:${day}:_couple`, {});
+      await put(`{"version":5,"auto":${JSON.stringify(day)},"start":${JSON.stringify(c.start || '')},"currency":${JSON.stringify(c.currency || '')},"members":${JSON.stringify(c.members || {})}`);
+      for (const col of BACKUP_COLS) { const v = await env.RESPALDOS.get(`d:${day}:${col}`); await put(`,${JSON.stringify(col)}:${v || '[]'}`); }
+      if (withPhotos) {
+        await put(',"photos":[');
+        const ids = await kvJSON(env, 'photos-index', []); let first = true;
+        for (const id of ids) { const v = await env.RESPALDOS.get('p:' + id); if (!v) continue; await put((first ? '' : ',') + v); first = false; }
+        await put(']');
+      }
+      await put('}');
+    } catch (e) { console.error('descarga', e); }
+    await w.close();
+  })();
+  return new Response(readable, { headers: { ...cors, 'Content-Type': 'application/json', 'Content-Disposition': `attachment; filename="futari-respaldo-${day}.json"` } });
+}
 
 /* ---------- Chef con IA ----------
    Usa Claude si hay un secreto ANTHROPIC_API_KEY; si no, Workers AI (binding «AI», gratis con límite diario).
@@ -431,6 +534,7 @@ function restReader(base, auth) {
   const docOf = d => ({ id: d.name.split('/').pop(), ...fields(d.fields || {}) });
   const root = base.slice(0, base.indexOf('/documents/') + '/documents'.length), prefix = base.slice(base.indexOf('/projects/') + 1);
   return {
+    base, auth,
     // Documentos de una colección con campo == valor (solo se cobran los que coinciden)
     async query(col, field, eq, op = 'EQUAL') {
       const r = await fetch(base + ':runQuery', { method: 'POST', headers: { ...auth, 'Content-Type': 'application/json' },

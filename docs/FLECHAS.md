@@ -76,3 +76,8 @@ figura (`t:lv<n>`, `t:cv<n>`), experto, contrarreloj de 1 min y duelo contra un 
 - **Dibujo plano:** una SVG con zoom/arrastre (`setupCamera`). **Figuras:** una SVG por panel con `matrix3d`
   (`cubeHTML`, `setupCube`), bordes solo en aristas/rincones reales.
 - Partida a medias en localStorage `futari-arrows-<clave>`. Un doc de Firestore **no puede tener un campo `id`**.
+
+## Administración → 🎮 Juegos (1.6.0+)
+Los niveles se pueden editar o agregar después del último desde `admin-juegos.js` (`liveLevel / arrowsTotal` aplican lo publicado en
+`lv-<n>`); reto programado (`day-<día>`), mensajes sorpresa (`msg-<n>`), estadísticas (`stats`), economía y ocultar el
+juego (`cfg`). Seguir pagando con monedas es una opción discreta con confirmación (1.7.1). Ver docs/FRUTA.md.

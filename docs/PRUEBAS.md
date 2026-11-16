@@ -59,3 +59,10 @@ Dilo explícitamente al usuario en vez de darlo por probado:
 - Cámara y selector de fotos de Android, fotos HEIF, calendario de Samsung, compartir archivos.
 - Ubicación real ("Dónde estoy", "Cerca de mí"), audio (adelantos de canciones), vibración.
 - Que Android cierre la app en segundo plano y la recarga.
+
+## Trampas de las pruebas automáticas (Playwright)
+- No esperes con `await page.evaluate(() => fn())` una función que abre un `ask()`: se queda trabada esperando el toque.
+  Usa `page.evaluate(() => { fn(); })` y después toca el botón del diálogo.
+- El emulador y el servidor se caen cuando se reinicia el contenedor: hay que volver a levantarlos (y crear las cuentas).
+- Pura fruta: `window.__frG()` (solo emulador) da la partida; `fruta-engine.js` se puede usar en Node para simular niveles.
+- Los servicios externos (TMDB, Photon, Open-Meteo, tipo de cambio, el Worker) se simulan con `context.route`.

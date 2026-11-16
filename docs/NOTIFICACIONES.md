@@ -1,6 +1,6 @@
 # Notificaciones
 
-Futari manda avisos al teléfono de la pareja (instantáneas, reacciones, notas, «pensando en ti», canciones
+Futari manda avisos al teléfono de la pareja (historias y su chat, reacciones, notas, «pensando en ti», canciones
 dedicadas y cupones) con **Web Push** estándar. Funciona en Android (Chrome) y en iPhone con iOS 16.4 o más nuevo,
 **solo con la app instalada en la pantalla de inicio**.
 
@@ -86,7 +86,7 @@ de solo lectura** y manda, según la hora de Costa Rica (`TIME_ZONE`):
 | 20:00 | «🐱 Mochi tiene hambre» / «🔥 Su racha de N días se acaba hoy» a quien aún no hizo nada hoy (si hay racha o mascota) | `streak` |
 | el minuto exacto del recordatorio (o 8:00) | recordatorios 🔔 de hoy no hechos, a quien le toca | `reminders` |
 | 8:00 / 9:00 | «Hoy es…» / «Mañana es…»: fechas especiales, aniversarios y mesiversarios | `dates` |
-| domingo 19:00 | «📊 Su semana en Futari»: días juntos, corazones e instantáneas o preguntas (como `week.js`) | `week` |
+| domingo 19:00 | «📊 Su semana en Futari»: días juntos, corazones e historias o preguntas (como `week.js`) | `week` |
 | el minuto de `showTime` | «💌 … te dejó una nota para hoy»: notas del frasco programadas (`showDay`/`showTime`) a la pareja. Desde `WORKER_VERSION` 8 | `notes` |
 | domingo 19:30 | «🐷 ¡Les sobraron…!» / «💸 Se pasaron…»: gustos de la semana vs. presupuesto y vs. la semana pasada (lee solo `expenses` con `date` de las últimas 2 semanas y `money/cfg`). Desde `WORKER_VERSION` 6 | `money` |
 
@@ -124,6 +124,9 @@ problema es el Cron en Cloudflare (*Settings → Triggers*, `* * * * *`) o sus *
 
 ## Viajes (Worker v10)
 
+Tipos de aviso nuevos en Ajustes: `trips`, `vacations` (vacaciones que pone tu pareja o que coinciden), `shows` (avance en una serie a su ritmo), `fruta` (reto y duelos de Pura fruta) y los mensajes del chat de historias (tipo `snaps`).
+
+
 A las 10:00, 30, 7 y 1 día antes de la ida (`trips.start`), a cada uno le llega «✈️ Faltan N días para…» con lo que le
 falta de «Antes de salir» (`trips.todo`, los que son suyos o de los dos). Tipo de aviso `trips` (también lo usa la app al
 guardar un lugar en «Por conocer»). Abre `./?open=trips`.
@@ -141,4 +144,25 @@ receta con IA. No guarda nada; la app la guarda solo si tocan «Guardar».
   crédito prepagado; sin cuota mensual). Si existe, el Worker usa Claude (`claude-opus-5-5`, esfuerzo `low`, salida JSON
   con esquema, `fallbacks: "default"`) en vez de Workers AI. `CHEF_MODEL` cambia el modelo de Claude. **Sin probar con
   una clave real**: revisar la primera vez.
-- Errores: `old-worker` (falta pegar v9), `no-ai` (falta el binding), `limit`, `ai` (otro error; detalle en *Logs*).
+- Errores: `old-worker` (falta pegar v9 o más nuevo), `no-ai` (falta el binding), `limit`, `ai` (otro error; detalle en *Logs*).
+
+## Respaldo automático (Worker v11)
+
+Cada noche, de 3:00 a 5:59 (hora de `TIME_ZONE`), el Cron hace un paso chico por minuto (`backupStep`; el plan gratis da
+10 ms de CPU por vez):
+1. Una colección por minuto → KV `d:<día>:<colección>` (+ `_couple` con fecha de inicio, moneda y miembros, y `_meta`).
+   Se borran los días viejos: quedan los últimos 7 y los domingos del último mes (`days`).
+2. Fotos nuevas: lista solo los ids de `photos` (sin bajarlas) y copia las que faltan a `p:<id>`, ~8 por minuto y hasta
+   600 por noche (límite gratis de KV: 1000 escrituras al día). `photos-index` = ids ya copiados; `photo-todo` = pendientes.
+No se copian `push`, lo privado de cada uno ni las cartas «Solo nosotros».
+
+**Configurar (una vez, lo hace el dueño):** Cloudflare → Storage & Databases → KV → crear `futari-respaldos`; luego en el
+Worker `futari-push` → Settings → Bindings → Add → KV namespace, nombre de la variable **`RESPALDOS`** → ese espacio. Pegar
+el Worker v11 y Deploy. Gratis: 1 GB de espacio (alcanza para miles de fotos).
+
+**En la app:** Ajustes → Respaldo → «🌙 Respaldos automáticos de cada noche» (`POST /respaldo` con `{action:'list'}` o
+`{action:'get', day, photos}`): lista los días, baja el JSON (mismo formato que «Descargar», versión 5, con o sin fotos)
+o lo restaura (se junta con lo actual, no borra nada). Errores: `no-kv` (falta el binding) y `old-worker`.
+
+Prueba local: `backupStep(env, fecha)` con `env.TEST_FIRESTORE` (emulador), un KV simulado (`get/put/delete`) y
+`env.BACKUP_ANYTIME = true` para correrlo fuera de horario.
