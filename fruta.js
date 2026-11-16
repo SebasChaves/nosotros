@@ -311,7 +311,11 @@ async function frutaHelp(k) {
 }
 
 /* ---------- Final ---------- */
-function overlay(html) { view.querySelector('.ar-end')?.remove(); view.insertAdjacentHTML('beforeend', `<div class="ar-end"><div class="ar-end-box">${html}</div></div>`); }
+// Cartel de fin: sus botones se activan después de un momento, para que el último toque del juego no caiga en uno sin querer
+function overlay(html) {
+  view.querySelector('.ar-end')?.remove(); view.insertAdjacentHTML('beforeend', `<div class="ar-end"><div class="ar-end-box">${html}</div></div>`);
+  const bs = [...view.querySelectorAll('.ar-end button')]; bs.forEach(b => { if (b.disabled) b.dataset.off = '1'; b.disabled = true; }); setTimeout(() => bs.forEach(b => { if (!b.dataset.off) b.disabled = false; }), 650);
+}
 function end() {
   if (!G || G.over) return;
   const { st, spec } = G, win = E.won(st), s = E.starsOf(st), pt = pet(), p = partnerUid();
@@ -320,7 +324,8 @@ function end() {
   if (!win && !spec.day && !spec.duel && !G.offered) { // ¿seguir con 5 más?
     G.offered = true;
     return overlay(`<div style="font-size:46px">😮</div><h2>¡Casi!</h2><p style="margin:0">${E.goalList(st).filter(g => g.have < g.need).map(g => `Faltan ${g.need - g.have} ${g.label}`).join(' · ')}</p>
-      <button class="btn" onclick="frutaMore()">➕ 5 movimientos más · ${helpCost('plus')} 🪙</button><div class="grid2"><button class="btn ghost" onclick="closeFruta()">Salir</button><button class="btn ghost" onclick="frutaRetry()">Reintentar</button></div>`);
+      <div class="grid2"><button class="btn ghost" onclick="closeFruta()">Salir</button><button class="btn" onclick="frutaRetry()">Reintentar</button></div>
+      <button class="btn ghost small pay" onclick="frutaMore()">o seguir con 5 movimientos más · ${helpCost('plus')} 🪙</button>`);
   }
   G.over = true; markActive(); countStat('acts', spec.day ? 'fruta-day' : spec.duel ? 'fruta-duel' : 'fruta');
   const b = writeBatch(db);
@@ -356,6 +361,7 @@ function end() {
 async function frutaMore() {
   const cost = helpCost('plus'), p = pet();
   if (!p?.hatchedAt || coins(p) < cost) return toast(`Faltan monedas: cuesta ${cost} 🪙`);
+  if (!(await ask(`¿Gastar ${cost} 🪙 de la mascota en 5 movimientos más?`, { ok: 'Sí, seguir', cancel: 'No' }))) return;
   write(updateDoc(ref('pet', 'main'), { spent: increment(cost) }));
   view.querySelector('.ar-end')?.remove(); G.st.moves += 5; G.help++; hud(); hintLater();
 }

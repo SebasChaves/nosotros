@@ -541,7 +541,11 @@ function check() {
   const c = G.queue[G.qi];
   if (!G.V.some(v => v.phase === 'parked' && v.color === c && v.filled < v.cap)) lose();
 }
-function overlay(html) { view.querySelector('.ar-end')?.remove(); view.insertAdjacentHTML('beforeend', `<div class="ar-end"><div class="ar-end-box">${html}</div></div>`); }
+// Cartel de fin: sus botones se activan después de un momento, para que el último toque del juego no caiga en uno sin querer
+function overlay(html) {
+  view.querySelector('.ar-end')?.remove(); view.insertAdjacentHTML('beforeend', `<div class="ar-end"><div class="ar-end-box">${html}</div></div>`);
+  const bs = [...view.querySelectorAll('.ar-end button')]; bs.forEach(b => { if (b.disabled) b.dataset.off = '1'; b.disabled = true; }); setTimeout(() => bs.forEach(b => { if (!b.dataset.off) b.disabled = false; }), 650);
+}
 const closeOverlay = () => view?.querySelector('.ar-end')?.remove();
 function lose() {
   if (G.spec.duel) { // en el duelo se reintenta solo, sin parar el reloj
@@ -558,7 +562,7 @@ function lose() {
 function unlockButtons() {
   const p = pet(), cost = unlockCost(), pn = partnerName();
   return `${partnerUid() ? `<button class="btn src-btn" onclick="busPhoto()">📸 Mandarle una foto a ${esc(pn || 'tu pareja')}<small>${G.spec.test ? 'En pruebas no se manda' : 'Gratis · le llega como historia'}</small></button>` : ''}
-    ${G.expert ? '' : `<button class="btn ghost" onclick="busUnlock('coins')" ${!G.spec.test && !(p?.hatchedAt && coins(p) >= cost) ? 'disabled' : ''}>🪙 Abrir con monedas · ${G.spec.test ? 'gratis' : cost}</button>`}
+    ${G.expert ? '' : `<button class="btn ghost small pay" onclick="busUnlock('coins')" ${!G.spec.test && !(p?.hatchedAt && coins(p) >= cost) ? 'disabled' : ''}>🪙 Abrir con monedas · ${G.spec.test ? 'gratis' : cost}</button>`}
     ${G.spec.test ? `<button class="btn ghost" onclick="busUnlock('free')">🧪 Abrir sin foto (prueba)</button>` : ''}`;
 }
 function busBay() {
@@ -584,6 +588,7 @@ async function busUnlock(how) {
     if (G.expert) return;
     if (!p?.hatchedAt) return toast('Las monedas son de su mascota 🐣');
     if (coins(p) < cost) return toast(`Faltan monedas: cuesta ${cost} 🪙`);
+    if (!(await ask(`¿Gastar ${cost} 🪙 de la mascota para abrir un lugar?`, { ok: 'Sí, abrir', cancel: 'No' }))) return;
     write(updateDoc(ref('pet', 'main'), { spent: increment(cost) }));
   }
   G.help++; openBay();

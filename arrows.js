@@ -1245,17 +1245,22 @@ function closeArrows() {
   const el = view; view = null; G = null; if (!el) return;
   el.classList.add('out'); setTimeout(() => { el.remove(); syncBack(); render(); }, 160);
 }
-function overlay(html) { view.querySelector('.ar-end')?.remove(); view.insertAdjacentHTML('beforeend', `<div class="ar-end"><div class="ar-end-box">${html}</div></div>`); }
+// Cartel de fin: sus botones se activan después de un momento, para que el último toque del juego no caiga en uno sin querer
+function overlay(html) {
+  view.querySelector('.ar-end')?.remove(); view.insertAdjacentHTML('beforeend', `<div class="ar-end"><div class="ar-end-box">${html}</div></div>`);
+  const bs = [...view.querySelectorAll('.ar-end button')]; bs.forEach(b => { if (b.disabled) b.dataset.off = '1'; b.disabled = true; }); setTimeout(() => bs.forEach(b => { if (!b.dataset.off) b.disabled = false; }), 650);
+}
 function outOfLives() {
   if (!view || !G) return;
   const p = pet(), have = p?.hatchedAt ? coins(p) : 0, can = have >= contCost() && !G.expert, left = G.board.list.length - G.gone.size;
   overlay(`<div style="font-size:46px">💔</div><h2>Sin vidas</h2><p class="muted" style="margin:0">Te faltan ${left} ${left === 1 ? 'flecha' : 'flechas'}.</p>
-    ${can ? `<button class="btn" onclick="arrowsContinue()">Seguir con 3 vidas · ${contCost()} 🪙</button><p class="tiny muted" style="margin:0">Las monedas son de su mascota (tienen ${have} 🪙)</p>`
-      : `<p class="tiny muted" style="margin:0">${G.expert ? '💀 Modo experto: no se puede seguir pagando.' : p?.hatchedAt ? `Para seguir donde ibas hacen falta ${contCost()} 🪙 de la mascota (tienen ${have}).` : 'Cuando tengan mascota, podrán seguir donde iban con sus monedas.'}</p>`}
-    <div class="grid2"><button class="btn ghost" onclick="closeArrows()">Salir</button><button class="btn ghost" onclick="restartArrows()">Empezar de nuevo</button></div>`);
+    <div class="grid2"><button class="btn ghost" onclick="closeArrows()">Salir</button><button class="btn" onclick="restartArrows()">Empezar de nuevo</button></div>
+    ${can ? `<button class="btn ghost small pay" onclick="arrowsContinue()">o seguir donde ibas con 3 vidas · ${contCost()} 🪙</button><p class="tiny muted" style="margin:0">Las monedas son de su mascota (tienen ${have} 🪙)</p>`
+      : `<p class="tiny muted" style="margin:0">${G.expert ? '💀 Modo experto: no se puede seguir pagando.' : p?.hatchedAt ? `Para seguir donde ibas hacen falta ${contCost()} 🪙 de la mascota (tienen ${have}).` : 'Cuando tengan mascota, podrán seguir donde iban con sus monedas.'}</p>`}`);
 }
-function arrowsContinue() {
+async function arrowsContinue() {
   const p = pet(); if (!G || !p || coins(p) < contCost() || G.expert) return;
+  if (!(await ask(`¿Gastar ${contCost()} 🪙 de la mascota para seguir con 3 vidas?`, { ok: 'Sí, seguir', cancel: 'No' }))) return;
   write(updateDoc(ref('pet', 'main'), { spent: increment(contCost()) }));
   G.lives = 3; G.paid++; updateHud(); save(); view.querySelector('.ar-end')?.remove(); toast('❤️❤️❤️ ¡A seguir!');
 }

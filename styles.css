@@ -1332,3 +1332,4 @@ html:not([data-ts="n"]) .topbar h1 { font-size: 26px; }
 .aj-table table { width: 100%; border-collapse: collapse; font-size: 13px; }
 .aj-table th, .aj-table td { padding: 6px 4px; text-align: center; border-bottom: 1px solid var(--line); white-space: nowrap; }
 .aj-table tr.wall td { background: color-mix(in srgb, #ff6a3d 16%, transparent); }
+.ar-end .btn.pay { font-weight: 500; opacity: .85; } .ar-end button:disabled { opacity: .55; }
