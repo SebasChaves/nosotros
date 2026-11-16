@@ -16,7 +16,7 @@ privado de cada uno (`private/<uid>`, ideas de regalo) y las cartas «Solo nosot
 
 ## Cómo se usa (en la app)
 
-Todo está en **Ajustes → Respaldo**:
+Todo está en **Ajustes → Respaldo**. Esta tarjeta **solo la ve el dueño** (`isOwner()` de `gifts.js`: su uid en `TESTERS`; en el emulador, la primera cuenta que entró). Su pareja no la ve.
 - **Descargar** / **Descargar con fotos**: baja un archivo en este momento (no depende de Cloudflare).
 - **Restaurar desde un respaldo**: sube uno de esos archivos. Primero muestra qué trae.
 - **🌙 Respaldos automáticos de cada noche**: lista los días guardados. En cada uno: **Bajar** (archivo sin fotos),
