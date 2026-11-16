@@ -49,6 +49,7 @@ Casi todos los docs llevan `by: uid` (quién lo creó) y `createdAt: ms`. Fechas
 | `guess` | id = día: `q` (índice en `GUESS_QS`), `<uid>: { me, guess, at }`, `paid?` — «¿Qué respondería tu pareja?»; cada acierto da 5 🪙 a la mascota (`guess.js`) |
 | `push` | id = uid: `subs { <llave>: { endpoint, keys{p256dh,auth}, device, at } }` — un teléfono por elemento (docs/NOTIFICACIONES.md) |
 | `dates` | fechas especiales: `title, date, emoji, yearly, by, createdAt, editedBy?, editedAt?` — tipos en `DATE_KINDS` (`data.js`); se crean/editan con `openFecha` (`calendar.js`), desde el Calendario o Inicio → Fechas |
+| `cooked` | recetas que hicieron (1.1.0): `rid` (receta o null si era del chef sin guardar), `name, emoji, date, at, by, note?, photo?` (foto `cook-<id>` + miniatura `t-cook-<id>` en `photos`) |
 | `shows` | `title, type movie|tv, year, tmdbId, poster, overview, providers[], status want|watching|seen, progress{s,e}, apart? (cada uno a su ritmo), progressBy.<uid>{s,e,at}, ratings, seenAt` |
 | `songs` | `title, artist, url, thumb, preview, apple, cover?(id en photos), why, date, ours, dedication?{by,to,msg,at,seen}` |
 | `reminders` | `text, date, time, for 'ambos'|uid, note, urgent, done, doneAt, doneBy` |

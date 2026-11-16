@@ -72,6 +72,7 @@ function happenings(since = 0) {
   for (const b of S.data.bucket || []) if (b.done && b.doneAt > since) out.push({ at: b.doneAt, e: '✨', joy: `¡Cumplieron «${b.text}» de su bucket list!`, d: `Cumplieron un sueño de la bucket list: ${b.text} ✨` });
   for (const c of S.data.coupons || []) if (c.doneAt > since) out.push({ at: c.doneAt, e: '🎟️', joy: 'Alguien cumplió un cupón. ¡Qué lindos!', d: `${pn(c.fromUid)} cumplió el cupón «${c.text}» 🎟️` });
   for (const m of S.data.moments || []) if (m.createdAt > since) out.push({ at: m.createdAt, e: '📸', joy: `Guardaron un momento nuevo: «${m.title}»`, d: `Guardaron un momento: ${m.title} 📸` });
+  for (const c of S.data.cooked || []) if (c.at > since) out.push({ at: c.at, e: c.emoji || '🍳', joy: `Cocinaron ${c.name}. ¡Huele riquísimo!`, d: `Cocinaron ${c.name}${c.photo ? ' y le tomaron foto' : ''} 🍳` });
   for (const s of S.data.shows || []) if (s.seenAt > since) out.push({ at: s.seenAt, e: '🍿', joy: `Terminaron «${s.title}». ¿La próxima la veo con ustedes?`, d: `Terminaron de ver ${s.title} 🍿` });
   return out.sort((a, b) => b.at - a.at);
 }
@@ -291,6 +292,6 @@ function petHelp() {
     <button class="btn ghost" onclick="closeSheet();go('s-settings')">🔔 Notificaciones</button></div>`);
 }
 
-on('pet moods answers thinks daily activity profiles cravings money bucket coupons moments shows', render);
+on('pet moods answers thinks daily activity profiles cravings money bucket coupons moments shows cooked', render);
 onShow('s-pet', render);
 expose({ adoptPet, eggTalk, hatchPet, petTalk: talk, renamePet, savePetName, petHelp, openPet, petTab, petSlot, buyItem, wearItem, undress, startGame });
