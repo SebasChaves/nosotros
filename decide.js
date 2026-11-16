@@ -1,7 +1,7 @@
 // Decidir: listas con tres modos (al azar, por turnos, match) y la ruleta de ideas de citas.
 import { setDoc, updateDoc, deleteDoc, arrayUnion } from 'https://www.gstatic.com/firebasejs/11.0.2/firebase-firestore.js';
 import { $, S, esc, icon, paint, on, expose, toast, openSheet, closeSheet, write, ref, newRef, animatePick,
-         nameOf, partnerUid, partnerName, uid, ask, celebrate, mainTop } from './core.js';
+         nameOf, partnerUid, partnerName, uid, ask, celebrate, mainTop, softDelete } from './core.js';
 import { DEFAULT_IDEAS, LIST_TEMPLATES } from './data.js';
 
 let tab = 'lists', selList = null, pendingSel = null, mode = null, turns = null, randomResult = null, lastIdea = null;
@@ -152,7 +152,7 @@ function createListFromSheet() {
   createList(name, $('listEmoji').value.trim() || '🤔', []);
   closeSheet();
 }
-async function delList(id) { if (await ask('¿Borrar esta lista para los dos?')) { write(deleteDoc(ref('lists', id))); selList = null; } }
+function delList(id) { softDelete('lists', id, 'la lista', { after: () => { selList = null; } }); }
 function addOption() {
   const l = curList(), v = $('newOption').value.trim();
   if (!l || !v) return;

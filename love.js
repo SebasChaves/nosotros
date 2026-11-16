@@ -1,7 +1,7 @@
 // Detalles: frasco de notas y cupones canjeables.
-import { setDoc, updateDoc, deleteDoc } from 'https://www.gstatic.com/firebasejs/11.0.2/firebase-firestore.js';
+import { setDoc, updateDoc, deleteDoc, deleteField } from 'https://www.gstatic.com/firebasejs/11.0.2/firebase-firestore.js';
 import { $, S, esc, icon, paint, on, onShow, expose, toast, openSheet, closeSheet, write, ref, newRef, pick,
-         fmtDate, fmtShort, nameOf, partnerName, myName, plural, uid, avatar, loadPhotos, ask, celebrate, markActive, mainTop, todayKey, parseDate } from './core.js';
+         fmtDate, fmtShort, nameOf, partnerName, myName, plural, uid, avatar, loadPhotos, ask, celebrate, markActive, mainTop, todayKey, parseDate, softDelete } from './core.js';
 import { COUPON_TEMPLATES } from './data.js';
 import { notify, meForPartner } from './push.js';
 
@@ -46,6 +46,7 @@ function renderNotes() {
     <div class="glass"><h2>Notas que escribiste</h2>
       <ul class="list" style="margin-top:6px">${mine.length ? mine.map(n => `<li><div class="txt">${esc(n.text)}<span class="sub">${fmtDate(new Date(n.createdAt))}${n.showAt ? ` · le llega el ${new Date(n.showAt).toLocaleString('es', { day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit' })}` : ''}</span></div>
         <span class="pill ${n.readAt ? 'ok' : ''}">${n.readAt ? 'Leída' : arrived(n) ? 'Sin leer' : '⏰ Programada'}</span>
+        ${!n.readAt ? `<button class="del" aria-label="Editar nota" onclick="editNote('${n.id}')">${icon('edit')}</button>` : ''}
         <button class="del" aria-label="Borrar nota" onclick="delNote('${n.id}')">${icon('trash')}</button></li>`).join('')
         : '<li class="empty">Todavía no escribes ninguna</li>'}</ul></div>`);
   loadPhotos($('loveBody'));
@@ -70,7 +71,25 @@ function drawNote() {
     <p class="small muted" style="margin:0">De ${esc(fromLabel(n))} · escrita el ${fmtDate(new Date(n.createdAt))}${unread.length ? '' : ' · ya leíste todas, esta es repetida'}</p>
     <button class="btn" onclick="closeSheet()">${icon('heart-f')} Gracias</button></div>`);
 }
-async function delNote(id) { if (await ask('¿Borrar esta nota?')) write(deleteDoc(ref('notes', id))); }
+function delNote(id) { softDelete('notes', id, 'la nota'); }
+// Mientras no la lea, se puede corregir el texto o cambiar cuándo le llega.
+function editNote(id) {
+  const n = S.data.notes.find(x => x.id === id); if (!n || n.readAt) return;
+  openSheet(`<div class="stack"><h2>Editar nota</h2>
+    <textarea id="enText" maxlength="500" aria-label="Nota">${esc(n.text)}</textarea>
+    ${n.showAt && !arrived(n) ? `<div><label class="f">Le llega</label><div class="grid2"><input type="date" id="enDay" min="${todayKey()}" value="${n.showDay || ''}" aria-label="Día"><input type="time" id="enTime" value="${n.showTime || '08:00'}" aria-label="Hora"></div></div>` : ''}
+    <button class="btn" onclick="saveNoteEdit('${id}')">Guardar cambios</button></div>`);
+}
+function saveNoteEdit(id) {
+  const text = $('enText').value.trim(); if (!text) return toast('La nota no puede quedar vacía');
+  const patch = { text };
+  if ($('enDay')) {
+    const day = $('enDay').value, time = $('enTime').value || '08:00', showAt = day ? new Date(`${day}T${time}`).getTime() : 0;
+    if (!day || showAt <= Date.now()) return toast('Elige una fecha y hora que todavía no haya pasado');
+    Object.assign(patch, { showAt, showDay: day, showTime: time });
+  }
+  write(updateDoc(ref('notes', id), patch)); closeSheet(); toast('Nota corregida ✓');
+}
 
 /* ---------- Cupones ---------- */
 const expired = c => c.expires && !c.redeemedAt && c.expires < todayKey();
@@ -104,6 +123,7 @@ function renderCoupons() {
       ${mine.length ? mine.map(c => `<div class="ticket ${c.doneAt ? 'used' : ''}"><div class="e">${esc(c.emoji)}</div>
         <div class="txt">${esc(c.text)}<small>${c.redeemedAt && !c.doneAt ? `¡${pn} lo canjeó! Te toca cumplir` : couponStatus(c)}</small></div>
         ${c.redeemedAt && !c.doneAt ? `<button class="btn small" onclick="fulfillCoupon('${c.id}')">${icon('check')} Cumplido</button>` : ''}
+        ${!c.redeemedAt ? `<button class="del" aria-label="Editar cupón" onclick="editCoupon('${c.id}')">${icon('edit')}</button>` : ''}
         ${!c.redeemedAt ? `<button class="del" aria-label="Borrar cupón" onclick="delCoupon('${c.id}')">${icon('trash')}</button>` : ''}</div>`).join('')
         : '<p class="empty">Todavía no regalas cupones</p>'}</div>`);
 }
@@ -129,11 +149,24 @@ function fulfillCoupon(id) {
   const c = S.data.coupons.find(x => x.id === id);
   notify('coupons', { title: `✅ ${meForPartner()} cumplió el cupón`, body: c ? `${c.emoji || ''} ${c.text}`.trim() : '', url: './?open=coupons', tag: 'coupon-' + id });
 }
-async function delCoupon(id) { if (await ask('¿Borrar este cupón?')) write(deleteDoc(ref('coupons', id))); }
+function delCoupon(id) { softDelete('coupons', id, 'el cupón'); }
+function editCoupon(id) {
+  const c = S.data.coupons.find(x => x.id === id); if (!c || c.redeemedAt) return;
+  openSheet(`<div class="stack"><h2>Editar cupón</h2>
+    <div class="add-row"><input id="ecEmoji" style="flex:0 0 60px;text-align:center" value="${esc(c.emoji || '🎟️')}" maxlength="4" aria-label="Emoji">
+      <input id="ecText" value="${esc(c.text)}" maxlength="90" aria-label="Cupón"></div>
+    <div class="row" style="gap:8px"><label class="small muted" for="ecExp" style="white-space:nowrap">Vence (opcional)</label><input type="date" id="ecExp" min="${todayKey()}" value="${c.expires || ''}"></div>
+    <button class="btn" onclick="saveCouponEdit('${id}')">Guardar cambios</button></div>`);
+}
+function saveCouponEdit(id) {
+  const text = $('ecText').value.trim(); if (!text) return toast('Escribe el cupón');
+  write(updateDoc(ref('coupons', id), { text, emoji: $('ecEmoji').value.trim() || '🎟️', expires: $('ecExp').value || deleteField() }));
+  closeSheet(); toast('Cupón actualizado ✓');
+}
 function markCouponsSeen() {
   for (const c of S.data.coupons) if (c.fromUid !== uid() && !c.seenAt) write(updateDoc(ref('coupons', c.id), { seenAt: Date.now() }));
 }
 
 on('notes coupons profiles', render);
 onShow('s-love', () => { if (tab === 'coupons') markCouponsSeen(); });
-expose({ loveTab, drawNote, addNote, delNote, useCouponTpl, addCoupon, redeemCoupon, fulfillCoupon, delCoupon });
+expose({ loveTab, drawNote, addNote, delNote, editNote, saveNoteEdit, editCoupon, saveCouponEdit, useCouponTpl, addCoupon, redeemCoupon, fulfillCoupon, delCoupon });

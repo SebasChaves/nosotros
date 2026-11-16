@@ -1,7 +1,7 @@
 // Momentos: línea de tiempo con fotos.
 import { writeBatch } from 'https://www.gstatic.com/firebasejs/11.0.2/firebase-firestore.js';
 import { $, S, db, esc, icon, paint, on, onShow, expose, toast, openSheet, closeSheet, write, ref, newRef,
-         loadPhotos, cachePhoto, compressImage, photoError, makeThumb, thumbId, parseDate, fmtDate, todayKey, nameOf, uid, ask, mainTop } from './core.js';
+         loadPhotos, cachePhoto, compressImage, photoError, makeThumb, thumbId, parseDate, fmtDate, todayKey, nameOf, uid, ask, mainTop, softDelete } from './core.js';
 import { dailyHTML, myDailyDone, partnerDailyDone } from './daily.js';
 import { snapsHTML, unseenSnaps } from './snaps.js';
 import { placeField, initPlace, getPlace, placeFromPhoto } from './location.js';
@@ -35,7 +35,8 @@ function render() {
       <div class="body"><div class="title">${esc(m.title)}</div>${m.note ? `<div class="note">${esc(m.note)}</div>` : ''}
       ${m.place ? `<button class="link place-link" onclick="showOnMap(${m.place.lat},${m.place.lng})">📍 ${esc(m.place.name)}</button>` : ''}
       <div class="row" style="margin-top:8px"><span class="tiny muted">${fmtDate(parseDate(m.date))} · ${esc(nameOf(m.by))}</span>
-      <button class="del" aria-label="Borrar momento" onclick="delMoment('${m.id}')">${icon('trash')}</button></div></div></div>`;
+      <span class="row" style="gap:2px"><button class="del" aria-label="Editar momento" onclick="openMoment('${m.id}')">${icon('edit')}</button>
+      <button class="del" aria-label="Borrar momento" onclick="delMoment('${m.id}')">${icon('trash')}</button></span></div></div></div>`;
   }
   paint('s-moments', html);
   loadPhotos($('s-moments'));
@@ -45,18 +46,22 @@ let momTimer = null;
 function momSearch(v) { mq = v; clearTimeout(momTimer); momTimer = setTimeout(() => { render(); const i = $('momQ'); if (i) { i.focus(); i.setSelectionRange(i.value.length, i.value.length); } }, 300); }
 function momYear(y) { my = y; render(); }
 
-let pendingPhoto = null;
-function openMoment() {
+let pendingPhoto = null, editing = null;
+// Sin id: momento nuevo. Con id: editar título, fecha, lugar, nota y cambiar (o poner) la foto.
+function openMoment(id) {
   pendingPhoto = null;
-  openSheet(`<div class="stack"><h2>Nuevo momento</h2>
-    <label class="photo-pick" id="photoPick">${icon('photo', 'ic lg')}<span>Agregar foto (opcional)</span>
+  const m = id && S.data.moments.find(x => x.id === id); editing = m ? id : null;
+  openSheet(`<div class="stack"><h2>${m ? 'Editar momento' : 'Nuevo momento'}</h2>
+    <label class="photo-pick" id="photoPick">${m?.hasPhoto ? `<img data-thumb="${m.id}" alt="">` : `${icon('photo', 'ic lg')}<span>Agregar foto (opcional)</span>`}
       <input type="file" accept="image/*" id="momentPhoto" hidden onchange="pickPhoto(this)"></label>
-    <div><label class="f" for="momentTitle">¿Qué pasó?</label><input id="momentTitle" data-fresh maxlength="80" placeholder="Ej: Nuestro primer viaje juntos"></div>
-    <div><label class="f" for="momentDate">Fecha</label><input type="date" id="momentDate" data-fresh value="${todayKey()}"></div>
+    ${m?.hasPhoto ? '<p class="tiny muted" style="margin:-6px 0 0;text-align:center">Toca la foto para cambiarla</p>' : ''}
+    <div><label class="f" for="momentTitle">¿Qué pasó?</label><input id="momentTitle" data-fresh maxlength="80" placeholder="Ej: Nuestro primer viaje juntos" value="${esc(m?.title || '')}"></div>
+    <div><label class="f" for="momentDate">Fecha</label><input type="date" id="momentDate" data-fresh value="${m?.date || todayKey()}"></div>
     ${placeField('momPlace')}
-    <div><label class="f" for="momentNote">Nota (opcional)</label><textarea id="momentNote" data-fresh maxlength="600" placeholder="Lo que no quieren olvidar…"></textarea></div>
-    <button class="btn" id="momentSave" onclick="saveMoment()">Guardar momento</button></div>`);
-  initPlace('momPlace');
+    <div><label class="f" for="momentNote">Nota (opcional)</label><textarea id="momentNote" data-fresh maxlength="600" placeholder="Lo que no quieren olvidar…">${esc(m?.note || '')}</textarea></div>
+    <button class="btn" id="momentSave" onclick="saveMoment()">${m ? 'Guardar cambios' : 'Guardar momento'}</button></div>`);
+  initPlace('momPlace', m?.place || null);
+  if (m?.hasPhoto) loadPhotos($('photoPick'));
 }
 async function pickPhoto(input) {
   const f = input.files[0]; input.value = '';
@@ -70,27 +75,29 @@ async function pickPhoto(input) {
     box.querySelector('img')?.remove();
     const img = document.createElement('img'); img.src = pendingPhoto; img.alt = ''; box.prepend(img);
   } catch (e) { photoError(e); }
-  finally { btn.disabled = false; btn.textContent = 'Guardar momento'; }
+  finally { btn.disabled = false; btn.textContent = editing ? 'Guardar cambios' : 'Guardar momento'; }
 }
 async function saveMoment() {
   const title = $('momentTitle').value.trim(), date = $('momentDate').value;
   if (!title || !date) return toast('Pon qué pasó y la fecha');
   $('momentSave').disabled = true;
-  const r = newRef('moments'), batch = writeBatch(db);
+  const r = editing ? ref('moments', editing) : newRef('moments'), batch = writeBatch(db);
+  const old = editing && S.data.moments.find(x => x.id === editing);
   if (pendingPhoto) {
     const thumb = await makeThumb(pendingPhoto).catch(() => null);
     batch.set(ref('photos', r.id), { data: pendingPhoto }); cachePhoto(r.id, pendingPhoto);
     if (thumb) { batch.set(ref('photos', thumbId(r.id)), { data: thumb }); cachePhoto(thumbId(r.id), thumb); }
+    else if (old?.hasPhoto) batch.delete(ref('photos', thumbId(r.id))); // se vuelve a crear de la foto nueva al verla
   }
-  batch.set(r, { title, date, note: $('momentNote').value.trim(), hasPhoto: !!pendingPhoto, place: getPlace('momPlace'), by: uid(), createdAt: Date.now() });
+  const fields = { title, date, note: $('momentNote').value.trim(), hasPhoto: !!pendingPhoto || !!old?.hasPhoto, place: getPlace('momPlace') };
+  if (old) batch.update(r, { ...fields, editedAt: Date.now() });
+  else batch.set(r, { ...fields, by: uid(), createdAt: Date.now() });
   write(batch.commit());
-  pendingPhoto = null; closeSheet(); toast('Momento guardado');
+  pendingPhoto = null; closeSheet(); toast(old ? 'Cambios guardados' : 'Momento guardado'); editing = null;
 }
-async function delMoment(id) {
-  if (!await ask('¿Borrar este momento para los dos?')) return;
-  const batch = writeBatch(db);
-  batch.delete(ref('moments', id)); batch.delete(ref('photos', id)); batch.delete(ref('photos', thumbId(id)));
-  write(batch.commit());
+function delMoment(id) {
+  // Las fotos se borran solo si no tocan «Deshacer»
+  softDelete('moments', id, 'el momento', { photos: [id, thumbId(id)] });
 }
 
 /* ---------- Galería ---------- */

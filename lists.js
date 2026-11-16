@@ -1,6 +1,6 @@
 // Bucket list y lista del súper.
 import { setDoc, updateDoc, deleteDoc, writeBatch, increment } from 'https://www.gstatic.com/firebasejs/11.0.2/firebase-firestore.js';
-import { $, S, db, esc, icon, paint, on, expose, toast, write, ref, newRef, fmtDate, nameOf, uid, ask, celebrate, partnerUid, partnerName, profile, openSheet, closeSheet, todayKey, compressImage, photoError, makeThumb, thumbId, cachePhoto } from './core.js';
+import { $, S, db, esc, icon, paint, on, expose, toast, write, ref, newRef, fmtDate, nameOf, uid, ask, celebrate, partnerUid, partnerName, profile, openSheet, closeSheet, todayKey, compressImage, photoError, makeThumb, thumbId, cachePhoto, softDelete, swipeHint } from './core.js';
 import { notify, meForPartner } from './push.js';
 import { GROCERY_TPL } from './data.js';
 
@@ -18,7 +18,7 @@ function renderBucket() {
     <div class="glass"><div class="add-row"><input id="newBucket" placeholder="Algo que queremos hacer juntos…" maxlength="120" aria-label="Nuevo sueño" onkeydown="if(event.key==='Enter')addBucket()">
       <button class="btn" aria-label="Agregar" onclick="addBucket()">${icon('plus')}</button></div></div>
     <div class="glass"><ul class="list">${items.length ? items.map(b => `
-      <li class="${b.done ? 'done' : ''}"><button class="check-btn" aria-label="${b.done ? 'Desmarcar' : 'Marcar cumplida'}" onclick="toggleBucket('${b.id}')">${b.done ? icon('check') : ''}</button>
+      <li class="${b.done ? 'done' : ''}" data-swr="toggleBucket|${b.id}" data-swl="delBucket|${b.id}"><button class="check-btn" aria-label="${b.done ? 'Desmarcar' : 'Marcar cumplida'}" onclick="toggleBucket('${b.id}')">${b.done ? icon('check') : ''}</button>
         <div class="txt"><span class="main">${esc(b.text)}</span><span class="sub">${b.doneAt ? `Cumplida el ${fmtDate(new Date(b.doneAt))}` : `Agregado por ${esc(nameOf(b.by))}`}</span></div>
         <button class="del" aria-label="Borrar" onclick="delBucket('${b.id}')">${icon('trash')}</button></li>`).join('')
       : '<li class="empty">Agreguen su primer sueño juntos</li>'}</ul></div>`);
@@ -56,7 +56,7 @@ async function bucketMoment(id, f) {
   batch.update(ref('bucket', id), { moment: r.id });
   write(batch.commit()); closeSheet(); toast('Guardado en Momentos 📸');
 }
-async function delBucket(id) { if (await ask('¿Borrar este elemento? Se borra para los dos.')) write(deleteDoc(ref('bucket', id))); }
+function delBucket(id) { softDelete('bucket', id, 'el elemento'); }
 
 /* ---------- Súper ----------
    La lista se ordena por pasillo (se adivina por la palabra: «leche» → Lácteos). «Voy al súper» le avisa a la pareja
@@ -82,7 +82,7 @@ function renderGrocery() {
   const names = new Set(pending.map(g => g.text.toLowerCase()));
   const p = partnerUid(), meThere = atSuper(uid()), themThere = atSuper(p);
   const groups = [...AISLES.map((a, i) => [a[0], a[1], pending.filter(g => aisleOf(g.text) === i)]), ['🛒', 'Otros', pending.filter(g => aisleOf(g.text) < 0)]].filter(g => g[2].length);
-  const item = g => `<li><button class="check-btn" aria-label="Marcar comprado" onclick="toggleGrocery('${g.id}')"></button>
+  const item = g => `<li data-swr="toggleGrocery|${g.id}" data-swl="delGrocery|${g.id}"><button class="check-btn" aria-label="Marcar comprado" onclick="toggleGrocery('${g.id}')"></button>
         <div class="txt"><span class="main">${esc(g.text)}</span><span class="sub">${esc(nameOf(g.by))}</span></div>
         <button class="del" aria-label="Borrar" onclick="delGrocery('${g.id}')">${icon('x')}</button></li>`;
   paint('s-grocery', `${backBar('Súper')}
@@ -91,10 +91,10 @@ function renderGrocery() {
     <div class="glass stack"><div class="add-row"><input id="newGrocery" placeholder="¿Qué hace falta?" maxlength="60" aria-label="Producto" onkeydown="if(event.key==='Enter')addGrocery()">
       <button class="btn" aria-label="Agregar" onclick="addGrocery()">${icon('plus')}</button></div>
       <div class="chips scroll">${GROCERY_TPL.filter(t => !names.has(t.toLowerCase())).map(t => `<button class="chip" onclick="addGrocery('${esc(t)}')">${icon('plus')} ${esc(t)}</button>`).join('')}</div></div>
-    <div class="glass"><div class="row"><h2>Por comprar</h2><span class="pill">${pending.length}</span></div>
+    <div class="glass"><div class="row"><h2>Por comprar</h2><span class="pill">${pending.length}</span></div>${pending.length ? swipeHint('marcar comprado') : ''}
       ${pending.length ? groups.map(([e, l, items]) => `<p class="label aisle">${e} ${l}</p><ul class="list">${items.map(item).join('')}</ul>`).join('') : '<ul class="list" style="margin-top:6px"><li class="empty">¡Nada pendiente!</li></ul>'}</div>
     ${bought.length ? `<div class="glass"><div class="row"><h2>En el carrito</h2><button class="link" onclick="clearBought()">Vaciar</button></div>
-      <ul class="list" style="margin-top:6px">${bought.map(g => `<li class="done"><button class="check-btn" aria-label="Desmarcar" onclick="toggleGrocery('${g.id}')">${icon('check')}</button>
+      <ul class="list" style="margin-top:6px">${bought.map(g => `<li class="done" data-swr="toggleGrocery|${g.id}" data-swl="delGrocery|${g.id}"><button class="check-btn" aria-label="Desmarcar" onclick="toggleGrocery('${g.id}')">${icon('check')}</button>
         <div class="txt"><span class="main">${esc(g.text)}</span></div></li>`).join('')}</ul>
       <button class="btn ghost small" style="width:100%;margin-top:8px" onclick="superToMoney()">💸 Anotar la compra en Gastos</button></div>` : ''}`);
 }
@@ -115,7 +115,7 @@ function toggleGrocery(id) {
   const g = S.data.groceries.find(x => x.id === id); if (!g) return;
   write(updateDoc(ref('groceries', id), { done: !g.done, doneAt: g.done ? null : Date.now() }));
 }
-function delGrocery(id) { write(deleteDoc(ref('groceries', id))); }
+function delGrocery(id) { softDelete('groceries', id, 'el artículo'); }
 function clearBought() {
   const batch = writeBatch(db);
   S.data.groceries.filter(g => g.done).forEach(g => batch.delete(ref('groceries', g.id)));

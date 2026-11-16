@@ -7,7 +7,7 @@
 import { setDoc, updateDoc, deleteDoc, writeBatch, increment } from 'https://www.gstatic.com/firebasejs/11.0.2/firebase-firestore.js';
 import { $, S, db, esc, icon, paint, on, onShow, expose, toast, openSheet, closeSheet, write, ref, newRef, loadPhotos, cachePhoto,
          getPhoto, compressImage, makeThumb, thumbId, photoError, dayKey, todayKey, parseDate, fmtShort, nameOf, partnerUid,
-         partnerName, plural, uid, ask, celebrate, animatePick, markActive, countStat } from './core.js';
+         partnerName, plural, uid, ask, celebrate, animatePick, markActive, countStat, softDelete } from './core.js';
 import { backBar } from './lists.js';
 import { notify, meForPartner } from './push.js';
 import { pet } from './pet.js';
@@ -272,12 +272,13 @@ async function saveCravingMoment(id) {
   b.update(ref('cravings', id), { savedMoment: r.id });
   write(b.commit()); toast('Guardado en Momentos 📚');
 }
-async function delCraving(id, quiet) {
+function delCraving(id, quiet) {
   const c = all().find(x => x.id === id); if (!c) return;
-  if (!quiet && !(await ask(c.done ? '¿Borrar este antojo del historial?' : '¿Borrar este antojo?'))) return;
+  const photos = [cravePhotoId(id), cravedPhotoId(id)].flatMap(pid => [pid, thumbId(pid)]);
+  if (!quiet) return softDelete('cravings', id, 'el antojo', { photos });
   const b = writeBatch(db);
   b.delete(ref('cravings', id));
-  for (const pid of [cravePhotoId(id), cravedPhotoId(id)]) { b.delete(ref('photos', pid)); b.delete(ref('photos', thumbId(pid))); }
+  for (const pid of photos) b.delete(ref('photos', pid));
   write(b.commit());
 }
 

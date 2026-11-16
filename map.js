@@ -1,7 +1,7 @@
 // Mapa de nosotros: pines de los lugares donde han estado. Mapa de OpenStreetMap con Leaflet (sin claves).
 import { setDoc, deleteDoc } from 'https://www.gstatic.com/firebasejs/11.0.2/firebase-firestore.js';
 import { $, S, esc, icon, paint, on, onShow, expose, go, toast, openSheet, closeSheet, write, ref, newRef, ask, celebrate,
-         todayKey, parseDate, fmtShort, nameOf, plural, uid } from './core.js';
+         todayKey, parseDate, fmtShort, nameOf, plural, uid, softDelete } from './core.js';
 import { backBar } from './lists.js';
 import { myDailyDone } from './daily.js';
 import { loadLeaflet, placeField, initPlace } from './location.js';
@@ -137,7 +137,7 @@ function savePin() {
   if (newCountry) celebrate();
   setTimeout(() => map?.flyTo([draft.lat, draft.lng], 13), 300);
 }
-async function delPin(id) { if (await ask('¿Quitar este lugar del mapa?')) { write(deleteDoc(ref('pins', id))); map?.closePopup(); } }
+function delPin(id) { softDelete('pins', id, 'el lugar del mapa', { after: () => map?.closePopup() }); }
 
 on('pins moments daily places', () => { if ($('mapBox') && $('s-map').classList.contains('active')) render(); });
 onShow('s-map', render);

@@ -2,7 +2,7 @@
 // Para que suene una alarma aunque la app esté cerrada, se pueden pasar al calendario del teléfono (con alarma).
 import { setDoc, updateDoc, deleteDoc } from 'https://www.gstatic.com/firebasejs/11.0.2/firebase-firestore.js';
 import { $, S, esc, icon, paint, on, onShow, expose, toast, openSheet, closeSheet, write, ref, newRef, ask, ANDROID,
-         parseDate, todayKey, dayKey, today, fmtDay, nameOf, partnerUid, uid } from './core.js';
+         parseDate, todayKey, dayKey, today, fmtDay, nameOf, partnerUid, uid, softDelete, swipeHint } from './core.js';
 import { backBar } from './lists.js';
 
 let editing = null, showDone = false;
@@ -34,12 +34,12 @@ const whoTxt = r => !r.for || r.for === 'ambos' ? 'Los dos' : r.for === uid() ? 
 function render() {
   const pending = S.data.reminders.filter(r => !r.done).sort((a, b) => (b.urgent ? 1 : 0) - (a.urgent ? 1 : 0) || (a.date + (a.time || '')).localeCompare(b.date + (b.time || '')));
   const done = S.data.reminders.filter(r => r.done).sort((a, b) => (b.doneAt || 0) - (a.doneAt || 0));
-  const item = r => `<li class="${r.done ? 'done' : ''}"><button class="check-btn ${r.done ? 'on' : ''}" aria-label="${r.done ? 'Marcar pendiente' : 'Marcar hecho'}" onclick="toggleReminder('${r.id}')">${r.done ? icon('check') : ''}</button>
+  const item = r => `<li class="${r.done ? 'done' : ''}" data-swr="toggleReminder|${r.id}" data-swl="delReminder|${r.id}"><button class="check-btn ${r.done ? 'on' : ''}" aria-label="${r.done ? 'Marcar pendiente' : 'Marcar hecho'}" onclick="toggleReminder('${r.id}')">${r.done ? icon('check') : ''}</button>
     <div class="txt" role="button" tabindex="0" style="cursor:pointer" onclick="openReminder('${r.id}')"><span class="main">${r.urgent && !r.done ? '<span class="urg-tag">Urgente</span> ' : ''}${esc(r.text)}</span>
       <span class="sub" style="${!r.done && r.date < todayKey() ? 'color:#FF7A9C' : ''}">${esc(whenTxt(r))} · ${esc(whoTxt(r))}${esc(repTxt(r))}${r.note ? ' · ' + esc(r.note) : ''}</span></div>
     ${r.done ? '' : `<button class="del" aria-label="Alarma en mi calendario" onclick="reminderAlarm('${r.id}')">🔔</button>`}</li>`;
   paint('s-reminders', `${backBar('Recordatorios', 's-more', `<button class="btn small" onclick="openReminder()">${icon('plus')} Nuevo</button>`)}
-    <div class="glass"><ul class="list">${pending.length ? pending.map(item).join('') : '<li class="empty">Nada pendiente ✨</li>'}</ul></div>
+    <div class="glass"><ul class="list">${pending.length ? pending.map(item).join('') : '<li class="empty">Nada pendiente ✨</li>'}</ul>${pending.length ? swipeHint('marcar hecho') : ''}</div>
     <p class="tiny muted center" style="margin:0">Aparecen en Hoy desde su fecha. Toca 🔔 para ponerlo en el calendario del teléfono con alarma.</p>
     ${done.length ? `<button class="link" onclick="toggleDoneList()">${showDone ? 'Ocultar' : 'Ver'} hechos (${done.length})</button>
       ${showDone ? `<div class="glass"><ul class="list">${done.slice(0, 30).map(item).join('')}</ul></div>` : ''}` : ''}`);
@@ -93,7 +93,7 @@ function snoozeReminder(id, k) {
   write(updateDoc(ref('reminders', id), { date, time }));
   closeSheet(); toast(`⏰ Pospuesto: ${whenTxt({ ...r, date, time })}`);
 }
-async function delReminder(id) { if (await ask('¿Borrar este recordatorio?')) { write(deleteDoc(ref('reminders', id))); closeSheet(); } }
+function delReminder(id) { softDelete('reminders', id, 'el recordatorio', { after: closeSheet }); }
 
 // Archivo de calendario con alarma a la hora del recordatorio (o a las 9:00 si no tiene hora).
 async function reminderAlarm(id) {

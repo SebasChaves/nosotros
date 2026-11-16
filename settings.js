@@ -3,7 +3,7 @@ import { setDoc, deleteDoc, writeBatch, getDocs } from 'https://www.gstatic.com/
 import { signOut } from 'https://www.gstatic.com/firebasejs/11.0.2/firebase-auth.js';
 import { $, S, db, auth, esc, icon, paint, on, onShow, expose, toast, write, ref, col, privRef, coupleRef, go,
          COLLECTIONS, PRIVATE, cachePhoto, forgetPhoto, compressImage, photoError, loadPhotos, parseDate, today, dayKey,
-         fmtMoney, nameOf, partnerUid, partnerName, myName, profile, plural, uid, avatar, ask, inBar, gateOn } from './core.js';
+         fmtMoney, nameOf, partnerUid, partnerName, myName, profile, plural, uid, avatar, ask, inBar, gateOn, softDelete } from './core.js';
 import { ACCENTS, CURRENCIES, accentFromColor } from './data.js';
 import { backBar, groceryPending } from './lists.js';
 import { balance } from './money.js';
@@ -245,7 +245,7 @@ function removeBg() {
   batch.set(ref('profiles', uid()), { prefs: { bg: false } }, { merge: true });
   forgetPhoto(`bg-${uid()}`); write(batch.commit());
 }
-function delIdea(id) { write(deleteDoc(ref('ideas', id))); }
+function delIdea(id) { softDelete('ideas', id, 'la idea'); }
 async function logout() { if (await ask('¿Cerrar sesión en este teléfono?')) { go('s-home'); signOut(auth); } }
 
 /* ---------- Respaldo ---------- */

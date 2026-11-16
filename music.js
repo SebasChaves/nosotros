@@ -2,7 +2,7 @@
 // Las portadas y los adelantos vienen de la búsqueda pública de Apple (iTunes Search, sin clave).
 import { setDoc, updateDoc, deleteDoc, writeBatch } from 'https://www.gstatic.com/firebasejs/11.0.2/firebase-firestore.js';
 import { $, S, db, esc, icon, paint, on, onShow, expose, toast, openSheet, closeSheet, write, ref, newRef, ask, pick, celebrate, go, markActive,
-         loadPhotos, cachePhoto, compressImage, photoError, todayKey, parseDate, fmtShort, nameOf, partnerUid, partnerName, uid } from './core.js';
+         loadPhotos, cachePhoto, compressImage, photoError, todayKey, parseDate, fmtShort, nameOf, partnerUid, partnerName, uid, softDelete } from './core.js';
 import { backBar } from './lists.js';
 import { notify, meForPartner } from './push.js';
 
@@ -138,11 +138,9 @@ function saveSong() {
   closeSheet(); toast(old ? 'Cambios guardados' : 'Canción agregada'); if (!old) celebrate('hearts');
   editing = null; newCover = null;
 }
-async function delSong(id) {
-  if (!(await ask('¿Quitar esta canción?'))) return;
+function delSong(id) {
   const s = S.data.songs.find(x => x.id === id);
-  write(deleteDoc(ref('songs', id))); if (s?.cover) write(deleteDoc(ref('photos', s.cover)));
-  closeSheet();
+  softDelete('songs', id, 'la canción', { photos: [s?.cover], after: closeSheet });
 }
 
 /* ---------- Dedicar ---------- */

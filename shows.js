@@ -1,7 +1,7 @@
 // Películas y series: por ver, viendo y vistas. Con clave de TMDB busca títulos con póster y dónde verlos.
 import { setDoc, updateDoc, deleteDoc, increment } from 'https://www.gstatic.com/firebasejs/11.0.2/firebase-firestore.js';
 import { $, S, esc, icon, paint, on, expose, toast, openSheet, closeSheet, write, ref, newRef, go,
-         nameOf, partnerUid, uid, ask } from './core.js';
+         nameOf, partnerUid, uid, ask, softDelete } from './core.js';
 import { TMDB_KEY } from './tmdb-config.js';
 import { backBar } from './lists.js';
 import { createList } from './decide.js';
@@ -202,7 +202,7 @@ function stepShow(id, k, d) {
   write(updateDoc(ref('shows', id), { progress: p }));
 }
 function rateShow(id, n) { write(updateDoc(ref('shows', id), { [`ratings.${uid()}`]: n })); }
-async function delShow(id) { if (await ask('¿Quitar de la lista?')) { write(deleteDoc(ref('shows', id))); openId = null; closeSheet(); } }
+function delShow(id) { softDelete('shows', id, 'la peli o serie', { after: () => { openId = null; closeSheet(); } }); }
 
 // Manda las pendientes a Decidir para elegir con match, al azar o por turnos.
 function showsToDecide() {

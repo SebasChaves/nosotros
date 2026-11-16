@@ -11,7 +11,7 @@
 //   money/g-<ts> { kind:'goal', name, emoji, target, saved, at, by, log[{ by, amount, at, auto }] }.
 import { setDoc, deleteDoc, updateDoc, increment, arrayUnion, runTransaction } from 'https://www.gstatic.com/firebasejs/11.0.2/firebase-firestore.js';
 import { $, S, db, esc, icon, paint, on, expose, toast, openSheet, closeSheet, write, ref, newRef, go, IOS, ANDROID,
-         parseDate, fmtShort, todayKey, dayKey, fmtMoney, nameOf, partnerUid, partnerName, uid, ask, celebrate, markActive } from './core.js';
+         parseDate, fmtShort, todayKey, dayKey, fmtMoney, nameOf, partnerUid, partnerName, uid, ask, celebrate, markActive, undoBar, softDelete } from './core.js';
 import { EXPENSE_CATS } from './data.js';
 import { backBar } from './lists.js';
 import { notify, meForPartner } from './push.js';
@@ -101,7 +101,7 @@ function render() {
   const row = e => {
     const [ce, cl] = e.type === 'settle' ? ['🤝', 'Pago'] : catOf(e.cat);
     const trip = e.tripId && S.data.trips.find(t => t.id === e.tripId);
-    return `<li><span style="font-size:22px">${ce}</span><div class="txt" role="button" tabindex="0" style="cursor:pointer" ${e.type === 'settle' ? '' : `onclick="openExpense({id:'${e.id}'})"`}>${esc(e.type === 'settle' ? `${nameOf(e.paidBy)} saldó cuentas` : e.desc || cl)}
+    return `<li ${e.type === 'settle' ? '' : `data-swr="editExpense|${e.id}"`} data-swl="delExpense|${e.id}"><span style="font-size:22px">${ce}</span><div class="txt" role="button" tabindex="0" style="cursor:pointer" ${e.type === 'settle' ? '' : `onclick="openExpense({id:'${e.id}'})"`}>${esc(e.type === 'settle' ? `${nameOf(e.paidBy)} saldó cuentas` : e.desc || cl)}
       <span class="sub">${fmtShort(parseDate(e.date))} · ${e.type === 'settle' ? '' : `pagó ${esc(nameOf(e.paidBy))} · ${esc(debtTxt(e.split || 'half', e.paidBy, e.amount))}`}${trip ? ` · ${esc(trip.name)}` : ''}</span></div>
       <b class="num">${fmtMoney(e.amount)}</b><button class="del" aria-label="Borrar" onclick="delExpense('${e.id}')">${icon('trash')}</button></li>`;
   };
@@ -231,7 +231,7 @@ function qsSave(cat) {
     ...(o ? { outing: o.oid, outName: o.name } : {}) };
   write(setDoc(r, data)); markActive();
   closeSheet(); Q = null; navigator.vibrate?.(12);
-  undoBar(`Anotado ${fmtMoney(amount)} en ${catOf(cat)[1]}${o ? ' · ' + o.name : ''} · ${debtTxt(data.split, data.paidBy, amount)}`, () => write(deleteDoc(r)));
+  undoBar(`Anotado ${fmtMoney(amount)} en ${catOf(cat)[1]}${o ? ' · ' + o.name : ''} · ${debtTxt(data.split, data.paidBy, amount)}`, () => write(deleteDoc(r)), { undoneMsg: 'Listo, no se anotó' });
   setTimeout(() => afterSpend(data, before), 600);
 }
 // Avisos suaves: salida que pasó su límite y presupuesto de la semana al 80 % o pasado
@@ -254,17 +254,6 @@ function afterSpend(e, before) {
   if (cross(1)) toast('🔴 Se pasaron del presupuesto de la semana');
   else if (cross(0.8)) toast(`🟡 Ya van por el 80 %: quedan ${fmtMoney(w.left)}`);
 }
-// Barra de abajo con «Deshacer» (en vez de preguntar antes de guardar)
-function undoBar(text, undo) {
-  $('undoBar')?.remove();
-  const el = document.createElement('div'); el.id = 'undoBar'; el.className = 'undo-bar'; el.setAttribute('role', 'status');
-  el.innerHTML = `<span>${esc(text)}</span><button>Deshacer</button>`;
-  let done = false;
-  el.querySelector('button').onclick = () => { if (done) return; done = true; undo(); el.remove(); toast('Listo, no se anotó'); };
-  document.body.appendChild(el);
-  setTimeout(() => { el.classList.add('out'); setTimeout(() => el.remove(), 300); }, 5000);
-}
-
 /* ---------- Formulario completo (viajes y detalles) ---------- */
 let editingEx = null;
 export function openExpense(preset = {}) {
@@ -320,7 +309,8 @@ async function settleUp() {
   write(setDoc(newRef('expenses'), { type: 'settle', amount: Math.abs(bal), paidBy: debtor, date: todayKey(), createdAt: Date.now(), by: uid() }));
   toast('¡Quedaron a mano!'); celebrate();
 }
-async function delExpense(id) { if (await ask('¿Borrar este movimiento?')) { write(deleteDoc(ref('expenses', id))); if (editingEx === id) { editingEx = null; closeSheet(); } } }
+const editExpense = id => openExpense({ id });
+function delExpense(id) { softDelete('expenses', id, 'el movimiento', { after: () => { if (editingEx === id) { editingEx = null; closeSheet(); } } }); }
 
 /* ---------- Salida en curso ---------- */
 function startOuting() {
@@ -432,7 +422,7 @@ function saveGoalAdd(id, sign) {
   else toast(sign > 0 ? `+${fmtMoney(amount)} en ${g.name} 🐷` : `Sacaron ${fmtMoney(amount)}`);
 }
 function goalStar(id) { write(setDoc(ref('money', 'cfg'), { goal: id }, { merge: true })); toast('Lo que sobre cada semana cae ahí 🐷'); }
-async function goalDel(id) { if (await ask('¿Borrar esta alcancía?')) { write(deleteDoc(ref('money', id))); if (cfg().goal === id) write(setDoc(ref('money', 'cfg'), { goal: null }, { merge: true })); } }
+function goalDel(id) { const star = cfg().goal === id; softDelete('money', id, 'la alcancía', { after: () => { if (star) write(setDoc(ref('money', 'cfg'), { goal: null }, { merge: true })); } }); }
 
 /* ---------- Desde el aviso del banco ----------
    Un atajo del teléfono (Atajos en iPhone, MacroDroid en Android) abre Futari con el texto del aviso en el enlace:
@@ -534,6 +524,6 @@ async function syncOutNotif() {
   } catch (e) { console.warn('outing notif', e); }
 }
 on('expenses trips money', () => { render(); rollWeek(); syncOutFab(); syncOutNotif(); });
-expose({ mvFilter, openExpense, saveExpense, settleUp, delExpense, quickSpend, qsKey, qsAdd, qsToggle, qsMore, qsBack, qsFreq, qsRepeat, qsSave, qsDescIn,
+expose({ editExpense, mvFilter, openExpense, saveExpense, settleUp, delExpense, quickSpend, qsKey, qsAdd, qsToggle, qsMore, qsBack, qsFreq, qsRepeat, qsSave, qsDescIn,
   startOuting, saveOuting, endOuting, budgetSheet, saveBudget, goalSheet, saveGoal, goalAdd, saveGoalAdd, goalStar, goalDel,
   bankTutorial, copyBankUrl, bankTry, bankTryOpen });

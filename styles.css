@@ -1122,3 +1122,9 @@ body:has(#sheet.show) .out-fab, body:has(.dialog) .out-fab { display: none; }
 .net-bar { position: fixed; left: 50%; top: calc(env(safe-area-inset-top) + 6px); transform: translateX(-50%); z-index: 84; pointer-events: none;
   max-width: calc(100% - 24px); padding: 6px 12px; border-radius: 999px; font-size: 12.5px; font-weight: 600; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
   background: color-mix(in srgb, var(--panel) 92%, #f59e0b); border: 1px solid color-mix(in srgb, var(--line) 60%, #f59e0b); box-shadow: 0 10px 24px -14px rgba(0,0,0,.6); animation: drop .3s ease; }
+
+/* Deslizar filas (v74) */
+[data-swl], [data-swr] { position: relative; touch-action: pan-y; }
+[data-swdir="r"] { box-shadow: inset 4px 0 0 #3ecf8e; background: color-mix(in srgb, #3ecf8e 14%, transparent); border-radius: 12px; }
+[data-swdir="l"] { box-shadow: inset -4px 0 0 #ff5c7a; background: color-mix(in srgb, #ff5c7a 14%, transparent); border-radius: 12px; }
+.swipe-hint { font-size: 12px; color: var(--muted); text-align: center; margin: 4px 0 0; }

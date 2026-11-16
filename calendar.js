@@ -1,7 +1,7 @@
 // Calendario compartido: planes de los dos más fechas especiales, mesiversarios y viajes.
 import { setDoc, updateDoc, deleteDoc } from 'https://www.gstatic.com/firebasejs/11.0.2/firebase-firestore.js';
 import { $, S, esc, icon, paint, on, onShow, expose, toast, openSheet, closeSheet, write, ref, newRef, loadPhotos,
-         parseDate, today, dayKey, todayKey, fmtDay, addMonths, nameOf, partnerUid, partnerName, avatar, uid, ask, ANDROID } from './core.js';
+         parseDate, today, dayKey, todayKey, fmtDay, addMonths, nameOf, partnerUid, partnerName, avatar, uid, ask, ANDROID, softDelete } from './core.js';
 import { backBar } from './lists.js';
 import { DATE_KINDS, YEARLY_KINDS } from './data.js';
 
@@ -150,7 +150,7 @@ function saveFecha() {
   closeSheet(); toast(edit ? 'Cambios guardados' : 'Fecha guardada'); editingF = null;
 }
 async function delFecha(id) {
-  if (await ask('¿Borrar esta fecha especial para los dos?')) { write(deleteDoc(ref('dates', id))); closeSheet(); }
+  softDelete('dates', id, 'la fecha', { after: closeSheet });
 }
 
 let editing = null;

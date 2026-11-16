@@ -1,7 +1,7 @@
 // Restaurantes: a dónde quieren ir, dónde ya fueron, calificaciones, qué pidieron, ubicación y "cerca de mí".
 import { setDoc, updateDoc, deleteDoc, writeBatch } from 'https://www.gstatic.com/firebasejs/11.0.2/firebase-firestore.js';
 import { $, S, esc, icon, paint, on, expose, toast, openSheet, closeSheet, write, ref, newRef, go,
-         parseDate, fmtShort, todayKey, nameOf, partnerUid, uid, ask, db, pick, celebrate, loadPhotos, cachePhoto, compressImage, photoError, makeThumb, thumbId } from './core.js';
+         parseDate, fmtShort, todayKey, nameOf, partnerUid, uid, ask, db, pick, celebrate, loadPhotos, cachePhoto, compressImage, photoError, makeThumb, thumbId, softDelete } from './core.js';
 import { backBar } from './lists.js';
 import { createList } from './decide.js';
 import { placeField, initPlace, getPlace, distKm, fmtKm, myPosition, mapsUrl, wazeUrl } from './location.js';
@@ -113,7 +113,7 @@ function saveVisit(id) {
   tab = 'been'; closeSheet(); toast('¡Visita guardada! Califíquenlo');
 }
 function ratePlace(id, n) { write(updateDoc(ref('places', id), { [`ratings.${uid()}`]: n })); }
-async function delPlace(id) { if (await ask('¿Borrar este restaurante?')) { write(deleteDoc(ref('places', id))); closeSheet(); } }
+function delPlace(id) { softDelete('places', id, 'el restaurante', { after: closeSheet }); }
 // Crea (o actualiza) una lista en Decidir con los lugares pendientes y los mejor calificados.
 // Con "Cerca de mí" activo, solo entran los que están a menos de 10 km.
 function placesToDecide() {

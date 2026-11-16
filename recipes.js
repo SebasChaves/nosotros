@@ -1,7 +1,7 @@
 // Recetas (incluidas + propias), favoritas y menú semanal con envío de ingredientes al Súper.
 import { setDoc, updateDoc, deleteDoc, deleteField, writeBatch, increment } from 'https://www.gstatic.com/firebasejs/11.0.2/firebase-firestore.js';
 import { $, S, db, esc, icon, paint, on, onShow, expose, toast, openSheet, closeSheet, write, ref, newRef, ask, pick, celebrate,
-         today, dayKey, parseDate, plural, uid, syncBack, auth } from './core.js';
+         today, dayKey, parseDate, plural, uid, syncBack, auth, softDelete } from './core.js';
 import { PUSH } from './push-config.js';
 import { RECIPES, RECIPE_TAGS } from './recipes-data.js';
 import { backBar } from './lists.js';
@@ -235,7 +235,7 @@ function toggleFav(id) {
   if (isFav(id)) write(deleteDoc(ref('recipefav', id))); else { write(setDoc(ref('recipefav', id), { by: uid(), at: Date.now() })); celebrate('hearts'); }
   closeSheet();
 }
-async function delRecipe(id) { if (await ask('¿Borrar esta receta?')) { write(deleteDoc(ref('recipes', id))); closeSheet(); } }
+function delRecipe(id) { softDelete('recipes', id, 'la receta', { after: closeSheet }); }
 function recipeForm() {
   openSheet(`<div class="stack"><h2>Nueva receta</h2>
     <div class="add-row"><input id="rEmoji" style="flex:0 0 60px;text-align:center" value="🍽️" maxlength="4" aria-label="Emoji"><input id="rName" placeholder="Nombre" maxlength="60" aria-label="Nombre"></div>

@@ -2,7 +2,7 @@
 import { initializeApp } from 'https://www.gstatic.com/firebasejs/11.0.2/firebase-app.js';
 import { getAuth, connectAuthEmulator } from 'https://www.gstatic.com/firebasejs/11.0.2/firebase-auth.js';
 import { initializeFirestore, persistentLocalCache, persistentMultipleTabManager, memoryLocalCache,
-         connectFirestoreEmulator, doc, collection, getDoc, setDoc, increment } from 'https://www.gstatic.com/firebasejs/11.0.2/firebase-firestore.js';
+         connectFirestoreEmulator, doc, collection, getDoc, setDoc, deleteDoc, increment } from 'https://www.gstatic.com/firebasejs/11.0.2/firebase-firestore.js';
 import { firebaseConfig } from './firebase-config.js';
 
 /* ================= Interfaz ================= */
@@ -43,6 +43,35 @@ export function ask(message, opts = {}) {
     document.addEventListener('keydown', key, true);
     document.body.appendChild(el);
     syncBack();
+  });
+}
+
+// Barra de abajo con «Deshacer» (en vez de preguntar «¿Seguro?» antes). undo() se llama si la tocan;
+// later() (opcional) se llama si pasan los segundos sin deshacer, p. ej. para borrar las fotos de algo borrado.
+export function undoBar(text, undo, { later, undoneMsg = 'Listo, se deshizo', ms = 5500 } = {}) {
+  const prev = $('undoBar'); if (prev) { prev._finish?.(); prev.remove(); }
+  const el = document.createElement('div'); el.id = 'undoBar'; el.className = 'undo-bar'; el.setAttribute('role', 'status');
+  el.innerHTML = `<span>${esc(text)}</span><button>Deshacer</button>`;
+  let done = false;
+  const finish = () => { if (done) return; done = true; later?.(); };
+  el._finish = finish;
+  el.querySelector('button').onclick = () => { if (done) return; done = true; undo(); el.remove(); toast(undoneMsg); };
+  document.body.appendChild(el);
+  setTimeout(() => { finish(); el.classList.add('out'); setTimeout(() => el.remove(), 300); }, ms);
+}
+// Borra un documento compartido y deja «Deshacer» unos segundos: si lo tocan, se vuelve a escribir igual.
+// También sirve para lo privado (private: true). photos: ids de fotos que se borran solo si no se deshace.
+export function softDelete(name, id, label, { private: priv = false, photos = [], after } = {}) {
+  const list = priv ? S.priv[name] : S.data[name];
+  const item = list?.find(x => x.id === id);
+  const r = priv ? privRef(name, id) : ref(name, id);
+  write(deleteDoc(r)); after?.();
+  if (!item) return;
+  const { id: _, ...data } = item;
+  const nm = [item.title, item.name, item.t, item.text, item.note].find(v => typeof v === 'string' && v.trim());
+  undoBar(nm ? `Borraste «${nm.length > 28 ? nm.slice(0, 27) + '…' : nm}»` : `Borraste ${label}`, () => write(setDoc(r, data)), {
+    undoneMsg: 'Listo, volvió 👍',
+    later: photos.length ? () => photos.filter(Boolean).forEach(p => write(deleteDoc(ref('photos', p)))) : null,
   });
 }
 
@@ -145,8 +174,45 @@ function viewerDrag() {
   });
 }
 
+/* ================= Deslizar una fila de lista =================
+   <li data-swr="toggleGrocery|<id>" data-swl="delGrocery|<id>">: a la derecha marca (✓), a la izquierda borra (con Deshacer).
+   Llama window[fn](id). Solo en pantallas táctiles; con el mouse se usan los botones de siempre. */
+export const swipeHint = (r = 'marcar') => matchMedia('(pointer: coarse)').matches && !localStorage.getItem('futari-swiped')
+  ? `<p class="swipe-hint">👉 Desliza una fila a la derecha para ${r} y a la izquierda para borrar</p>` : '';
+function rowSwipe() {
+  let row = null, x0 = 0, y0 = 0, dx = 0, mode = null;
+  const reset = el => { el.style.transition = 'transform .2s ease'; el.style.transform = ''; delete el.dataset.swdir; setTimeout(() => { el.style.transition = ''; }, 220); };
+  document.addEventListener('touchstart', e => {
+    row = e.touches.length === 1 ? e.target.closest('[data-swl], [data-swr]') : null;
+    if (!row || e.target.closest('input, textarea, select')) { row = null; return; }
+    x0 = e.touches[0].clientX; y0 = e.touches[0].clientY; dx = 0; mode = null;
+  }, { passive: true });
+  document.addEventListener('touchmove', e => {
+    if (!row) return;
+    const mx = e.touches[0].clientX - x0, my = e.touches[0].clientY - y0;
+    if (!mode) { if (Math.abs(mx) < 10 && Math.abs(my) < 10) return; mode = Math.abs(mx) > Math.abs(my) * 1.3 ? 'x' : 'y'; }
+    if (mode !== 'x') { row = null; return; }
+    e.preventDefault();
+    dx = mx;
+    if ((dx > 0 && !row.dataset.swr) || (dx < 0 && !row.dataset.swl)) dx = dx / 6; // sin acción en ese lado: casi no se mueve
+    row.style.transition = 'none'; row.style.transform = `translateX(${dx}px)`;
+    row.dataset.swdir = dx > 70 && row.dataset.swr ? 'r' : dx < -70 && row.dataset.swl ? 'l' : '';
+  }, { passive: false });
+  const end = () => {
+    if (!row) return; const el = row; row = null;
+    if (mode !== 'x') return;
+    const act = dx > 70 ? el.dataset.swr : dx < -70 ? el.dataset.swl : null;
+    if (!act) return reset(el);
+    navigator.vibrate?.(12); try { localStorage.setItem('futari-swiped', '1'); } catch {}
+    const [fn, arg] = act.split('|');
+    if (dx < 0) { el.style.transition = 'transform .18s ease, opacity .18s'; el.style.transform = 'translateX(-110%)'; el.style.opacity = '0'; setTimeout(() => window[fn]?.(arg), 170); }
+    else { reset(el); window[fn]?.(arg); }
+  };
+  document.addEventListener('touchend', end); document.addEventListener('touchcancel', end);
+}
+
 /* ================= Deslizar entre las pestañas principales ================= */
-const NO_SWIPE = 'input, textarea, select, .chips.scroll, .map-box, .leaflet-container, .noswipe, .lock';
+const NO_SWIPE = 'input, textarea, select, .chips.scroll, .map-box, .leaflet-container, .noswipe, .lock, [data-swl], [data-swr]';
 function hasHScroll(el) {
   for (; el && el !== document.body; el = el.parentElement) {
     if (el.scrollWidth > el.clientWidth + 2) { const o = getComputedStyle(el).overflowX; if (o === 'auto' || o === 'scroll') return true; }
@@ -330,7 +396,7 @@ export function openCamera(accept, onFile) {
   start();
 }
 
-sheetDrag(); viewerDrag(); // los módulos corren cuando el HTML ya está listo
+sheetDrag(); viewerDrag(); rowSwipe(); // los módulos corren cuando el HTML ya está listo
 
 // Repinta un contenedor sin perder lo que el usuario está escribiendo (valores y foco por id).
 export function paint(target, html) {
