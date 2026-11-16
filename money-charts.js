@@ -100,13 +100,24 @@ function columns(id, data, { ref = 0, stacked = false } = {}) {
 }
 const table = (head, rows) => `<details class="vz-table"><summary>Ver como tabla</summary><table><thead><tr>${head.map(h => `<th>${h}</th>`).join('')}</tr></thead><tbody>${rows.map(r => `<tr>${r.map((c, i) => `<td${i ? ' class="num"' : ''}>${c}</td>`).join('')}</tr>`).join('')}</tbody></table></details>`;
 
+// Alcancías: lo que se metió cada mes (últimos 6, sacar resta) y a qué ritmo se llenan
+function goalsData() {
+  const ms = Array.from({ length: 6 }, (_, i) => monthKey(dayKey(new Date()), i - 5));
+  return S.data.money.filter(d => d.kind === 'goal').sort((a, b) => (a.done ? 1 : 0) - (b.done ? 1 : 0) || b.at - a.at).map(g => {
+    const per = ms.map(mk => (g.log || []).filter(l => dayKey(new Date(l.at)).slice(0, 7) === mk).reduce((s, l) => s + (Number(l.amount) || 0), 0));
+    const avg = per.slice(-3).reduce((s, v) => s + v, 0) / 3, left = Math.max(0, (g.target || 0) - (g.saved || 0));
+    return { g, ms, per, left, monthsLeft: !g.done && left > 0 && avg > 0 ? Math.ceil(left / avg) : null };
+  });
+}
+
 /* ---------- Pantalla ---------- */
 let view = null, period = 'mes';
 const TIPS = {};
 function render() {
   if (!view) return;
   const ws = weeks(), ms = months(), cat = byCat(period), dd = byDay(), b = budget(), g = gustos(), ins = insights();
-  const any = spends().length;
+  const any = spends().length, goals = goalsData();
+  goals.forEach((x, n) => { TIPS['g' + n] = x.ms.map((mk, i) => `<b>${MES[Number(mk.slice(5)) - 1]} ${mk.slice(0, 4)}</b>: ${x.per[i] >= 0 ? 'metieron' : 'sacaron'} ${fmtMoney(Math.abs(x.per[i]))}`); });
   TIPS.w = ws.map(w => `<b>Semana del ${fmtDay(w.from)}${w.cur ? ' (esta)' : ''}</b>: ${fmtMoney(w.v)} en gustos${b ? ` · ${w.v <= b ? `les sobró ${fmtMoney(b - w.v)}` : `se pasaron ${fmtMoney(w.v - b)}`}` : ''}`);
   TIPS.m = ms.map(m => { const [y, mo] = m.mk.split('-'); return `<b>${MES[mo - 1]} ${y}${m.cur ? ' (va)' : ''}</b>: ${fmtMoney(m.a + m.b)} en total · gustos ${fmtMoney(m.a)} · lo demás ${fmtMoney(m.b)}`; });
   TIPS.d = dd.map((v, i) => `<b>${DIAS_L[i][0].toUpperCase() + DIAS_L[i].slice(1)}</b>: ${fmtMoney(v)} en gustos en las últimas 8 semanas (≈ ${fmtMoney(v / 9)} por semana)`);
@@ -127,12 +138,17 @@ function render() {
       ${columns('vzM', ms.map(m => ({ label: MES[Number(m.mk.slice(5)) - 1], segs: [m.a, m.b], cur: m.cur })), { stacked: true })}
       <p class="vz-tip" id="vzM-tip">Toca una barra para ver el detalle</p>
       ${table(['Mes', 'Gustos', 'Lo demás', 'Total'], ms.map(m => [`${MES[Number(m.mk.slice(5)) - 1]} ${m.mk.slice(0, 4)}`, fmtMoney(m.a), fmtMoney(m.b), fmtMoney(m.a + m.b)]))}</section>
+    ${goals.map((x, n) => { const pc = x.g.target ? Math.min(100, Math.round((x.g.saved || 0) / x.g.target * 100)) : 0; return `<section class="vz-card"><h3>${esc(x.g.emoji || '🐷')} Alcancía «${esc(x.g.name)}»</h3>
+      <p class="vz-sub"><b>${fmtMoney(x.g.saved || 0)}</b> de ${fmtMoney(x.g.target || 0)} · ${pc} %${x.g.done ? ' · ¡llena! 🎉' : x.monthsLeft ? ` · al ritmo de los últimos 3 meses se llena en ${x.monthsLeft === 1 ? '1 mes' : `${x.monthsLeft} meses`}` : x.left ? ' · metan algo este mes para ver cuánto falta' : ''}</p>
+      <div class="vz-htrack vz-goal"><i style="width:${Math.max(1.5, pc)}%"></i></div>
+      ${columns('vzG' + n, x.ms.map((mk, i) => ({ label: MES[Number(mk.slice(5)) - 1], segs: [Math.max(0, x.per[i])], cur: i === 5 })))}
+      <p class="vz-tip" id="vzG${n}-tip">Lo que metieron cada mes · toca una barra</p></section>`; }).join('')}
     <section class="vz-card"><h3>¿Qué días gastan más?</h3><p class="vz-sub">Gustos de las últimas 8 semanas, por día</p>
       ${columns('vzD', dd.map((v, i) => ({ label: DIAS[i], segs: [v] })))}
       <p class="vz-tip" id="vzD-tip">Toca una barra para ver el detalle</p>
       ${table(['Día', 'Gustos'], dd.map((v, i) => [DIAS[i], fmtMoney(v)]))}</section>`}
     </div>`;
-  [['vzW', 'w'], ['vzM', 'm'], ['vzD', 'd']].forEach(([id, k]) => {
+  [['vzW', 'w'], ['vzM', 'm'], ['vzD', 'd'], ...goals.map((_, n) => ['vzG' + n, 'g' + n])].forEach(([id, k]) => {
     const svg = $(id); if (!svg) return;
     svg.addEventListener('click', e => {
       const h = e.target.closest('.vz-hit'); if (!h) return;

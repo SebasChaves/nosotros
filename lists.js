@@ -105,7 +105,8 @@ function goingSuper(on) {
     toast('Listo, le avisé 🛒');
   } else if (S.data.groceries.some(g => g.done)) superToMoney();
 }
-function superToMoney() { window.quickSpend?.({ desc: 'Súper', note: 'Escribe el total y toca 🛒 Súper' }); }
+// Lo que está en el carrito se guarda como la lista de lo que se compró en ese gasto
+function superToMoney() { window.quickSpend?.({ desc: 'Súper', note: 'Escribe el total y toca 🛒 Súper', items: S.data.groceries.filter(g => g.done).map(g => ({ t: g.text })) }); }
 function addGrocery(text) {
   const t = (text ?? $('newGrocery').value).trim(); if (!t) return;
   write(setDoc(newRef('groceries'), { text: t, done: false, by: uid(), createdAt: Date.now() }));

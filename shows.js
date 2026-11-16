@@ -3,6 +3,7 @@ import { setDoc, updateDoc, deleteDoc, increment } from 'https://www.gstatic.com
 import { $, S, esc, icon, paint, on, expose, toast, openSheet, closeSheet, write, ref, newRef, go,
          nameOf, partnerUid, uid, ask, softDelete } from './core.js';
 import { TMDB_KEY } from './tmdb-config.js';
+import { notify, meForPartner } from './push.js';
 import { backBar } from './lists.js';
 import { createList } from './decide.js';
 
@@ -34,7 +35,7 @@ function render() {
     ${HAS_TMDB ? `<button class="btn" onclick="openFinder()">🔎 ¿Qué vemos? Buscar por estilo y plataforma</button>` : ''}
     ${list.length ? `<div class="posters">${list.map(s => `<button class="poster" onclick="openShow('${s.id}')">
       <span class="img">${s.poster ? `<img src="${IMG(s.poster, 342)}" alt="" loading="lazy">` : (s.type === 'tv' ? '📺' : '🎬')}
-        ${s.newSeason ? `<span class="tag new">🆕 Temporada ${s.newSeason}</span>` : s.status === 'watching' && s.type === 'tv' && s.progress ? `<span class="tag">T${s.progress.s} · E${s.progress.e}</span>` : ''}</span>
+        ${s.newSeason ? `<span class="tag new">🆕 Temporada ${s.newSeason}</span>` : s.status === 'watching' && s.type === 'tv' && s.apart ? `<span class="tag">Tú E${myProg(s).e}${s.progressBy?.[partnerUid()] ? ` · ${esc(nameOf(partnerUid()).split(' ')[0])} E${s.progressBy[partnerUid()].e}` : ''}</span>` : s.status === 'watching' && s.type === 'tv' && s.progress ? `<span class="tag">T${s.progress.s} · E${s.progress.e}</span>` : ''}</span>
       <b>${esc(s.title)}</b><small>${[s.year, s.type === 'tv' ? 'Serie' : 'Película'].filter(Boolean).join(' · ')}</small></button>`).join('')}</div>`
       : `<div class="glass center"><p class="muted" style="margin:0">${tab === 'want' ? 'Agreguen pelis y series que quieren ver' : tab === 'watching' ? 'Nada en curso' : 'Cuando terminen una, aparece aquí'}</p></div>`}
     ${HAS_TMDB ? '<p class="tiny muted center" style="margin:0">Datos de películas por TMDB. Este producto usa la API de TMDB pero no está avalado ni certificado por TMDB.</p>' : ''}`);
@@ -178,15 +179,37 @@ function openShow(id) {
         <span class="tiny muted">La agregó ${esc(nameOf(s.by))}</span></div></div>
     ${s.overview ? `<p class="small" style="margin:0;line-height:1.5;color:color-mix(in srgb,var(--text) 85%,transparent)">${esc(s.overview)}</p>` : ''}
     <div class="seg">${STATUS.map(([k, l]) => `<button class="${st === k ? 'on' : ''}" onclick="setShowStatus('${id}','${k}')">${l.replace('Vistas', 'Vista')}</button>`).join('')}</div>
-    ${s.type === 'tv' && st === 'watching' ? `<div class="glass tight row"><span class="small">Van en</span>
-      <div class="stepper"><button aria-label="Temporada anterior" onclick="stepShow('${id}','s',-1)">−</button><b>T${prog.s}</b><button aria-label="Temporada siguiente" onclick="stepShow('${id}','s',1)">+</button></div>
-      <div class="stepper"><button aria-label="Capítulo anterior" onclick="stepShow('${id}','e',-1)">−</button><b>E${prog.e}</b><button aria-label="Capítulo siguiente" onclick="stepShow('${id}','e',1)">+</button></div></div>` : ''}
+    ${s.type === 'tv' && st === 'watching' ? progressBox(s) : ''}
     ${st === 'seen' ? `<div class="row"><span class="small muted">Tu nota</span><span class="stars">${[1, 2, 3, 4, 5].map(i =>
       `<button class="${i <= mine ? 'on' : ''}" aria-label="${i} estrellas" onclick="rateShow('${id}',${i})">${icon('star')}</button>`).join('')}</span></div>
       ${theirs ? `<div class="row"><span class="small muted">Nota de ${esc(nameOf(p))}</span><span class="stars">${[1, 2, 3, 4, 5].map(i =>
         `<span style="color:${i <= theirs ? 'var(--g2)' : 'var(--line)'}">${icon('star')}</span>`).join('')}</span></div>` : ''}` : ''}
     <button class="btn danger" onclick="delShow('${id}')">${icon('trash')} Quitar de la lista</button></div>`);
 }
+/* ---------- En qué capítulo van ----------
+   Juntos: progress {s, e} compartido. Cada uno (apart: true): progressBy.<uid> {s, e, at}; se ve en qué va el otro
+   y si va adelante (sin spoilers). Al avanzar le llega un aviso (tipo «shows»), uno por serie que se reemplaza. */
+const epN = p => p ? p.s * 1000 + p.e : 0;
+const myProg = s => s.progressBy?.[uid()] || s.progress || { s: 1, e: 1 };
+function stepper(id, p, who = '') {
+  return `<div class="stepper"><button aria-label="Temporada anterior" onclick="stepShow('${id}','s',-1${who})">−</button><b>T${p.s}</b><button aria-label="Temporada siguiente" onclick="stepShow('${id}','s',1${who})">+</button></div>
+    <div class="stepper"><button aria-label="Capítulo anterior" onclick="stepShow('${id}','e',-1${who})">−</button><b>E${p.e}</b><button aria-label="Capítulo siguiente" onclick="stepShow('${id}','e',1${who})">+</button></div>`;
+}
+function progressBox(s) {
+  const id = s.id, p = partnerUid(), pn = p ? esc(nameOf(p)) : 'tu pareja';
+  const seg = `<div class="seg" style="margin-bottom:8px"><button class="${s.apart ? '' : 'on'}" onclick="showApart('${id}',false)">👫 La vemos juntos</button><button class="${s.apart ? 'on' : ''}" onclick="showApart('${id}',true)">🙋 Cada uno a su ritmo</button></div>`;
+  if (!s.apart) return `<div class="glass tight">${seg}<div class="row"><span class="small">Van en</span>${stepper(id, s.progress || { s: 1, e: 1 })}</div></div>`;
+  const mine = myProg(s), theirs = p && s.progressBy?.[p], diff = epN(theirs) - epN(mine);
+  return `<div class="glass tight">${seg}<p class="small" style="margin:0 0 6px">Tú vas en</p><div class="row" style="justify-content:flex-start;gap:12px">${stepper(id, mine, ",'me'")}</div>
+    <p class="small" style="margin:8px 0 0">${theirs ? `${pn} va en <b>T${theirs.s} · E${theirs.e}</b>${diff > 0 ? ' · va adelante, ¡cuidado con los spoilers! 🤐' : diff < 0 ? ' · vas adelante tú 😏' : ' · van parejos 🤝'}` : `${pn} todavía no marca en qué va`}</p></div>`;
+}
+function showApart(id, on) {
+  const s = S.data.shows.find(x => x.id === id); if (!s) return;
+  const patch = { apart: on };
+  if (on && !s.progressBy?.[uid()]) patch[`progressBy.${uid()}`] = { ...(s.progress || { s: 1, e: 1 }), at: Date.now() };
+  write(updateDoc(ref('shows', id), patch));
+}
+const notifiedAt = {};
 function setShowStatus(id, status) {
   const patch = { status };
   if (status === 'seen') patch.seenAt = Date.now();
@@ -196,10 +219,20 @@ function setShowStatus(id, status) {
   write(updateDoc(ref('shows', id), patch)); tab = status;
   if (status === 'seen') toast(patch.coins ? '¡Vista! Pónganle nota · +3 🪙 para su mascota' : '¡Vista! Pónganle nota');
 }
-function stepShow(id, k, d) {
-  const s = S.data.shows.find(x => x.id === id); const p = { ...(s.progress || { s: 1, e: 1 }) };
+function stepShow(id, k, d, who) {
+  const s = S.data.shows.find(x => x.id === id); if (!s) return;
+  const p = { ...(who === 'me' ? myProg(s) : s.progress || { s: 1, e: 1 }) };
   p[k] = Math.max(1, p[k] + d); if (k === 's' && d > 0) p.e = 1;
-  write(updateDoc(ref('shows', id), { progress: p }));
+  if (who !== 'me') return write(updateDoc(ref('shows', id), { progress: { s: p.s, e: p.e } }));
+  write(updateDoc(ref('shows', id), { [`progressBy.${uid()}`]: { s: p.s, e: p.e, at: Date.now() } }));
+  // Aviso al otro solo al avanzar, y como mucho uno cada 20 minutos por serie (si marcan varios capítulos seguidos)
+  if (d > 0 && Date.now() - (notifiedAt[id] || 0) > 20 * 60000) {
+    notifiedAt[id] = Date.now();
+    setTimeout(() => {
+      const cur = myProg(S.data.shows.find(x => x.id === id) || s), theirs = S.data.shows.find(x => x.id === id)?.progressBy?.[partnerUid()];
+      notify('shows', { title: `🎬 ${meForPartner()} va en «${s.title}» T${cur.s} · E${cur.e}`, body: theirs ? (epN(cur) > epN(theirs) ? 'Te lleva ventaja, ¡ojo con los spoilers!' : 'Todavía vas adelante 😏') : 'Marca en qué capítulo vas tú', url: './?open=shows', tag: 'show-' + id });
+    }, 8000);
+  }
 }
 function rateShow(id, n) { write(updateDoc(ref('shows', id), { [`ratings.${uid()}`]: n })); }
 function delShow(id) { softDelete('shows', id, 'la peli o serie', { after: () => { openId = null; closeSheet(); } }); }
@@ -217,5 +250,5 @@ function showsToDecide() {
 
 let seasonsChecked = false;
 on('shows', () => { if (!seasonsChecked && S.data.shows.length) { seasonsChecked = true; setTimeout(checkSeasons, 3000); } render(); if (openId && $('showDetail') && $('sheet').classList.contains('show')) openShow(openId); });
-expose({ openSuggestions, showsTab, showsKind, openAddShow, manualShow, saveManualShow, searchShows, pickShow, openShow,
+expose({ showApart, openSuggestions, showsTab, showsKind, openAddShow, manualShow, saveManualShow, searchShows, pickShow, openShow,
   setShowStatus, stepShow, rateShow, delShow, showsToDecide });

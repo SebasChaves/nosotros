@@ -32,7 +32,7 @@ Casi todos los docs llevan `by: uid` (quién lo creó) y `createdAt: ms`. Fechas
 | `lists` | listas de Decidir: `name, emoji, options[], votes: { <uid>: { opción: true/false } }` |
 | `ideas` | ideas de cita propias: `t, place: 'casa'|'afuera', cost: 0-3, e` |
 | `bucket`, `groceries` | `text, done, doneAt` |
-| `expenses` | gastos (`desc, amount, paidBy, split: half/full/none, cat, date, tripId?, outing?, outName?, quick?`) y pagos de saldo (`type: 'settle'`) |
+| `expenses` | gastos (`desc, amount, paidBy, split: half/full/none, cat, date, tripId?, outing?, outName?, quick?, items?[{t, a?}]` — lo que se compró; desde el Súper se llena con el carrito) y pagos de saldo (`type: 'settle'`) |
 | `notes` | notas del frasco `{ text, fromUid, fromName, createdAt, readAt, showAt?, showDay?, showTime? }` (programadas: no se ven antes de `showAt`) |
 | `money` | `cfg` `{ week, weekCats[], goal, lastRoll }` (presupuesto semanal y alcancía donde cae lo que sobra), `out` `{ active, oid, name, limit, startAt, by, warned }` (salida en curso), `g-<ts>` `{ kind: 'goal', name, emoji, target, saved, log[], done? }` (alcancías). Ver docs/GASTOS.md |
 | `places` | restaurantes: `name, kind, price 0-4, loc?{name,lat,lng}, status 'want'|'been', ratings{uid:1-5}, visits[{date,note,by}]` |
@@ -49,7 +49,7 @@ Casi todos los docs llevan `by: uid` (quién lo creó) y `createdAt: ms`. Fechas
 | `guess` | id = día: `q` (índice en `GUESS_QS`), `<uid>: { me, guess, at }`, `paid?` — «¿Qué respondería tu pareja?»; cada acierto da 5 🪙 a la mascota (`guess.js`) |
 | `push` | id = uid: `subs { <llave>: { endpoint, keys{p256dh,auth}, device, at } }` — un teléfono por elemento (docs/NOTIFICACIONES.md) |
 | `dates` | fechas especiales: `title, date, emoji, yearly, by, createdAt, editedBy?, editedAt?` — tipos en `DATE_KINDS` (`data.js`); se crean/editan con `openFecha` (`calendar.js`), desde el Calendario o Inicio → Fechas |
-| `shows` | `title, type movie|tv, year, tmdbId, poster, overview, providers[], status want|watching|seen, progress{s,e}, ratings, seenAt` |
+| `shows` | `title, type movie|tv, year, tmdbId, poster, overview, providers[], status want|watching|seen, progress{s,e}, apart? (cada uno a su ritmo), progressBy.<uid>{s,e,at}, ratings, seenAt` |
 | `songs` | `title, artist, url, thumb, preview, apple, cover?(id en photos), why, date, ours, dedication?{by,to,msg,at,seen}` |
 | `reminders` | `text, date, time, for 'ambos'|uid, note, urgent, done, doneAt, doneBy` |
 | `pins` | lugares del mapa: `title, kind (emoji), lat, lng, place, country, date, note` |

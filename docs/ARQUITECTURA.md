@@ -111,6 +111,18 @@ evento `change`, así que no hace falta hacer nada extra.
 
 **Fechas:** siempre como texto `'AAAA-MM-DD'` (`todayKey()`, `dayKey(d)`, `parseDate(s)`), en hora local.
 
+### Borrar, deslizar, cargar (v74–v75)
+
+- **Borrar con «Deshacer»**: `softDelete(colección, id, 'el nombre', { photos, after, private })` borra al instante y
+  deja la barra `undoBar` unos segundos; si la tocan, se vuelve a escribir igual. Las fotos (`photos`) se borran solo
+  si no se deshace. No uses `ask('¿Borrar…?')` para cosas del día a día.
+- **Deslizar filas**: `<li data-swr="fn|id" data-swl="fn|id">` → a la derecha llama `window.fn(id)` (marcar) y a la
+  izquierda borra. `swipeHint()` muestra la pista hasta el primer deslizamiento.
+- **Esqueleto**: `paint()` de una `.screen` pinta un esqueleto gris hasta que `dataReady()` (app.js, cuando llega la
+  primera foto de todas las colecciones o a los 4 s). Juegos, mapa, ajustes y buscador no lo usan (`SKEL_SKIP`).
+- **Tamaño de letra**: `prefs.textSize` n/g/xg → `--tz` y `html[data-ts]`; zoom de CSS en pantallas, hojas y
+  ventanas, menos juegos y mapa (styles.css, «Tamaño de letra»).
+
 ## Cómo agregar una pantalla nueva (lista de pasos)
 
 1. `index.html`: `<section class="screen" id="s-nueva" data-tab="more"></section>` (y un `<symbol id="i-...">` si necesita ícono).

@@ -47,9 +47,10 @@
 
 ## Ideas conversadas, no hechas
 
-- De la lista de mejoras (nov 2026), quedaron sin hacer: clima en el saludo, diario de la mascota, responder instantáneas
-  con texto, agrupar avisos que llegan seguidos, y una revisión general de tamaños de botones/textos y velocidad de fotos
-  en el Samsung. Ya existían (no se rehicieron): filtros de citas por presupuesto y lugar, ingredientes al Súper, portada
+- De la lista de mejoras (nov 2026), quedaron sin hacer: clima en el saludo, responder instantáneas con texto, agrupar avisos
+  que llegan seguidos, horas de silencio, cargar los módulos pesados solo al entrar y miniaturas en todas las listas.
+  (El diario de la mascota y el tamaño de letra/botones se hicieron en v75–v76.) Falta revisar en los dos teléfonos
+  reales: deslizar filas, arrastrar planes en la vista de semana y el zoom de «Más grande». Ya existían (no se rehicieron): filtros de citas por presupuesto y lugar, ingredientes al Súper, portada
   y adelanto en la playlist, instantáneas guardadas en Momentos, aciertos en «¿Qué respondería?», buscador global,
   presupuesto y gastos por viaje, preguntas que no se repiten hasta dar la vuelta.
 

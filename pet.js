@@ -7,7 +7,7 @@
 // Monedas = 10 por cada día que comió + bonus − spent (son de los dos). Dibujos: pet-art.js · juegos: pet-games.js.
 import { setDoc, updateDoc, increment } from 'https://www.gstatic.com/firebasejs/11.0.2/firebase-firestore.js';
 import { $, S, esc, icon, paint, onShow, on, expose, toast, openSheet, closeSheet, write, ref, today, dayKey, todayKey, parseDate, nameOf, partnerUid,
-         plural, uid, celebrate, go, ask } from './core.js';
+         plural, uid, celebrate, go, ask, fmtMoney } from './core.js';
 import { bothDid, didSomething, streak } from './home.js';
 import { backBar } from './lists.js';
 import { sceneSVG, petSVG, ITEMS, SLOTS, timeOfDay } from './pet-art.js';
@@ -59,10 +59,43 @@ export const petEmoji = (p = pet()) => !p ? '🥚' : !p.hatchedAt ? '🥚' : p.s
 
 export const COINS_PER_DAY = 10, GAME_CAP = 30;
 export const coins = (p = pet()) => !p ? 0 : fedDays(p) * COINS_PER_DAY + (p.bonus || 0) - (p.spent || 0);
+/* ---------- Lo que pasa en la pareja le cambia el ánimo ----------
+   Cosas bonitas de las últimas 24 h (antojo cumplido, plata en la alcancía, algo de la bucket list, cupón cumplido,
+   momento nuevo, peli vista juntos): se pone feliz aunque todavía tenga hambre, y lo dice. Todo sale de los datos
+   que ya existen; no se guarda nada nuevo. */
+const DAY_MS = 864e5;
+function happenings(since = 0) {
+  const out = [], pn = id => nameOf(id).split(' ')[0];
+  for (const c of S.data.cravings || []) if (c.done && c.doneAt > since) out.push({ at: c.doneAt, e: c.emoji || '🍓', joy: `¡Cumplieron el antojo de ${pn(c.by)}: ${c.text}! Hasta a mí se me antojó`, d: `${pn(c.doneBy)} le cumplió el antojo a ${pn(c.by)} (${c.text}) y me dio un poquito 😋` });
+  for (const g of S.data.money || []) if (g.kind === 'goal') for (const l of g.log || []) if (l.amount > 0 && l.at > since) out.push({ at: l.at, e: '🐷', joy: `¡Metieron plata en «${g.name}»! Me encanta que ahorren`, d: `${l.auto ? 'Les sobró de la semana y' : `${pn(l.by)}`} metió ${fmtMoney(l.amount)} en la alcancía «${g.name}» 🐷` });
+  for (const g of S.data.money || []) if (g.kind === 'goal' && g.done) { const last = (g.log || []).reduce((m, l) => Math.max(m, l.at || 0), 0); if (last > since) out.push({ at: last + 1, e: '🎉', joy: `¡Llenaron la alcancía «${g.name}»! Estoy saltando`, d: `¡Llenaron la alcancía «${g.name}»! 🎉` }); }
+  for (const b of S.data.bucket || []) if (b.done && b.doneAt > since) out.push({ at: b.doneAt, e: '✨', joy: `¡Cumplieron «${b.text}» de su bucket list!`, d: `Cumplieron un sueño de la bucket list: ${b.text} ✨` });
+  for (const c of S.data.coupons || []) if (c.doneAt > since) out.push({ at: c.doneAt, e: '🎟️', joy: 'Alguien cumplió un cupón. ¡Qué lindos!', d: `${pn(c.fromUid)} cumplió el cupón «${c.text}» 🎟️` });
+  for (const m of S.data.moments || []) if (m.createdAt > since) out.push({ at: m.createdAt, e: '📸', joy: `Guardaron un momento nuevo: «${m.title}»`, d: `Guardaron un momento: ${m.title} 📸` });
+  for (const s of S.data.shows || []) if (s.seenAt > since) out.push({ at: s.seenAt, e: '🍿', joy: `Terminaron «${s.title}». ¿La próxima la veo con ustedes?`, d: `Terminaron de ver ${s.title} 🍿` });
+  return out.sort((a, b) => b.at - a.at);
+}
+const joyNow = () => happenings(Date.now() - DAY_MS)[0] || null;
+
+// Diario: lo que le ha pasado a la mascota, contado por ella (se arma con los datos; lo más nuevo primero)
+function diary(p = pet()) {
+  if (!p?.hatchedAt) return [];
+  const out = [], start = p.start || dayKey(new Date(p.hatchedAt));
+  out.push({ at: p.hatchedAt, e: '🐣', d: `¡Nací! ${p.hatchedBy ? `${nameOf(p.hatchedBy).split(' ')[0]} me abrió` : 'Me abrieron'} y lo primero que vi fueron sus caras` });
+  // Etapas: el día en que llegó a cada una (contando los días en que comió)
+  const keys = [...new Set([...S.data.moods, ...S.data.answers, ...S.data.thinks, ...S.data.daily, ...S.data.activity].map(x => x.id))].filter(k => k >= start && k <= todayKey() && bothDid(k)).sort();
+  STAGES.forEach(([min, label], i) => { if (i > 1 && keys[min - 1]) out.push({ at: parseDate(keys[min - 1]).getTime() + 72e6, e: '🌱', d: `Crecí: ya soy ${label.toLowerCase()} (${min} días comiendo con ustedes)` }); });
+  // Días tristes de las últimas semanas (cuando no comió)
+  for (let i = 1; i <= 21; i++) { const d = addDays(today(), -i), k = dayKey(d); if (k > start && !bothDid(k)) out.push({ at: d.getTime() + 79e6, e: '😢', d: 'Ese día no me dieron de comer los dos. Me fui a dormir con la pancita vacía' }); }
+  for (const h of happenings(p.hatchedAt)) out.push(h);
+  const st = streak(); if (st >= 7) out.push({ at: Date.now() - 1, e: '🔥', d: `¡Llevamos ${st} días seguidos comiendo juntos! Así da gusto` });
+  return out.sort((a, b) => b.at - a.at).slice(0, 40);
+}
+
 // Cómo se dibuja hoy: ánimo del dibujo, etapa, si el platito está lleno
 function look(p = pet()) {
-  const n = fedDays(p), st = stageOf(n, p), mood = petMood(p), time = timeOfDay();
-  const art = mood === 'fed' ? (time === 'noche' ? 'dormido' : 'feliz') : mood === 'sad' ? 'triste' : 'hambre';
+  const n = fedDays(p), st = stageOf(n, p), mood = petMood(p), time = timeOfDay(), joy = joyNow();
+  const art = mood === 'fed' ? (time === 'noche' ? 'dormido' : 'feliz') : joy && mood !== 'sad' ? 'feliz' : mood === 'sad' ? 'triste' : 'hambre';
   return { n, st, mood, time, egg: !p?.hatchedAt, ready: !p?.hatchedAt && n >= HATCH_AT, opts: { species: p?.species, mood: art, stage: st || 1, wear: p?.wear || {} }, fed: mood === 'fed' };
 }
 function petScene(p, size = '') {
@@ -73,8 +106,10 @@ function statusText(p) {
   const L = look(p), partner = partnerUid(), night = L.time === 'noche';
   const label = petLabel(p), Label = label.charAt(0).toUpperCase() + label.slice(1);
   const who = id => esc(id === uid() ? 'Tú' : nameOf(id)), done = id => didSomething(todayKey(), id);
+  const joy = !L.egg && joyNow();
+  if (joy && L.mood !== 'fed' && L.mood !== 'sad') return `${joy.e} ${esc(joy.joy)} · ${L.mood === 'half' ? `${done(uid()) ? `falta ${who(partner)}` : 'falta que tú hagas algo'} para que coma` : 'pero tiene hambre: hagan algo en Futari'}`;
   return L.ready ? `¡${Label} se está moviendo! Tóquenlo para que nazca 🐣`
-    : L.mood === 'fed' ? (night ? `${Label} ya comió y está durmiendo 💤` : `¡${Label} ya comió hoy! 😋`)
+    : L.mood === 'fed' ? (night ? `${Label} ya comió y está durmiendo 💤` : joy ? `${joy.e} ${esc(joy.joy)} 😋` : `¡${Label} ya comió hoy! 😋`)
     : L.mood === 'sad' ? `${Label} está triste porque ayer no comió 😢 Si hoy hacen algo los dos, se le pasa`
     : L.mood === 'half' ? `${done(uid()) ? 'Ya le diste de comer' : `${who(partner)} ya le dio de comer`}; falta ${done(uid()) ? who(partner) : 'que tú hagas algo'}`
     : `${Label} tiene hambre. Hagan algo en Futari para darle de comer`;
@@ -141,6 +176,10 @@ function render() {
     body = `<p class="small muted" style="margin:0">Las monedas son de los dos. Ganan ${COINS_PER_DAY} 🪙 cada día que ${esc(petLabel(p))} come y hasta ${GAME_CAP} 🪙 al día cada uno jugando.</p>
       ${SLOTS.map(([k, l]) => { const list = ITEMS.filter(i => i.slot === k); return `<span class="label">${l}</span><div class="pet-items">${list.map(i => `<button class="pet-item ${owned[i.id] ? 'have' : ''}" onclick="${owned[i.id] ? `wearItem('${i.id}')` : `buyItem('${i.id}')`}">
           ${itemThumb(p, i)}<b>${esc(i.name)}</b><small>${owned[i.id] ? (wear[i.slot] === i.id ? 'Puesto' : 'Ya es suyo') : `🪙 ${i.price}`}</small></button>`).join('')}</div>`; }).join('')}`;
+  } else if (tab === 'diario') {
+    const list = diary(p), fmt = t => new Date(t).toLocaleDateString('es', { day: 'numeric', month: 'short' });
+    body = `<p class="small muted" style="margin:0">Lo que ${esc(petLabel(p))} ha vivido con ustedes, contado en primera persona.</p>
+      <ul class="pet-diary">${list.map(x => `<li><span class="pd-e">${x.e}</span><div><span class="tiny muted">${fmt(x.at)}</span><p>${esc(x.d)}</p></div></li>`).join('')}</ul>`;
   } else {
     const gd = p.gameDay?.[uid()], todayCoins = gd?.day === todayKey() ? gd.n : 0, partner = partnerUid();
     body = `<p class="small muted" style="margin:0">Hoy ganaste ${todayCoins} de ${GAME_CAP} 🪙 jugando. Los récords son de cada uno: ¡compitan!</p>
@@ -154,7 +193,7 @@ function render() {
       <button class="pet-stage big" onclick="petTalk()" aria-label="Acariciar">${petScene(p, 'big')}<div class="pet-talk" id="petTalk2"></div></button>
       <p class="small center" style="margin:0">${statusText(p)}</p>${todayRow()}${progress(p)}
       <div class="row" style="justify-content:center;gap:14px"><button class="link" onclick="renamePet()">✏️ Nombre</button><button class="link" onclick="petHelp()">¿Cómo se alimenta?</button></div></div>
-    <div class="seg">${[['vestir', '👗 Vestir'], ['tienda', '🛍️ Tienda'], ['juegos', '🎮 Juegos']].map(([k, l]) => `<button class="${tab === k ? 'on' : ''}" onclick="petTab('${k}')">${l}</button>`).join('')}</div>
+    <div class="seg">${[['vestir', '👗 Vestir'], ['tienda', '🛍️ Tienda'], ['juegos', '🎮 Juegos'], ['diario', '📖 Diario']].map(([k, l]) => `<button class="${tab === k ? 'on' : ''}" onclick="petTab('${k}')">${l}</button>`).join('')}</div>
     <div class="glass stack">${body}</div>`);
 }
 // Miniatura: la mascota con esa prenda puesta (o el cuarto con ese detalle)
@@ -252,6 +291,6 @@ function petHelp() {
     <button class="btn ghost" onclick="closeSheet();go('s-settings')">🔔 Notificaciones</button></div>`);
 }
 
-on('pet moods answers thinks daily activity profiles', render);
+on('pet moods answers thinks daily activity profiles cravings money bucket coupons moments shows', render);
 onShow('s-pet', render);
 expose({ adoptPet, eggTalk, hatchPet, petTalk: talk, renamePet, savePetName, petHelp, openPet, petTab, petSlot, buyItem, wearItem, undress, startGame });

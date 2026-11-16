@@ -1,12 +1,13 @@
 // Calendario compartido: planes de los dos más fechas especiales, mesiversarios y viajes.
 import { setDoc, updateDoc, deleteDoc } from 'https://www.gstatic.com/firebasejs/11.0.2/firebase-firestore.js';
 import { $, S, esc, icon, paint, on, onShow, expose, toast, openSheet, closeSheet, write, ref, newRef, loadPhotos,
-         parseDate, today, dayKey, todayKey, fmtDay, addMonths, nameOf, partnerUid, partnerName, avatar, uid, ask, ANDROID, softDelete } from './core.js';
+         parseDate, today, dayKey, todayKey, fmtDay, addMonths, nameOf, partnerUid, partnerName, avatar, uid, ask, ANDROID, softDelete, undoBar } from './core.js';
 import { backBar } from './lists.js';
 import { DATE_KINDS, YEARLY_KINDS } from './data.js';
 
 const cap = s => s.charAt(0).toUpperCase() + s.slice(1);
 let vy = today().getFullYear(), vm = today().getMonth(), sel = todayKey();
+let mode = (() => { try { return localStorage.getItem('futari-cal-mode') || 'month'; } catch { return 'month'; } })();
 
 // Repeticiones de un plan: none (una vez), weekly, biweekly, monthly, yearly; "until" opcional.
 export const REPEATS = [['none', 'No se repite'], ['weekly', 'Cada semana'], ['biweekly', 'Cada 2 semanas'], ['monthly', 'Cada mes'], ['yearly', 'Cada año']];
@@ -59,7 +60,88 @@ export function itemsFor(key) {
   return out.sort((a, b) => (a.time || '').localeCompare(b.time || ''));
 }
 
+// Vista por semana: lunes a domingo de la semana del día elegido. Los planes se arrastran a otro día.
+function weekStart(k) { const d = parseDate(k); d.setDate(d.getDate() - (d.getDay() + 6) % 7); return d; }
+function renderWeek() {
+  const ws = weekStart(sel), tk = todayKey(), days = [...Array(7)].map((_, i) => new Date(ws.getFullYear(), ws.getMonth(), ws.getDate() + i));
+  const we = days[6], p = partnerUid();
+  const rng = ws.getMonth() === we.getMonth() ? `${ws.getDate()} – ${we.getDate()} de ${we.toLocaleDateString('es', { month: 'long' })}` : `${ws.getDate()} ${ws.toLocaleDateString('es', { month: 'short' })} – ${we.getDate()} ${we.toLocaleDateString('es', { month: 'short' })}`;
+  paint('s-cal', `${backBar('Calendario', 's-more', `<button class="btn small" onclick="openAdd()">${icon('plus')} Agregar</button>`)}
+    ${modeSeg()}
+    <div class="glass stack noswipe">
+      <div class="row"><button class="icon-btn" aria-label="Semana anterior" onclick="calWeek(-1)">${icon('back')}</button>
+        <h2 style="font-size:17px">${esc(rng)}</h2>
+        <button class="icon-btn" aria-label="Semana siguiente" onclick="calWeek(1)" style="transform:scaleX(-1)">${icon('back')}</button></div>
+      <div class="wk">${days.map(d => {
+        const k = dayKey(d), its = itemsFor(k);
+        return `<div class="wk-day ${k === tk ? 'today' : ''}" data-day="${k}">
+          <button class="wk-date" onclick="openAdd('${k}')" aria-label="Agregar el ${esc(fmtDay(d))}"><b>${cap(d.toLocaleDateString('es', { weekday: 'short' }).replace('.', ''))}</b><span>${d.getDate()}</span></button>
+          <div class="wk-items">${its.length ? its.map(i => i.kind === 'plan'
+            ? `<button class="wk-plan" data-ev="${i.ev.id}" onclick="wkTap(this)">${i.time ? `<small>${esc(i.time)}</small> ` : ''}${esc(i.label)}${i.ev.who && i.ev.who !== 'ambos' ? ` · ${esc(nameOf(i.ev.who).split(' ')[0])}` : ''}${i.ev.repeat && i.ev.repeat !== 'none' ? ' ↻' : ''}</button>`
+            : i.kind === 'date' ? `<button class="wk-chip" onclick="openFecha(null,'${i.f.id}')">${esc(i.label)}</button>` : `<span class="wk-chip">${esc(i.label)}</span>`).join('')
+            : '<span class="wk-none">—</span>'}</div></div>`;
+      }).join('')}</div>
+      <p class="tiny muted center" style="margin:0">Mantén y arrastra un plan a otro día para moverlo · toca un día para agregar</p>
+      ${weekStart(tk).getTime() !== ws.getTime() ? `<button class="link" onclick="calToday()">Ir a esta semana</button>` : ''}
+    </div>`);
+  wkDrag();
+}
+const modeSeg = () => `<div class="seg"><button class="${mode === 'month' ? 'on' : ''}" onclick="calMode('month')">Mes</button><button class="${mode === 'week' ? 'on' : ''}" onclick="calMode('week')">Semana</button></div>`;
+function calMode(m) { mode = m; try { localStorage.setItem('futari-cal-mode', m); } catch {} render(); }
+function calWeek(n) { const d = parseDate(sel); d.setDate(d.getDate() + 7 * n); sel = dayKey(d); vy = d.getFullYear(); vm = d.getMonth(); render(); }
+let dragged = false;
+function wkTap(b) { if (dragged) return; openEvent(null, b.dataset.ev); }
+// Arrastrar: con el dedo (o el mouse) se mueve una copia del plan; al soltarlo sobre otro día se cambia la fecha.
+function wkDrag() {
+  document.querySelectorAll('#s-cal .wk-plan').forEach(chip => {
+    chip.onpointerdown = e => {
+      if (e.button > 0) return;
+      const x0 = e.clientX, y0 = e.clientY; let ghost = null, over = null, timer = null, armed = e.pointerType !== 'touch';
+      dragged = false;
+      if (!armed) timer = setTimeout(() => { armed = true; navigator.vibrate?.(15); chip.classList.add('armed'); }, 280);
+      // En el teléfono: una vez que se mantuvo apretado, el dedo arrastra el plan en vez de mover la pantalla
+      const noScroll = te => { if (armed) te.preventDefault(); };
+      chip.addEventListener('touchmove', noScroll, { passive: false });
+      const move = ev => {
+        const dx = ev.clientX - x0, dy = ev.clientY - y0;
+        if (!ghost) {
+          if (!armed) { if (Math.hypot(dx, dy) > 8) cleanup(); return; }
+          if (Math.hypot(dx, dy) < 6) return;
+          dragged = true; ghost = chip.cloneNode(true); ghost.className = 'wk-plan wk-ghost'; document.body.appendChild(ghost);
+          chip.classList.add('lifting');
+        }
+        ev.preventDefault();
+        ghost.style.transform = `translate(${ev.clientX - 40}px, ${ev.clientY - 18}px)`;
+        const t = document.elementFromPoint(ev.clientX, ev.clientY)?.closest('#s-cal [data-day]');
+        if (t !== over) { over?.classList.remove('drop'); over = t; over?.classList.add('drop'); }
+      };
+      const up = () => {
+        const target = over?.dataset.day; cleanup();
+        if (ghost) { ghost.remove(); if (target) moveEvent(chip.dataset.ev, chip.closest('[data-day]').dataset.day, target); setTimeout(() => { dragged = false; }, 50); }
+      };
+      const cleanup = () => {
+        clearTimeout(timer); chip.classList.remove('armed', 'lifting'); over?.classList.remove('drop');
+        removeEventListener('pointermove', move); removeEventListener('pointerup', up); removeEventListener('pointercancel', up);
+        chip.removeEventListener('touchmove', noScroll);
+      };
+      addEventListener('pointermove', move, { passive: false }); addEventListener('pointerup', up); addEventListener('pointercancel', up);
+    };
+    chip.oncontextmenu = e => e.preventDefault();
+  });
+}
+// Mover un plan de un día a otro. Si se repite, se corre toda la serie la misma cantidad de días.
+function moveEvent(id, from, to) {
+  const ev = S.data.events.find(e => e.id === id); if (!ev || from === to) return;
+  const delta = Math.round((parseDate(to) - parseDate(from)) / 864e5);
+  const nd = new Date(parseDate(ev.date)); nd.setDate(nd.getDate() + delta);
+  const old = ev.date, date = dayKey(nd);
+  write(updateDoc(ref('events', id), { date, editedBy: uid(), editedAt: Date.now() }));
+  sel = to;
+  undoBar(`«${ev.title}» pasó al ${fmtDay(parseDate(to))}${ev.repeat && ev.repeat !== 'none' ? ' (y sus repeticiones)' : ''}`, () => write(updateDoc(ref('events', id), { date: old })), { undoneMsg: 'Listo, volvió a su día' });
+}
+
 function render() {
+  if (mode === 'week') return renderWeek();
   const first = new Date(vy, vm, 1);
   const offset = (first.getDay() + 6) % 7; // lunes primero
   const gridStart = new Date(vy, vm, 1 - offset);
@@ -69,6 +151,7 @@ function render() {
   const items = itemsFor(sel);
   const p = partnerUid();
   paint('s-cal', `${backBar('Calendario', 's-more', `<button class="btn small" onclick="openAdd()">${icon('plus')} Agregar</button>`)}
+    ${modeSeg()}
     <div class="glass stack">
       <div class="row"><button class="icon-btn" aria-label="Mes anterior" onclick="calMove(-1)">${icon('back')}</button>
         <h2>${cap(first.toLocaleDateString('es', { month: 'long', year: 'numeric' }))}</h2>
@@ -184,10 +267,9 @@ function saveEvent() {
   sel = date; const d = parseDate(date); vy = d.getFullYear(); vm = d.getMonth();
   closeSheet(); toast(editing ? 'Cambios guardados' : 'Plan guardado'); editing = null;
 }
-async function delEvent(id) {
+function delEvent(id) {
   const ev = S.data.events.find(e => e.id === id);
-  const rep = ev?.repeat && ev.repeat !== 'none';
-  if (await ask(rep ? '¿Borrar este plan y todas sus repeticiones para los dos?' : '¿Borrar este plan para los dos?')) { write(deleteDoc(ref('events', id))); closeSheet(); }
+  softDelete('events', id, ev?.repeat && ev.repeat !== 'none' ? 'el plan y sus repeticiones' : 'el plan', { after: closeSheet });
 }
 // Regla de repetición para el calendario del teléfono y Google
 const rrule = ev => {
@@ -257,4 +339,4 @@ async function downloadIcs(id) {
 
 on('events dates trips profiles', () => { if ($('s-cal').classList.contains('active')) render(); });
 onShow('s-cal', render);
-expose({ calMove, calToday, calPick, openAdd, openEvent, saveEvent, delEvent, openFecha, fechaKindChanged, saveFecha, delFecha, exportEvent, downloadIcs });
+expose({ calMode, calWeek, wkTap, calMove, calToday, calPick, openAdd, openEvent, saveEvent, delEvent, openFecha, fechaKindChanged, saveFecha, delFecha, exportEvent, downloadIcs });

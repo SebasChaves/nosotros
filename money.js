@@ -102,7 +102,7 @@ function render() {
     const [ce, cl] = e.type === 'settle' ? ['🤝', 'Pago'] : catOf(e.cat);
     const trip = e.tripId && S.data.trips.find(t => t.id === e.tripId);
     return `<li ${e.type === 'settle' ? '' : `data-swr="editExpense|${e.id}"`} data-swl="delExpense|${e.id}"><span style="font-size:22px">${ce}</span><div class="txt" role="button" tabindex="0" style="cursor:pointer" ${e.type === 'settle' ? '' : `onclick="openExpense({id:'${e.id}'})"`}>${esc(e.type === 'settle' ? `${nameOf(e.paidBy)} saldó cuentas` : e.desc || cl)}
-      <span class="sub">${fmtShort(parseDate(e.date))} · ${e.type === 'settle' ? '' : `pagó ${esc(nameOf(e.paidBy))} · ${esc(debtTxt(e.split || 'half', e.paidBy, e.amount))}`}${trip ? ` · ${esc(trip.name)}` : ''}</span></div>
+      <span class="sub">${fmtShort(parseDate(e.date))} · ${e.type === 'settle' ? '' : `pagó ${esc(nameOf(e.paidBy))} · ${esc(debtTxt(e.split || 'half', e.paidBy, e.amount))}`}${trip ? ` · ${esc(trip.name)}` : ''}${e.items?.length ? ` · 🧾 ${e.items.length}` : ''}</span></div>
       <b class="num">${fmtMoney(e.amount)}</b><button class="del" aria-label="Borrar" onclick="delExpense('${e.id}')">${icon('trash')}</button></li>`;
   };
   for (const e of items) {
@@ -176,7 +176,7 @@ function frequent() {
 }
 const lastMine = () => [...spends()].filter(e => e.by === uid()).sort((a, b) => b.createdAt - a.createdAt)[0];
 export function quickSpend(pre = {}) {
-  Q = { amt: pre.amount ? String(Math.round(pre.amount * 100) / 100) : '', desc: pre.desc || '', paidBy: uid(), split: lastSplit(), date: todayKey(), note: pre.note || '' };
+  Q = { amt: pre.amount ? String(Math.round(pre.amount * 100) / 100) : '', desc: pre.desc || '', paidBy: uid(), split: lastSplit(), date: todayKey(), note: pre.note || '', items: pre.items || [] };
   paintQuick();
 }
 function paintQuick() {
@@ -227,7 +227,7 @@ function qsSave(cat) {
   const amount = Math.round(Number(Q?.amt || 0) * 100) / 100;
   if (!(amount > 0)) { toast('Escribe el monto primero'); $('qsAmt')?.animate([{ transform: 'translateX(-6px)' }, { transform: 'translateX(6px)' }, { transform: 'none' }], { duration: 220 }); return; }
   const o = outing(), r = newRef('expenses'), before = weekState();
-  const data = { desc: (Q.desc || '').trim() || catOf(cat)[1], amount, paidBy: Q.paidBy, split: Q.split, cat, date: Q.date, tripId: null, createdAt: Date.now(), by: uid(), quick: true,
+  const data = { desc: (Q.desc || '').trim() || catOf(cat)[1], amount, paidBy: Q.paidBy, split: Q.split, cat, date: Q.date, tripId: null, createdAt: Date.now(), by: uid(), quick: true, ...(Q.items?.length ? { items: Q.items } : {}),
     ...(o ? { outing: o.oid, outName: o.name } : {}) };
   write(setDoc(r, data)); markActive();
   closeSheet(); Q = null; navigator.vibrate?.(12);
@@ -271,11 +271,22 @@ export function openExpense(preset = {}) {
       <div><label class="f" for="exCat">Categoría</label><select id="exCat">${EXPENSE_CATS.map(([e, l]) => `<option value="${e}" ${preset.cat === e ? 'selected' : ''}>${e} ${l}</option>`).join('')}</select></div>
       <div><label class="f" for="exDate">Fecha</label><input type="date" id="exDate" value="${ex?.date || today}"></div>
     </div>
+    <div><label class="f" for="exItems">🧾 Lo que se compró (opcional, una cosa por línea; con precio si quieren: «Leche 1200»)</label>
+      <textarea id="exItems" rows="3" maxlength="1500" placeholder="Leche 1200&#10;Pan&#10;Café 3500">${esc((ex?.items || preset.items || []).map(itemTxt).join('\n'))}</textarea></div>
     ${trips.length ? `<div><label class="f" for="exTrip">Viaje (opcional)</label><select id="exTrip"><option value="">Ninguno</option>${trips.map(t => `<option value="${t.id}" ${preset.tripId === t.id ? 'selected' : ''}>${esc(t.name)}</option>`).join('')}</select></div>` : ''}
     <button class="btn" onclick="saveExpense()">${ex ? 'Guardar cambios' : 'Guardar gasto'}</button>
     ${ex ? `<button class="btn ghost danger" onclick="delExpense('${ex.id}')">${icon('trash')} Borrar gasto</button>` : ''}</div>`);
   $('exSplit').value = ex ? ex.split || 'half' : lastSplit();
   if (ex) $('exPaid').value = ex.paidBy;
+}
+// Lista de lo que se compró: «Leche 1200» → { t: 'Leche', a: 1200 }; sin precio → { t: 'Pan' }
+const itemTxt = it => typeof it === 'string' ? it : `${it.t}${it.a ? ' ' + it.a : ''}`;
+function parseItems(txt) {
+  return String(txt || '').split('\n').map(l => l.trim()).filter(Boolean).slice(0, 60).map(l => {
+    const m = l.match(/^(.*?)[\s:=-]+[₡$€]?\s*(\d[\d.,]*)\s*$/);
+    const a = m ? parseAmount(m[2]) : 0;
+    return m && a > 0 && m[1].trim() ? { t: m[1].trim().slice(0, 50), a } : { t: l.slice(0, 50) };
+  });
 }
 // Acepta "5000", "5.000", "5,000", "12,50", "1.234,56" o "1,234.56".
 export function parseAmount(s) {
@@ -286,17 +297,20 @@ export function parseAmount(s) {
   return Number(s.slice(0, lastSep).replace(/[.,]/g, '') + '.' + s.slice(lastSep + 1));
 }
 function saveExpense() {
-  const desc = $('exDesc').value.trim(), amount = parseAmount($('exAmount').value);
+  const desc = $('exDesc').value.trim(), its = parseItems($('exItems').value);
+  let amount = parseAmount($('exAmount').value);
+  if (!(amount > 0) && its.length && its.every(i => i.a)) amount = its.reduce((s, i) => s + i.a, 0); // sin total: la suma de la lista
   if (!desc || !(amount > 0)) return toast('Pon en qué y un monto válido');
   const o = outing(), cat = $('exCat').value;
   if (!editingEx) keepSplit($('exSplit').value);
   if (editingEx && S.data.expenses.some(e => e.id === editingEx)) {
-    write(updateDoc(ref('expenses', editingEx), { desc, amount: Math.round(amount * 100) / 100, paidBy: $('exPaid').value, split: $('exSplit').value, cat, date: $('exDate').value || todayKey(), tripId: $('exTrip')?.value || null }));
+    write(updateDoc(ref('expenses', editingEx), { items: its, desc, amount: Math.round(amount * 100) / 100, paidBy: $('exPaid').value, split: $('exSplit').value, cat, date: $('exDate').value || todayKey(), tripId: $('exTrip')?.value || null }));
     editingEx = null; closeSheet(); return toast('Cambios guardados');
   }
   write(setDoc(newRef('expenses'), {
     desc, amount: Math.round(amount * 100) / 100, paidBy: $('exPaid').value, split: $('exSplit').value,
     cat, date: $('exDate').value || todayKey(), tripId: $('exTrip')?.value || null, createdAt: Date.now(), by: uid(),
+    ...(its.length ? { items: its } : {}),
     ...(o && !$('exTrip')?.value ? { outing: o.oid, outName: o.name } : {}),
   }));
   closeSheet(); toast('Gasto guardado');
