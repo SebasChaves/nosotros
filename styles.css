@@ -1230,3 +1230,4 @@ html:not([data-ts="n"]) .topbar h1 { font-size: 26px; }
 .vac-colors button { width: 32px; height: 32px; border-radius: 50%; border: 3px solid transparent; cursor: pointer; padding: 0; }
 .vac-colors button.on { border-color: var(--text); }
 .vac-together { border-color: color-mix(in srgb, var(--g1) 50%, var(--line)); }
+.tour .steps { flex-direction: row; list-style: none; }

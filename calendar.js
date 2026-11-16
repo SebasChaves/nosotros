@@ -78,8 +78,10 @@ export function myVacationRow() {
 }
 function vacRange(v) { const a = parseDate(v.start), b = parseDate(v.end); return v.start === v.end ? fmtShort(a) : a.getMonth() === b.getMonth() ? `${a.getDate()}–${b.getDate()} ${b.toLocaleDateString('es', { month: 'short' }).replace('.', '')}` : `${fmtShort(a)} – ${fmtShort(b)}`; }
 function togetherBanner() {
-  const t = freeTogether()[0]; if (!t) return '';
+  const runs = freeTogether(); if (!runs.length) return '';
+  const t = runs.find(r => sel >= r.from && sel <= r.to) || runs[0], more = runs.filter(r => r !== t);
   return `<div class="glass stack vac-together"><b>💞 Coinciden ${plural(t.n, 'día libre', 'días libres')}: ${esc(vacRange({ start: t.from, end: t.to }))}</b>
+    ${more.length ? `<span class="tiny muted">También coinciden: ${more.slice(0, 3).map(r => `<button class="link" onclick="calPick('${r.from}')">${esc(vacRange({ start: r.from, end: r.to }))}</button>`).join(' · ')}</span>` : ''}
     <div class="grid2"><button class="btn small" onclick="vacTrip('${t.from}','${t.to}')">✈️ Planear un viaje</button><button class="btn ghost small" onclick="vacDreams(${t.n})">🗺️ Lugares que caben</button></div></div>`;
 }
 let vacEdit = null, vacColor = VAC_COLORS[0];
@@ -128,7 +130,14 @@ function saveVac() {
   }
   sel = start; const d = parseDate(start); vy = d.getFullYear(); vm = d.getMonth();
   closeSheet(); toast(vacEdit ? 'Cambios guardados' : 'Guardado 🏖️'); vacEdit = null;
-  setTimeout(() => { const after = freeTogether().reduce((s, r) => s + r.n, 0); if (after > before) { celebrate('hearts'); toast(`💞 ¡Coinciden ${plural(after - before, 'día libre', 'días libres')} más!`); } }, 700);
+  // No importa quién las puso primero: al guardar se revisa si ahora los dos están libres más días a la vez,
+  // y se celebra aquí y se le avisa a la pareja.
+  setTimeout(() => {
+    const runs = freeTogether(), after = runs.reduce((s, r) => s + r.n, 0); if (after <= before) return;
+    const r = runs.find(x => start <= x.to && end >= x.from) || runs[0];
+    celebrate('hearts'); toast(`💞 ¡Coinciden ${plural(r.n, 'día libre', 'días libres')}: ${vacRange({ start: r.from, end: r.to })}!`);
+    notify('vacations', { title: `💞 Coinciden sus días libres`, body: `${meForPartner()} también está libre: ${vacRange({ start: r.from, end: r.to })} (${plural(r.n, 'día', 'días')}). ¿Planean algo?`, url: './?open=cal', tag: 'vac-together' });
+  }, 700);
 }
 function delVac(id) { softDelete('vacations', id, 'las vacaciones', { after: closeSheet }); }
 function vacTrip(from, to) { window.newTripDates?.(from, to); }

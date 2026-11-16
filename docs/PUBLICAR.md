@@ -60,3 +60,12 @@ La versión se ve al final de Ajustes y en el título de Novedades.
   en `.gitignore`; si creas otro, agrégalo ahí para no publicarlo.
 - Administración tiene "Forzar actualización" (borra caché y service worker de ese teléfono) por si alguno se queda pegado.
 - Si cambias `manifest.json` (por ejemplo accesos directos), Android puede tardar hasta un día en aplicarlo a la app instalada.
+
+## Guía «✨ Lo nuevo en Futari» (tour.js)
+
+Además de las notas de Novedades, cada tanda con algo nuevo y visible lleva su paso en la guía:
+1. En `tour.js`, crea el paso (`{ screen, emoji, title, text, list }`; `screen` lleva a esa pantalla).
+2. Agrégalo en `NEW_BY_VERSION` bajo el número siguiente y sube `TOUR_VERSION` a ese número. Si ya subiste la guía en
+   esa misma tanda sin publicar, agrégalo al mismo número.
+3. Si es algo importante para alguien que recién instala, súmalo también a `STEPS` (la guía completa).
+A quien ya conocía la app le sale una vez solo lo que no ha visto, después de cerrar Novedades.

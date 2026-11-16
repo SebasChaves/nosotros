@@ -6,11 +6,11 @@ const standalone = () => matchMedia('(display-mode: standalone)').matches || nav
 const isIOS = () => /iphone|ipad|ipod/i.test(navigator.userAgent);
 
 // Versión de la guía: si alguien ya vio una anterior, le sale una vez «Lo nuevo» (NEW_STEPS) en vez de la completa.
-const TOUR_VERSION = 4;
+const TOUR_VERSION = 5;
 const PET = { screen: 's-home', tab: 'home', emoji: '🐣', title: 'Su mascota',
   text: 'Adopten un huevo en Inicio. Come cada día que <b>los dos</b> hacen algo en Futari:', list: ['Nace a los 3 días y crece hasta leyenda 👑', 'Si un día no come se pone triste, pero no pierde lo que creció', 'Ganan monedas 🪙 para comprarle ropa y detalles', '4 juegos para competir por el récord'] };
 const SNAPS = { screen: 's-home', tab: 'home', emoji: '📸', title: 'Historias',
-  text: 'Fotos rápidas para tu pareja, con texto encima si quieres. Duran 24 horas.', list: ['Se toman con la cámara de Futari, al instante', 'Reaccionen con ❤️😂😍🥺🔥 o respondan con otra foto', 'Guarden en Momentos las que quieran conservar'] };
+  text: 'Fotos rápidas para tu pareja, con texto encima si quieres. Duran 24 horas.', list: ['Se toman con la cámara de Futari, al instante', 'Reaccionen con ❤️😂😍🥺🔥, escríbanse en el chat de abajo o respondan con otra foto', 'Guarden en Momentos las que quieran conservar (con la conversación)'] };
 const GUESS = { screen: 's-home', tab: 'home', emoji: '🔮', title: '¿Qué respondería tu pareja?',
   text: 'Cada día una pregunta con 4 opciones: respondes por ti y adivinas qué eligió tu pareja. Cuando responden los dos, se ve quién acertó (y la mascota gana monedas).' };
 const WEEK = { emoji: '📊', title: 'Su semana', text: 'Los domingos en la noche les llega el resumen de la semana: días juntos, corazones, fotos y cómo les fue comparado con la semana anterior.' };
@@ -25,6 +25,18 @@ const GASTOS = { emoji: '💸', title: 'Gastos, en 3 segundos',
 const MENU = { screen: 's-more', tab: 'more', emoji: '🧩', title: 'Tu menú',
   text: 'Arma tu barra de abajo con lo que más usas: en <b>Ajustes → Tu menú</b> eliges hasta 4 secciones para la barra, el orden de todo y qué esconder de Más. Cada uno tiene el suyo.' };
 
+// Lo nuevo de la guía 5 (noviembre 2026)
+const EASIER = { emoji: '👉', title: 'Más fácil en el día a día', list: ['Deslicen una fila: a la derecha marca (Súper, Recordatorios, Bucket list) y a la izquierda borra', 'Al borrar ya no pregunta «¿Seguro?»: abajo sale «Deshacer» unos segundos', 'Momentos, notas sin leer y cupones ahora se pueden editar', 'En Ajustes → Apariencia: letra Normal, Grande o Más grande'],
+  text: 'Pequeños cambios para hacer todo más rápido:' };
+const CHAT = { screen: 's-moments', tab: 'moments', emoji: '💬', title: 'Historias con chat',
+  text: 'Las instantáneas ahora se llaman <b>Historias</b>, y cada una tiene un chat abajo para contestarse. Al otro le llega un aviso y, si guardan la historia en Momentos, la conversación queda en la nota.' };
+const COOKED = { screen: 's-recipes', emoji: '📸', title: 'Recetas que hicieron',
+  text: 'En cada receta toquen <b>«📸 La hicimos»</b> (o terminen el modo cocina) y guárdenla con foto:', list: ['La foto pasa a ser la imagen de esa receta', 'En la pestaña «Las que hicimos» están todas, con fecha y nota', 'Y ven cuál es la que más repiten'] };
+const TRAVEL = { screen: 's-trips', emoji: '🗺️', title: 'Viajes, de principio a fin',
+  text: 'Arriba hay una vista nueva, <b>«Por conocer»</b>, para los lugares a los que quieren ir algún día (con votos, filtros y una ruleta). Y cada viaje ahora tiene:', list: ['💡 Ideas y ✅ Antes de salir (con aviso 30, 7 y 1 día antes)', '🎫 Reservas que se ven sin internet', '🌦️ Clima del destino y sugerencias para la maleta', '💱 Gastos en otra moneda y 🐷 su alcancía', '📔 Diario y resumen para guardar en Momentos'] };
+const VACATIONS = { screen: 's-cal', emoji: '🏖️', title: 'Vacaciones en el calendario',
+  text: 'En «+ Agregar» → <b>Vacaciones o días libres</b>: desde y hasta, de quién, color y nota.', list: ['Se ven como barras de color en el mes', 'Si los dos están libres a la vez, les dice cuántos días coinciden', 'Desde ahí arman un viaje con esas fechas', 'En Inicio, la cuenta regresiva'] };
+
 const STEPS = () => [
   { emoji: '💞', title: `¡Bienvenido${myName() ? ', ' + myName() : ''}!`,
     text: 'Esta es Futari (二人, «los dos» en japonés), su app de pareja. Todo lo que hagan aquí lo ven los dos al instante. Te muestro lo principal en un minuto.' },
@@ -38,7 +50,7 @@ const STEPS = () => [
     text: 'Para consentirse:', list: ['Frasco de notas: escribes para tu pareja y ella saca una cuando quiera', 'Cupones canjeables: "vale por un masaje"…'] },
   { tab: 'more', screen: 's-more', emoji: '✨', title: 'Más',
     text: 'Todo lo demás (y puedes ordenarlo o pasar lo que más usas a la barra de abajo):', list: ['Antojos, súper, gastos y viajes con búsqueda de hospedaje', 'Calendario con fechas especiales y recordatorios con aviso', 'Recetas, nuestro mapa, su playlist y pelis por ver', 'Juego de retos, quiz, gustos y regalos', 'Logros y el resumen del año'] },
-  PET, SNAPS, GUESS, CRAVINGS, GASTOS, MENU, WEEK, NOTIFS, GESTURES,
+  PET, SNAPS, GUESS, CRAVINGS, GASTOS, TRAVEL, VACATIONS, MENU, WEEK, NOTIFS, GESTURES,
   { emoji: '🔴', title: 'Los puntitos',
     text: `Cuando hay algo pendiente para ti (una nota nueva, una historia, un voto) aparece un puntito en la barra de abajo. Y con la lupa ${icon('search')} de arriba encuentras cualquier cosa.` },
   standalone()
@@ -49,7 +61,7 @@ const STEPS = () => [
 ];
 // Solo lo nuevo, para quien ya conocía la app
 // Lo nuevo de cada versión de la guía; a quien se saltó varias le salen todas las que no vio
-const NEW_BY_VERSION = { 2: [PET, SNAPS, GUESS, WEEK, NOTIFS, GESTURES], 3: [CRAVINGS, MENU], 4: [GASTOS] };
+const NEW_BY_VERSION = { 2: [PET, SNAPS, GUESS, WEEK, NOTIFS, GESTURES], 3: [CRAVINGS, MENU], 4: [GASTOS], 5: [CHAT, COOKED, TRAVEL, VACATIONS, EASIER] };
 const NEW_STEPS = seenV => [
   { emoji: '✨', title: 'Lo nuevo en Futari', text: `${myName() ? esc(myName()) + ', a' : 'A'}gregamos ${seenV >= TOUR_VERSION - 1 ? 'algo' : 'varias cosas'}. Te ${seenV >= TOUR_VERSION - 1 ? 'lo' : 'las'} muestro en un minuto.` },
   ...Object.entries(NEW_BY_VERSION).filter(([v]) => Number(v) > seenV).flatMap(([, s]) => s),

@@ -44,7 +44,7 @@ import { logVisit } from './tracking.js';
 import { maybeStartTour, resetTourCheck } from './tour.js';
 
 // Versión de esta copia de la app. Súbela junto con version.json y la caché de sw.js al publicar.
-export const APP_VERSION = '1.4.0';
+export const APP_VERSION = '1.4.1';
 window.FUTARI_VERSION = APP_VERSION; // lo guarda el registro de ingresos (panel de administración)
 
 // Si la app estuvo abierta hace poco (Android la cierra sola al salir), se vuelve rápido a la misma pantalla.
@@ -261,7 +261,9 @@ function afterIn() {
   if (!firstIn) return; firstIn = false;
   // Pantallas que dependen de algo elegido antes (un viaje, una partida) no se restauran.
   if (resume?.screen && !['s-home', 's-trip', 's-search', 's-game', 's-quiz'].includes(resume.screen) && $(resume.screen)) go(resume.screen);
-  let seen = null; try { seen = localStorage.getItem('futari-version'); localStorage.setItem('futari-version', APP_VERSION); } catch {}
+  // «futari-version» = la última versión cuyas Novedades se vieron. Solo se actualiza cuando se cierran (ver showNews):
+  // si algo las tapa (el PIN, otra ventana) o no hay internet para leerlas, salen la próxima vez.
+  let seen = null; try { seen = localStorage.getItem('futari-version'); if (!seen) localStorage.setItem('futari-version', APP_VERSION); } catch {}
   if (seen && seen !== APP_VERSION) setTimeout(() => showNews(seen), 1200);
   setTimeout(checkUpdate, 4000);
   setInterval(checkUpdate, 30 * 60000);
@@ -281,16 +283,30 @@ async function updateNow(btn) {
   location.reload();
 }
 // Muestra todo lo nuevo desde la última versión que se abrió en este teléfono (acumulado, de lo más nuevo a lo más viejo).
-async function showNews(seen) {
-  let v; try { v = await getVersion(); } catch { return; }
+// Espera a que no haya PIN, guía ni otra ventana abierta, y queda como vista solo cuando se cierra después de verla.
+const markNewsSeen = () => { try { localStorage.setItem('futari-version', APP_VERSION); } catch {} };
+async function showNews(seen, tries = 0) {
+  if ($('lockScreen') || $('tour') || document.querySelector('.dialog') || $('sheet')?.classList.contains('show') || document.hidden) {
+    if (tries < 600) setTimeout(() => showNews(seen, tries + 1), 1000);
+    return;
+  }
+  let v; try { v = await getVersion(); } catch { return; } // sin internet: salen la próxima vez que abran la app
   const hist = (v?.history || [{ version: v?.version, notes: v?.notes || [] }])
     .filter(h => vnum(h.version) > vnum(seen) && vnum(h.version) <= vnum(APP_VERSION) && h.notes?.length)
     .sort((a, b) => vnum(b.version) - vnum(a.version));
-  if (!hist.length) return;
+  if (!hist.length) return markNewsSeen();
   const notes = hist.flatMap(h => h.notes);
-  openSheet(`<div class="stack"><h2>✨ Novedades <span class="tiny muted" style="font-weight:500">versión ${esc(APP_VERSION)}</span></h2>${hist.length > 1 ? `<p class="small muted" style="margin:0">Lo nuevo de las últimas ${hist.length} actualizaciones</p>` : ''}
+  openSheet(`<div class="stack" id="newsSheet"><h2>✨ Novedades <span class="tiny muted" style="font-weight:500">versión ${esc(APP_VERSION)}</span></h2>${hist.length > 1 ? `<p class="small muted" style="margin:0">Lo nuevo de las últimas ${hist.length} actualizaciones</p>` : ''}
     <ul class="news" style="margin:0;padding-left:20px;max-height:52vh;overflow:auto">${notes.map(n => `<li>${esc(n)}</li>`).join('')}</ul>
-    <button class="btn" onclick="closeSheet()">¡Genial!</button></div>`);
+    <button class="btn" onclick="markNewsSeen();closeSheet()">¡Genial!</button></div>`);
+  // Si la cierran de otra forma (deslizando, atrás) después de verla un rato, también cuenta; si otra ventana la
+  // reemplazó enseguida, se vuelve a mostrar después.
+  const shownAt = Date.now();
+  const watch = setInterval(() => {
+    if ($('newsSheet') && $('sheet').classList.contains('show')) return;
+    clearInterval(watch);
+    if (Date.now() - shownAt > 2500) markNewsSeen(); else setTimeout(() => showNews(seen), 3000);
+  }, 500);
 }
 
-expose({ login, resetPass, updateNow });
+expose({ login, resetPass, updateNow, markNewsSeen });

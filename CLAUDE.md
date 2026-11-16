@@ -41,6 +41,10 @@ Los juegos sorpresa comparten `gifts.js` (regalo envuelto, `gates`). Ver [docs/P
    viven solo en la consola de Firebase; `firestore.rules` del repo tiene correos de ejemplo.
 4. **Cada publicación sube la versión** (`MAYOR.MENOR.ARREGLO`, p. ej. 1.0.1) en tres lugares (`app.js`, `sw.js`, `version.json`). Si no, los
    teléfonos no reciben el cambio ni el aviso. Ver docs/PUBLICAR.md.
+4b. **Cosas nuevas visibles → también a la guía «✨ Lo nuevo en Futari»** (`tour.js`): agrega un paso en
+   `NEW_BY_VERSION` con la siguiente versión de la guía y sube `TOUR_VERSION`, además de las notas de `version.json`.
+   Las notas salen en «Novedades»; la guía lleva a cada pantalla y es lo que el dueño llama «el mensaje de lo nuevo».
+   Arreglos chicos no necesitan paso. Ver docs/PUBLICAR.md.
 5. **Todo módulo nuevo va en la lista `FILES` de `sw.js`** (si no, no funciona sin internet).
 6. **Las funciones que se llaman desde `onclick="..."` deben exponerse** con `expose({ ... })`.
 7. **Privacidad:** si se empieza a guardar un dato nuevo de uso (como en `tracking.js`), actualiza el aviso de
