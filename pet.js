@@ -1,5 +1,5 @@
 // Mascota de los dos: empieza como huevo y crece con los días en que ambos hacen algo en Futari (la misma regla
-// que la racha: ánimo, pregunta, corazón, foto del día, instantánea, nota, cupón o canción).
+// que la racha: ánimo, pregunta, corazón, foto del día, historia, nota, cupón o canción).
 // Si un día no comen los dos, se pone triste, pero nunca pierde lo que ya creció.
 // Doc "pet/main": { start: 'AAAA-MM-DD', createdAt, by, species?, name?, hatchedAt?, hatchedBy?,
 //   bonus (monedas ganadas jugando), spent (gastadas), owned { idPrenda: true }, wear { head, face, neck, body, room },
@@ -284,7 +284,7 @@ function petHelp() {
     <p class="small" style="margin:0">Come una vez al día, cuando <b>los dos</b> hacen al menos una de estas cosas:</p>
     <ul class="small" style="margin:0;padding-left:20px;line-height:1.7">
       <li>Marcar cómo se sienten</li><li>Responder la pregunta del día</li><li>Mandar un «pensando en ti»</li>
-      <li>Subir la foto del día o mandar una instantánea</li><li>Dejar una nota, regalar un cupón o dedicar una canción</li></ul>
+      <li>Subir la foto del día o mandar una historia</li><li>Dejar una nota, regalar un cupón o dedicar una canción</li></ul>
     <p class="small muted" style="margin:0">Cada día que come cuenta para crecer: nace a los ${HATCH_AT} días, y luego crece a los ${STAGES.slice(2).map(s => s[0]).join(', ')} días.
       Si un día no come, se pone triste, pero <b>no pierde</b> lo que ya creció. Cada día que come ganan ${COINS_PER_DAY} 🪙 para la tienda, y pueden ganar más jugando.
       Con las notificaciones activas, les avisa en la noche si todavía tiene hambre.</p>

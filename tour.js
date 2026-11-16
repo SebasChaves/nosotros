@@ -9,14 +9,14 @@ const isIOS = () => /iphone|ipad|ipod/i.test(navigator.userAgent);
 const TOUR_VERSION = 4;
 const PET = { screen: 's-home', tab: 'home', emoji: '🐣', title: 'Su mascota',
   text: 'Adopten un huevo en Inicio. Come cada día que <b>los dos</b> hacen algo en Futari:', list: ['Nace a los 3 días y crece hasta leyenda 👑', 'Si un día no come se pone triste, pero no pierde lo que creció', 'Ganan monedas 🪙 para comprarle ropa y detalles', '4 juegos para competir por el récord'] };
-const SNAPS = { screen: 's-home', tab: 'home', emoji: '📸', title: 'Instantáneas',
+const SNAPS = { screen: 's-home', tab: 'home', emoji: '📸', title: 'Historias',
   text: 'Fotos rápidas para tu pareja, con texto encima si quieres. Duran 24 horas.', list: ['Se toman con la cámara de Futari, al instante', 'Reaccionen con ❤️😂😍🥺🔥 o respondan con otra foto', 'Guarden en Momentos las que quieran conservar'] };
 const GUESS = { screen: 's-home', tab: 'home', emoji: '🔮', title: '¿Qué respondería tu pareja?',
   text: 'Cada día una pregunta con 4 opciones: respondes por ti y adivinas qué eligió tu pareja. Cuando responden los dos, se ve quién acertó (y la mascota gana monedas).' };
 const WEEK = { emoji: '📊', title: 'Su semana', text: 'Los domingos en la noche les llega el resumen de la semana: días juntos, corazones, fotos y cómo les fue comparado con la semana anterior.' };
 const NOTIFS = { emoji: '🔔', title: 'Notificaciones',
   text: 'Actívalas en <b>Ajustes → Notificaciones</b> y Futari te avisa aunque esté cerrada:', list: ['Cuando tu pareja te manda algo', 'Tus recordatorios, a su hora', 'En la noche, si la racha o la mascota están en peligro', 'Tú eliges qué avisos recibir'] };
-const GESTURES = { emoji: '👆', title: 'Atajos', text: 'Para moverte más rápido:', list: ['Desliza a los lados para cambiar de pestaña', 'Arrastra hacia abajo las ventanas para cerrarlas', 'En Android, el botón atrás cierra ventanas y regresa', 'Mantén presionado el ícono de Futari para mandar una instantánea o anotar un gasto (Android)'] };
+const GESTURES = { emoji: '👆', title: 'Atajos', text: 'Para moverte más rápido:', list: ['Desliza a los lados para cambiar de pestaña', 'Arrastra hacia abajo las ventanas para cerrarlas', 'En Android, el botón atrás cierra ventanas y regresa', 'Mantén presionado el ícono de Futari para mandar una historia o anotar un gasto (Android)'] };
 
 const CRAVINGS = { screen: 's-cravings', emoji: '🍓', title: 'Antojos',
   text: '¿Se te antojó algo? Pídeselo a tu pareja en dos toques:', list: ['😌 Cuando se pueda o 🔥 ¡Ya! (le llega un aviso llamativo)', 'Quien lo cumple puede mandar una foto de prueba 📸 y gana monedas para la mascota', '«Algún día»: antojos sin prisa que pasan al calendario', 'Ruleta para cuando no saben qué comer'] };
@@ -29,18 +29,18 @@ const STEPS = () => [
   { emoji: '💞', title: `¡Bienvenido${myName() ? ', ' + myName() : ''}!`,
     text: 'Esta es Futari (二人, «los dos» en japonés), su app de pareja. Todo lo que hagan aquí lo ven los dos al instante. Te muestro lo principal en un minuto.' },
   { tab: 'home', screen: 's-home', emoji: '🏠', title: 'Inicio',
-    text: 'Su día a día juntos:', list: ['El contador de días juntos y su mascota', 'Hoy: lo pendiente de los dos y su racha 🔥', '¿Cómo te sientes?, la pregunta del día y ¿Qué respondería tu pareja?', 'Instantáneas, próximos momentos y fechas especiales'] },
+    text: 'Su día a día juntos:', list: ['El contador de días juntos y su mascota', 'Hoy: lo pendiente de los dos y su racha 🔥', '¿Cómo te sientes?, la pregunta del día y ¿Qué respondería tu pareja?', 'Historias, próximos momentos y fechas especiales'] },
   { tab: 'decide', screen: 's-decide', emoji: '🎲', title: 'Decidir',
     text: '¿No se ponen de acuerdo? Arman una lista y eligen:', list: ['Al azar', 'Eliminando por turnos', 'Match: cada uno vota en su teléfono y solo quedan las coincidencias', 'Además, más de 100 ideas de citas'] },
   { tab: 'moments', screen: 's-moments', emoji: '📸', title: 'Momentos',
-    text: 'Su historia con fotos:', list: ['Línea de tiempo con los momentos importantes', 'Foto del día: cada uno sube una foto diaria; la de tu pareja se revela cuando subes la tuya', 'Instantáneas de las últimas 24 horas', 'Galería con todas las fotos'] },
+    text: 'Su historia con fotos:', list: ['Línea de tiempo con los momentos importantes', 'Foto del día: cada uno sube una foto diaria; la de tu pareja se revela cuando subes la tuya', 'Historias de las últimas 24 horas', 'Galería con todas las fotos'] },
   { tab: 'love', screen: 's-love', emoji: '💌', title: 'Detalles',
     text: 'Para consentirse:', list: ['Frasco de notas: escribes para tu pareja y ella saca una cuando quiera', 'Cupones canjeables: "vale por un masaje"…'] },
   { tab: 'more', screen: 's-more', emoji: '✨', title: 'Más',
     text: 'Todo lo demás (y puedes ordenarlo o pasar lo que más usas a la barra de abajo):', list: ['Antojos, súper, gastos y viajes con búsqueda de hospedaje', 'Calendario con fechas especiales y recordatorios con aviso', 'Recetas, nuestro mapa, su playlist y pelis por ver', 'Juego de retos, quiz, gustos y regalos', 'Logros y el resumen del año'] },
   PET, SNAPS, GUESS, CRAVINGS, GASTOS, MENU, WEEK, NOTIFS, GESTURES,
   { emoji: '🔴', title: 'Los puntitos',
-    text: `Cuando hay algo pendiente para ti (una nota nueva, una instantánea, un voto) aparece un puntito en la barra de abajo. Y con la lupa ${icon('search')} de arriba encuentras cualquier cosa.` },
+    text: `Cuando hay algo pendiente para ti (una nota nueva, una historia, un voto) aparece un puntito en la barra de abajo. Y con la lupa ${icon('search')} de arriba encuentras cualquier cosa.` },
   standalone()
     ? { emoji: '⚙️', title: '¡Listo!', text: 'Empieza poniendo tu nombre, la fecha en que empezaron y tu foto en Ajustes. Ahí también activas las notificaciones y un PIN para proteger la app.', final: true }
     : { emoji: '📲', title: 'Instálala en tu teléfono', final: true,

@@ -20,8 +20,8 @@
   ],
   "shortcuts": [
     {
-      "name": "Mandar instantánea",
-      "short_name": "Instantánea",
+      "name": "Mandar historia",
+      "short_name": "Historia",
       "description": "Abre la cámara para mandarle una foto rápida a tu pareja",
       "url": "./?snap",
       "icons": [

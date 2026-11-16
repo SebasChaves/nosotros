@@ -5,7 +5,7 @@ import { setDoc } from 'https://www.gstatic.com/firebasejs/11.0.2/firebase-fires
 import { S, esc, icon, on, expose, toast, write, ref, profile, uid, SECTIONS, BAR_DEFAULT, BAR_MAX, setBar, inBar, rerenderAll, gateOn } from './core.js';
 import { listNeedsMyVote } from './decide.js';
 import { unreadNotes, couponAlerts } from './love.js';
-import { unseenSnaps } from './snaps.js';
+import { unseenSnaps, newChats } from './snaps.js';
 import { quizWaiting } from './quiz.js';
 import { cravingAlerts } from './cravings.js';
 import { arrowsAlerts } from './arrows.js';
@@ -31,7 +31,7 @@ export const sectionIcon = id => SECTIONS.find(([k]) => k === id)?.[1] || 'grid'
 // Avisos (puntitos) por sección: van en su botón de la barra o, si no está en la barra, se suman en Más
 export const sectionAlerts = () => ({
   's-decide': S.data.lists.filter(listNeedsMyVote).length, 's-love': unreadNotes() + couponAlerts(),
-  's-moments': unseenSnaps().length, 's-quiz': quizWaiting() ? 1 : 0, 's-cravings': cravingAlerts(), 's-arrows': arrowsAlerts(), 's-bus': busAlerts(),
+  's-moments': unseenSnaps().length + newChats().length, 's-quiz': quizWaiting() ? 1 : 0, 's-cravings': cravingAlerts(), 's-arrows': arrowsAlerts(), 's-bus': busAlerts(),
 });
 
 const saveMenu = patch => write(setDoc(ref('profiles', uid()), { prefs: { menu: { order: menuOrder(), bar: barChoice(), hidden: prefs().hidden || [], ...patch } } }, { merge: true }));

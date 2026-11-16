@@ -242,7 +242,7 @@ function statsHTML(ids, days) {
 
   // 2. Notificaciones (enviadas por quien las mandó; abiertas por quien las tocó)
   const sum = (kind, id, key) => stats.reduce((s, d) => s + (d[kind]?.[id]?.[key] || 0), 0);
-  const SHORT = { snaps: '📸 Instantáneas', reacts: '😍 Reacciones', notes: '💌 Notas', thinks: '❤️ Corazones', songs: '🎵 Canciones', coupons: '🎟️ Cupones',
+  const SHORT = { snaps: '📸 Historias', reacts: '😍 Reacciones', notes: '💌 Notas', thinks: '❤️ Corazones', songs: '🎵 Canciones', coupons: '🎟️ Cupones',
     streak: '🔥 Racha', reminders: '🔔 Recordatorios', dates: '🎂 Fechas' };
   const notif = `<table class="adm-table adm-notif"><thead><tr><th>Aviso</th>${ids.map(id => `<th>${esc(nameOf(id))}</th>`).join('')}</tr></thead><tbody>
     ${NOTIF_TYPES.map(([k]) => `<tr><td>${SHORT[k] || k}</td>${ids.map(id => `<td><b>${sum('sent', id, k)}</b> <span class="muted">/ ${sum('opened', id, k)}</span></td>`).join('')}</tr>`).join('')}
@@ -254,7 +254,7 @@ function statsHTML(ids, days) {
   const D = S.data;
   const rows = [
     ['❤️ «Pensando en ti»', id => D.thinks.filter(t => inRange(t.id)).reduce((s, t) => s + (Number(t[id]) || 0), 0)],
-    ['📸 Instantáneas', id => sum('acts', id, 'snap')],
+    ['📸 Historias', id => sum('acts', id, 'snap')],
     ['😍 Reacciones', id => sum('acts', id, 'react')],
     ['💌 Notas', id => D.notes.filter(n => n.fromUid === id && msInRange(n.createdAt)).length],
     ['🎟️ Cupones regalados', id => D.coupons.filter(c => c.fromUid === id && msInRange(c.createdAt)).length],
@@ -269,7 +269,7 @@ function statsHTML(ids, days) {
   ];
   const who = ids.length < 2 ? '<p class="small muted" style="margin:0">Hace falta que estén los dos.</p>'
     : names + rows.map(([l, f]) => { const v = ids.map(f); return `<div class="adm-who"><span class="small">${l}</span>${duel(ids, v)}</div>`; }).join('')
-      + '<p class="tiny muted" style="margin:0">Instantáneas y reacciones se cuentan desde esta versión (las instantáneas se borran a las 24 h).</p>';
+      + '<p class="tiny muted" style="margin:0">Historias y reacciones se cuentan desde esta versión (las historias se borran a las 24 h).</p>';
 
   return `<div class="glass stack"><span class="label">📱 Uso de la app · ${range} días</span>
       <p class="tiny muted" style="margin:0">Tiempo con Futari abierta y a la vista, por sección.</p></div>

@@ -3,7 +3,7 @@ import { writeBatch } from 'https://www.gstatic.com/firebasejs/11.0.2/firebase-f
 import { $, S, db, esc, icon, paint, on, onShow, expose, toast, openSheet, closeSheet, write, ref, newRef,
          loadPhotos, cachePhoto, compressImage, photoError, makeThumb, thumbId, parseDate, fmtDate, todayKey, nameOf, uid, ask, mainTop, softDelete } from './core.js';
 import { dailyHTML, myDailyDone, partnerDailyDone } from './daily.js';
-import { snapsHTML, unseenSnaps } from './snaps.js';
+import { snapsHTML, unseenSnaps, newChats } from './snaps.js';
 import { placeField, initPlace, getPlace, placeFromPhoto } from './location.js';
 
 let tab = 'timeline', mq = '', my = '';
@@ -14,9 +14,9 @@ function render() {
   const allM = [...S.data.moments].sort((a, b) => b.date.localeCompare(a.date) || b.createdAt - a.createdAt), years = [...new Set(allM.map(m => m.date.slice(0, 4)))];
   const q = normT(mq), items = allM.filter(m => (!my || m.date.startsWith(my)) && (!q || normT(`${m.title} ${m.note} ${m.place?.name}`).includes(q)));
   const dot = !myDailyDone() && partnerDailyDone() ? '<b class="dot">1</b>' : '';
-  const nSnaps = unseenSnaps().length, snapDot = nSnaps ? `<b class="dot">${nSnaps > 9 ? '9+' : nSnaps}</b>` : '';
+  const nSnaps = unseenSnaps().length + newChats().length, snapDot = nSnaps ? `<b class="dot">${nSnaps > 9 ? '9+' : nSnaps}</b>` : '';
   let html = `${mainTop('s-moments', 'Momentos', `<div class="row" style="gap:8px"><button class="icon-btn" aria-label="Galería" onclick="go('s-gallery')">${icon('grid')}</button>${tab === 'timeline' ? `<button class="btn small" onclick="openMoment()">${icon('plus')} Agregar</button>` : ''}</div>`)}
-    <div class="seg"><button class="${tab === 'timeline' ? 'on' : ''}" onclick="momTab('timeline')">Línea de tiempo</button><button class="${tab === 'daily' ? 'on' : ''}" onclick="momTab('daily')">Foto del día${dot}</button><button class="${tab === 'snaps' ? 'on' : ''}" onclick="momTab('snaps')">Instantáneas${snapDot}</button></div>`;
+    <div class="seg"><button class="${tab === 'timeline' ? 'on' : ''}" onclick="momTab('timeline')">Línea de tiempo</button><button class="${tab === 'daily' ? 'on' : ''}" onclick="momTab('daily')">Foto del día${dot}</button><button class="${tab === 'snaps' ? 'on' : ''}" onclick="momTab('snaps')">Historias${snapDot}</button></div>`;
   if (tab === 'daily') { paint('s-moments', html + dailyHTML()); loadPhotos($('s-moments')); return; }
   if (tab === 'snaps') { paint('s-moments', html + snapsHTML()); loadPhotos($('s-moments')); return; }
   if (allM.length > 3) html += `<input id="momQ" type="search" placeholder="Buscar: playa, cumpleaños, un lugar…" aria-label="Buscar momentos" value="${esc(mq)}" oninput="momSearch(this.value)">

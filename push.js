@@ -1,5 +1,5 @@
 // Notificaciones: cada teléfono se suscribe (Web Push) y guarda su dirección en "push/<uid>".
-// Cuando alguien hace algo (instantánea, nota, cupón…), su teléfono le pide al Worker de Cloudflare
+// Cuando alguien hace algo (historia, nota, cupón…), su teléfono le pide al Worker de Cloudflare
 // (push-config.js, docs/NOTIFICACIONES.md) que avise a los teléfonos de su pareja.
 // En el emulador (?emu) no se llama al Worker: el aviso se anota en la consola y en window.__pushLog.
 import { setDoc, updateDoc, deleteField } from 'https://www.gstatic.com/firebasejs/11.0.2/firebase-firestore.js';
@@ -7,7 +7,7 @@ import { $, S, auth, EMU, ref, on, partnerUid, profile, uid, toast, go, esc, ope
 import { PUSH } from './push-config.js';
 
 // [tipo, nombre en Ajustes]. Cada uno elige cuáles recibe (prefs.notif[tipo] === false = apagado).
-export const NOTIF_TYPES = [['snaps', '📸 Instantáneas y respuestas'], ['reacts', '😍 Reacciones a tus instantáneas'], ['notes', '💌 Notas nuevas'],
+export const NOTIF_TYPES = [['snaps', '📸 Historias y respuestas'], ['reacts', '😍 Reacciones a tus historias'], ['notes', '💌 Notas nuevas'],
   ['thinks', '❤️ «Pensando en ti»'], ['songs', '🎵 Canciones dedicadas'], ['coupons', '🎟️ Cupones nuevos, canjeados y cumplidos'],
   // Programados: los manda el Worker solo (notificaciones/worker.js → scheduled)
   ['cravings', '🍓 Antojos (nuevos, urgentes y cumplidos)'], ['arrows', '🏹 Flechas (reto del día)'], ['bus', '🚏 La parada (reto del día y duelos)'], ['pet', '🐾 Su mascota (compras, récords, nacimiento)'], ['money', '💸 Gastos (salidas, presupuesto y resumen del domingo)'], ['grocery', '🛒 Cuando tu pareja va al súper'], ['shows', '🎬 Cuando tu pareja avanza en una serie que ven por separado'], ['guess', '🔮 ¿Qué respondería tu pareja?'],

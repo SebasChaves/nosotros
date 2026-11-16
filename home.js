@@ -23,7 +23,7 @@ import { notify, meForPartner } from './push.js';
 
 /* ---------- Racha y "Pensando en ti" ---------- */
 // Un día cuenta para la racha si los dos hicieron algo: marcar ánimo, responder la pregunta, mandar un "pensando en ti",
-// subir la foto del día o (vía markActive) mandar una instantánea, nota, cupón o canción.
+// subir la foto del día o (vía markActive) mandar una historia, nota, cupón o canción.
 export const didSomething = (key, who) => !!(S.data.moods.find(x => x.id === key)?.[who] || S.data.answers.find(x => x.id === key)?.answers?.[who] || S.data.thinks.find(x => x.id === key)?.[who] || S.data.daily.find(x => x.id === key)?.[who] || S.data.activity.find(x => x.id === key)?.[who]);
 export const bothDid = key => { const p = partnerUid(); return !!p && didSomething(key, uid()) && didSomething(key, p); };
 const prevDay = d => new Date(d.getFullYear(), d.getMonth(), d.getDate() - 1);
@@ -298,10 +298,10 @@ document.addEventListener('click', e => {
 export function homeUnhide() { const u = cardUse(), now = Date.now(); for (const id of AUTO_HIDE) u[id] = now; saveUse(u); renderHome(); toast('Listo, volvieron todas las tarjetas'); }
 
 /* ---------- Personalización de Inicio ---------- */
-export const HOME_CARDS = [['urgent', '🔴 Recordatorios urgentes'], ['cravings', '🚨 Antojos urgentes de tu pareja'], ['counter', '💞 Contador'], ['week', '📊 Resumen de la semana (domingo y lunes)'], ['pet', '🥚 Su mascota'], ['snaps', '📸 Instantáneas'], ['money', '💸 Gastos: anotar rápido y presupuesto de la semana'], ['today', '📌 Hoy'], ['memory', '📸 Un día como hoy'],
+export const HOME_CARDS = [['urgent', '🔴 Recordatorios urgentes'], ['cravings', '🚨 Antojos urgentes de tu pareja'], ['counter', '💞 Contador'], ['week', '📊 Resumen de la semana (domingo y lunes)'], ['pet', '🥚 Su mascota'], ['snaps', '📸 Historias'], ['money', '💸 Gastos: anotar rápido y presupuesto de la semana'], ['today', '📌 Hoy'], ['memory', '📸 Un día como hoy'],
   ['mood', '🙂 ¿Cómo te sientes?'], ['question', '💬 Pregunta del día'], ['guess', '🔮 ¿Qué respondería tu pareja?'], ['challenge', '🏆 Reto de la semana'], ['upcoming', '🗓️ Próximos momentos']];
 // [{ id, on }] en el orden elegido; las tarjetas nuevas que no estén guardadas se agregan visibles, detrás de la
-// tarjeta que tienen antes en HOME_CARDS (por ejemplo, Instantáneas queda debajo del contador).
+// tarjeta que tienen antes en HOME_CARDS (por ejemplo, Historias queda debajo del contador).
 export function homeLayout() {
   const out = (profile(uid()).prefs?.home || []).filter(c => HOME_CARDS.some(([id]) => id === c.id));
   HOME_CARDS.forEach(([id], k) => {

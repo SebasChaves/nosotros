@@ -2,7 +2,7 @@
 // - Estacionamiento en 3D: autos (4 asientos, también en diagonal), busetas (6) y buses (10). Al tocarlos salen si su
 //   camino hasta el borde está libre (si chocan, regresan), rodean por la calle y se estacionan en la parada.
 // - La parada tiene 7 lugares: 4 abiertos y 3 con candado 🔒 que se abren solo durante ese nivel mandándole una foto a la
-//   pareja (llega como instantánea) o con monedas.
+//   pareja (llega como historia) o con monedas.
 // - La fila de pasajeros sube sola, en orden, al vehículo de su color que llegó primero. Lleno = se va y libera el lugar.
 //   Si la parada se llena y el siguiente de la fila no tiene vehículo de su color, se pierde.
 // - Ayudas con monedas de la mascota: acomodar la fila y grúa (saca un vehículo bloqueado). 💀 Experto: sin ayudas de monedas.
@@ -540,7 +540,7 @@ function lose() {
 // Botones para abrir un lugar con candado (foto gratis · monedas · gratis en pruebas)
 function unlockButtons() {
   const p = pet(), cost = UNLOCK_COST, pn = partnerName();
-  return `${partnerUid() ? `<button class="btn src-btn" onclick="busPhoto()">📸 Mandarle una foto a ${esc(pn || 'tu pareja')}<small>${G.spec.test ? 'En pruebas no se manda' : 'Gratis · le llega como instantánea'}</small></button>` : ''}
+  return `${partnerUid() ? `<button class="btn src-btn" onclick="busPhoto()">📸 Mandarle una foto a ${esc(pn || 'tu pareja')}<small>${G.spec.test ? 'En pruebas no se manda' : 'Gratis · le llega como historia'}</small></button>` : ''}
     ${G.expert ? '' : `<button class="btn ghost" onclick="busUnlock('coins')" ${!G.spec.test && !(p?.hatchedAt && coins(p) >= cost) ? 'disabled' : ''}>🪙 Abrir con monedas · ${G.spec.test ? 'gratis' : cost}</button>`}
     ${G.spec.test ? `<button class="btn ghost" onclick="busUnlock('free')">🧪 Abrir sin foto (prueba)</button>` : ''}`;
 }
@@ -548,7 +548,7 @@ function busBay() {
   if (!G || G.over) return;
   if (G.spec.duel) return toast('En el duelo los lugares 🔒 no se abren');
   overlay(`<div class="lk-big">${LOCK_SVG}</div><h2>Lugar con candado</h2>
-    <p class="small muted" style="margin:0">Se abre solo durante este nivel. Mándale una foto a ${esc(partnerName() || 'tu pareja')} (llega como instantánea) y es tuyo.</p>
+    <p class="small muted" style="margin:0">Se abre solo durante este nivel. Mándale una foto a ${esc(partnerName() || 'tu pareja')} (llega como historia) y es tuyo.</p>
     ${unlockButtons()}<button class="btn ghost" onclick="busCloseOverlay()">Ahora no</button>`);
 }
 function busCloseOverlay() { closeOverlay(); if (G?.stuck) lose(); }
@@ -571,7 +571,7 @@ async function busUnlock(how) {
   }
   G.help++; openBay();
 }
-// Abrir con una foto: la cámara (o la galería en la computadora), vista previa con texto opcional y se manda como instantánea
+// Abrir con una foto: la cámara (o la galería en la computadora), vista previa con texto opcional y se manda como historia
 let busPending = null;
 function busPhoto(gallery) {
   if (!G || G.over) return;

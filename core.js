@@ -263,7 +263,7 @@ export function nativePick(accept, capture, onFile) {
   document.body.appendChild(tmp); tmp.click();
 }
 // Qué cámara usar: la de Futari (rápida, sin espejo) o la del teléfono (zoom, flash, modos). Se recuerda por teléfono
-// (localStorage "futari-cam-src") para las instantáneas, que abren la cámara directo.
+// (localStorage "futari-cam-src") para las historias, que abren la cámara directo.
 export const camSrc = () => { try { return localStorage.getItem('futari-cam-src') === 'phone' ? 'phone' : 'futari'; } catch { return 'futari'; } };
 export const setCamSrc = v => { try { localStorage.setItem('futari-cam-src', v); } catch {} };
 // Tomar una foto con la cámara elegida (o la del teléfono si este navegador no deja usar la de Futari)
@@ -621,7 +621,7 @@ export const S = {
 };
 export const uid = () => S.me?.uid;
 // Estadísticas de Administración (doc "stats/<día>"): kind = 'sent' (avisos que mandaste), 'opened' (avisos que abriste)
-// o 'acts' (cosas que no quedan guardadas para siempre, como instantáneas y reacciones). No se lee en vivo.
+// o 'acts' (cosas que no quedan guardadas para siempre, como historias y reacciones). No se lee en vivo.
 export function countStat(kind, key) {
   if (!S.me || !key) return;
   const day = todayKey();

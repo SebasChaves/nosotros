@@ -281,7 +281,7 @@ export async function runSchedule(env, when = Date.now(), { dryRun = false } = {
       const title = pet ? `${pet.hatchedAt ? pet.species : '🥚'} ${petName} tiene hambre` : `🔥 Su racha de ${streak} ${streak === 1 ? 'día' : 'días'} se acaba hoy`;
       const parts = [];
       if (pet && streak) parts.push(`Llevan ${streak} ${streak === 1 ? 'día' : 'días'} seguidos.`);
-      parts.push(otherDid ? `${nameFor(u, other)} ya hizo lo suyo; solo faltas tú.` : 'Hagan algo hoy en Futari: un corazón, su ánimo o una instantánea.');
+      parts.push(otherDid ? `${nameFor(u, other)} ya hizo lo suyo; solo faltas tú.` : 'Hagan algo hoy en Futari: un corazón, su ánimo o una historia.');
       add(u, 'streak', { title, body: parts.join(' '), url: './?open=pet', tag: 'streak' });
     }
   }
@@ -330,7 +330,7 @@ export async function runSchedule(env, when = Date.now(), { dryRun = false } = {
     const snaps = keys.reduce((s, k) => s + members.reduce((a, u) => a + (Number(days[k]?.stats?.acts?.[u]?.snap) || 0), 0), 0);
     const answers = keys.filter(k => members.every(u => days[k]?.answers?.answers?.[u])).length;
     const parts = [`🔥 ${together} de 7 días juntos`, `❤️ ${hearts} ${hearts === 1 ? 'corazón' : 'corazones'}`];
-    if (snaps) parts.push(`📸 ${snaps} ${snaps === 1 ? 'instantánea' : 'instantáneas'}`); else parts.push(`💬 ${answers} ${answers === 1 ? 'pregunta' : 'preguntas'}`);
+    if (snaps) parts.push(`📸 ${snaps} ${snaps === 1 ? 'historia' : 'historias'}`); else parts.push(`💬 ${answers} ${answers === 1 ? 'pregunta' : 'preguntas'}`);
     const title = together >= 6 ? '🏆 ¡Qué semana! Su resumen en Futari' : '📊 Su semana en Futari';
     for (const u of members) add(u, 'week', { title, body: parts.join(' · ') + '. Toquen para ver el resumen completo.', url: './?open=week', tag: 'week-' + today });
   }
