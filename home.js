@@ -5,7 +5,7 @@ import {
   parseDate, today, daysBetween, fmtDate, fmtShort, dayKey, todayKey, whenText, addMonths, weekKey, epochDay, DAY,
   nameOf, partnerUid, partnerName, myName, plural, uid, avatar, ask, celebrate } from './core.js';
 import { QUESTIONS, MOODS, CHALLENGES } from './data.js';
-import { itemsFor, nextEventDate, nextOccurrence } from './calendar.js';
+import { itemsFor, nextEventDate, nextOccurrence, myVacationRow } from './calendar.js';
 import { unreadNotes, couponsExpiring } from './love.js';
 import { listNeedsMyVote } from './decide.js';
 import { quizWaiting } from './quiz.js';
@@ -69,6 +69,7 @@ function todayCard() {
   const tomorrow = dayKey(new Date(today().getFullYear(), today().getMonth(), today().getDate() + 1));
   const rows = [];
   const row = (e, text, action) => rows.push(`<button class="result-row" onclick="${action}"><span class="e">${e}</span><span class="grow">${text}</span>${icon('send')}</button>`);
+  const vac = myVacationRow(); if (vac) row(...vac);
   for (const it of itemsFor(tk)) row(it.kind === 'plan' ? '📌' : it.kind === 'trip' ? '✈️' : '🎉', `<b>Hoy:</b> ${esc(it.label)}${it.time ? ' · ' + esc(it.time) : ''}`, `go('s-cal');calPick('${tk}')`);
   for (const it of itemsFor(tomorrow).filter(i => i.kind !== 'trip')) row('⏰', `<b>Mañana:</b> ${esc(it.label)}`, `go('s-cal');calPick('${tomorrow}')`);
   for (const r of dueReminders().slice(0, 4)) row('🔔', `<b>${r.date < tk ? 'Pendiente' : 'Recordar'}:</b> ${esc(r.text)}${r.time ? ' · ' + esc(r.time) : ''}`, "go('s-reminders')");
@@ -347,7 +348,7 @@ setInterval(() => {
   const m = $('heroMin'); if (m) m.innerHTML = `<b>${mins % 60}</b>minutos`;
 }, 20000);
 
-on('dates moments moods answers challenges trips profiles events thinks notes coupons lists quiz daily reminders songs snaps activity pet guess cravings expenses money', renderHome);
+on('vacations dates moments moods answers challenges trips profiles events thinks notes coupons lists quiz daily reminders songs snaps activity pet guess cravings expenses money', renderHome);
 window.rerenderHome = () => { if ($('s-home').classList.contains('active')) renderHome(); };
 on('thinks', checkIncomingThink);
 expose({ homeUnhide, sendThink, openFechas, answerQuestion, openAnswers, setMood, skipChallenge, doneChallenge });

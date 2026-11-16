@@ -70,6 +70,8 @@ function tripForm(t = {}) {
 }
 function newTrip() { fromDream = null; tripForm(); }
 // Desde «Por conocer»: el formulario con nombre, destino y presupuesto ya puestos
+// Desde los días libres del calendario: el viaje con esas fechas
+function newTripDates(start, end) { go('s-trips'); fromDream = null; tripForm({ name: '', start, end }); }
 function newTripFrom(d) { tripForm({ name: d.name, dest: d.dest, budget: d.budget }); fromDream = d; }
 function editTrip() { tripForm(trip()); }
 function saveTrip() {
@@ -224,4 +226,4 @@ async function delTrip() {
 }
 
 on('trips expenses dreams money', () => { renderTrips(); if (current) renderTrip(); });
-expose({ tripsView, newTripFrom, tripGoal, copyPack, newTrip, editTrip, saveTrip, openTrip, tripTab, addPlan, delPlan, addPack, togglePack, delPack, setBudget, delTrip });
+expose({ tripsView, newTripFrom, newTripDates, tripGoal, copyPack, newTrip, editTrip, saveTrip, openTrip, tripTab, addPlan, delPlan, addPack, togglePack, delPack, setBudget, delTrip });

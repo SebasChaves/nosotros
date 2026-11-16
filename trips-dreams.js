@@ -11,14 +11,14 @@ import { notify, meForPartner } from './push.js';
 
 export const DREAM_KINDS = [['🏖️', 'Playa'], ['⛰️', 'Montaña'], ['🏙️', 'Ciudad'], ['🌿', 'Naturaleza'], ['🏰', 'Cultura'], ['🎢', 'Diversión'], ['📍', 'Otro']];
 const dPhoto = id => `dream-${id}`;
-let fKind = '', fWhere = '', fMax = 0;
+let fKind = '', fWhere = '', fMax = 0, fDays = 0;
 const score = d => Object.values(d.votes || {}).reduce((s, v) => s + (v || 0), 0);
 const safeUrl = u => /^https?:\/\//i.test(u || '');
 const host = u => { try { return new URL(u).hostname.replace(/^www\./, ''); } catch { return ''; } };
 export const dreamsPending = () => S.data.dreams.filter(d => !d.went && d.by !== uid() && d.votes?.[uid()] === undefined).length;
 
 function filtered() {
-  return S.data.dreams.filter(d => !d.went && (!fKind || d.kind === fKind) && (!fWhere || (fWhere === 'fuera') === !!d.abroad) && (!fMax || !d.cost || d.cost <= fMax));
+  return S.data.dreams.filter(d => !d.went && (!fKind || d.kind === fKind) && (!fWhere || (fWhere === 'fuera') === !!d.abroad) && (!fMax || !d.cost || d.cost <= fMax) && (!fDays || !d.days || d.days <= fDays));
 }
 export function dreamsHTML() {
   const list = filtered().sort((a, b) => score(b) - score(a) || b.at - a.at), went = S.data.dreams.filter(d => d.went), p = partnerUid();
@@ -41,13 +41,14 @@ export function dreamsHTML() {
   return `<div class="glass stack"><div class="grid2"><button class="btn" onclick="dreamForm()">${icon('plus')} Lugar por conocer</button><button class="btn ghost" onclick="dreamSpin()" ${filtered().length < 2 ? 'disabled' : ''}>🎲 ¿A dónde vamos?</button></div>
       <div class="chips scroll">${[['', 'Todos'], ...DREAM_KINDS].map(([e, l]) => `<button class="chip ${fKind === e ? 'on' : ''}" onclick="dreamF('k','${e}')">${e} ${l}</button>`).join('')}</div>
       <div class="row" style="gap:8px"><div class="seg grow" style="margin:0">${[['', 'Todo'], ['pais', 'En el país'], ['fuera', 'Afuera']].map(([k, l]) => `<button class="${fWhere === k ? 'on' : ''}" onclick="dreamF('w','${k}')">${l}</button>`).join('')}</div></div>
+      ${fDays ? `<button class="chip on" style="align-self:flex-start" onclick="dreamF('d','')">🗓️ Que quepan en ${plural(fDays, 'día', 'días')} ✕</button>` : ''}
       <input id="drMax" inputmode="numeric" placeholder="Presupuesto máximo (opcional)" aria-label="Presupuesto máximo" value="${fMax || ''}" onchange="dreamF('m', this.value)"></div>
     ${list.length ? list.map(card).join('') : `<div class="glass center stack"><div style="font-size:42px">🗺️</div><p class="muted" style="margin:0">${S.data.dreams.length ? 'Ningún lugar con ese filtro' : 'Guarden aquí los lugares a los que quieren ir algún día: el que vieron en TikTok, el que les recomendaron, el de siempre.'}</p></div>`}
     ${went.length ? `<span class="label">✅ Ya fueron</span><div class="glass"><ul class="list">${went.map(d => `<li><span style="font-size:20px">${esc(d.kind || '📍')}</span><div class="txt">${esc(d.name)}</div>${d.tripId && S.data.trips.some(t => t.id === d.tripId) ? `<button class="link" onclick="openTrip('${d.tripId}')">Ver viaje</button>` : ''}</li>`).join('')}</ul></div>` : ''}`;
 }
 export function afterDreams(el) { loadPhotos(el); }
 function dreamF(k, v) {
-  if (k === 'k') fKind = fKind === v ? '' : v; else if (k === 'w') fWhere = v; else fMax = parseAmount(v) || 0;
+  if (k === 'k') fKind = fKind === v ? '' : v; else if (k === 'w') fWhere = v; else if (k === 'd') fDays = Number(v) || 0; else fMax = parseAmount(v) || 0;
   window.renderTripsList?.();
 }
 
@@ -130,4 +131,5 @@ function dreamSpin() {
   });
 }
 
+window.dreamsForDays = n => dreamF('d', n);
 expose({ dreamF, dreamForm, dreamKind, dreamWhere, dreamPhoto, saveDream, voteDream, dreamMenu, dreamWent, delDream, dreamToTrip, dreamSpin });
