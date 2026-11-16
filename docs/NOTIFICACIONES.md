@@ -122,6 +122,12 @@ problema es el Cron en Cloudflare (*Settings → Triggers*, `* * * * *`) o sus *
 6. Abre la dirección del Worker: debe decir `"scheduled":true`.
 
 
+## Viajes (Worker v10)
+
+A las 10:00, 30, 7 y 1 día antes de la ida (`trips.start`), a cada uno le llega «✈️ Faltan N días para…» con lo que le
+falta de «Antes de salir» (`trips.todo`, los que son suyos o de los dos). Tipo de aviso `trips` (también lo usa la app al
+guardar un lugar en «Por conocer»). Abre `./?open=trips`.
+
 ## Chef con IA (`/chef`, Worker v9)
 
 «👩‍🍳 Pregúntale al chef» (`recipes.js`) manda lo que escriben al Worker (con la sesión de la pareja) y el Worker arma la

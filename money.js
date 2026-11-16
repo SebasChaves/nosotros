@@ -9,10 +9,10 @@
 // Datos: expenses { desc, amount, paidBy, split: half|full|none, cat, date, tripId, outing, createdAt, by } ·
 //   money/cfg { week, weekCats[], goal, lastRoll } · money/out { active, oid, name, limit, startAt, by, warned } ·
 //   money/g-<ts> { kind:'goal', name, emoji, target, saved, at, by, log[{ by, amount, at, auto }] }.
-import { setDoc, deleteDoc, updateDoc, increment, arrayUnion, runTransaction } from 'https://www.gstatic.com/firebasejs/11.0.2/firebase-firestore.js';
+import { setDoc, deleteDoc, updateDoc, increment, arrayUnion, runTransaction, deleteField } from 'https://www.gstatic.com/firebasejs/11.0.2/firebase-firestore.js';
 import { $, S, db, esc, icon, paint, on, expose, toast, openSheet, closeSheet, write, ref, newRef, go, IOS, ANDROID,
          parseDate, fmtShort, todayKey, dayKey, fmtMoney, nameOf, partnerUid, partnerName, uid, ask, celebrate, markActive, undoBar, softDelete } from './core.js';
-import { EXPENSE_CATS } from './data.js';
+import { EXPENSE_CATS, CURRENCIES } from './data.js';
 import { backBar } from './lists.js';
 import { notify, meForPartner } from './push.js';
 
@@ -103,7 +103,7 @@ function render() {
     const trip = e.tripId && S.data.trips.find(t => t.id === e.tripId);
     return `<li ${e.type === 'settle' ? '' : `data-swr="editExpense|${e.id}"`} data-swl="delExpense|${e.id}"><span style="font-size:22px">${ce}</span><div class="txt" role="button" tabindex="0" style="cursor:pointer" ${e.type === 'settle' ? '' : `onclick="openExpense({id:'${e.id}'})"`}>${esc(e.type === 'settle' ? `${nameOf(e.paidBy)} saldó cuentas` : e.desc || cl)}
       <span class="sub">${fmtShort(parseDate(e.date))} · ${e.type === 'settle' ? '' : `pagó ${esc(nameOf(e.paidBy))} · ${esc(debtTxt(e.split || 'half', e.paidBy, e.amount))}`}${trip ? ` · ${esc(trip.name)}` : ''}${e.items?.length ? ` · 🧾 ${e.items.length}` : ''}</span></div>
-      <b class="num">${fmtMoney(e.amount)}</b><button class="del" aria-label="Borrar" onclick="delExpense('${e.id}')">${icon('trash')}</button></li>`;
+      <b class="num">${fmtMoney(e.amount)}${e.orig ? `<small class="muted" style="display:block;font-weight:500;font-size:11px">${esc(e.orig.amount)} ${esc(e.orig.cur)}</small>` : ''}</b><button class="del" aria-label="Borrar" onclick="delExpense('${e.id}')">${icon('trash')}</button></li>`;
   };
   for (const e of items) {
     const mk = (e.date || '').slice(0, 7);
@@ -264,7 +264,9 @@ export function openExpense(preset = {}) {
   const trips = S.data.trips.filter(t => !t.end || t.end >= today || t.id === preset.tripId);
   openSheet(`<div class="stack"><h2>${ex ? 'Editar gasto' : 'Nuevo gasto'}</h2>
     <input id="exDesc" placeholder="¿En qué?" maxlength="60" aria-label="Descripción" value="${esc(ex?.desc || '')}">
-    <input id="exAmount" inputmode="decimal" placeholder="Monto" aria-label="Monto" value="${ex ? ex.amount : ''}">
+    <div class="add-row"><input id="exAmount" inputmode="decimal" placeholder="Monto" aria-label="Monto" value="${ex ? (ex.orig?.amount ?? ex.amount) : ''}" oninput="exConv()">
+      <select id="exCur" style="flex:0 0 96px" aria-label="Moneda" onchange="exCurChange()">${curOpts(ex, preset)}</select></div>
+    <p class="tiny muted" id="exConvTxt" style="margin:-6px 0 0" hidden></p>
     <div class="grid2">
       <div><label class="f" for="exPaid">Pagó</label><select id="exPaid"><option value="${uid()}">Yo</option>${p ? `<option value="${p}">${esc(nameOf(p))}</option>` : ''}</select></div>
       <div><label class="f" for="exSplit">Se divide</label><select id="exSplit">${Object.entries(SPLITS).map(([k, l]) => `<option value="${k}">${l}</option>`).join('')}</select></div>
@@ -277,8 +279,46 @@ export function openExpense(preset = {}) {
     <button class="btn" onclick="saveExpense()">${ex ? 'Guardar cambios' : 'Guardar gasto'}</button>
     ${ex ? `<button class="btn ghost danger" onclick="delExpense('${ex.id}')">${icon('trash')} Borrar gasto</button>` : ''}</div>`);
   $('exSplit').value = ex ? ex.split || 'half' : lastSplit();
+  $('exTrip')?.addEventListener('change', () => { const t = S.data.trips.find(x => x.id === $('exTrip').value); if (t?.currency && !ex) { $('exCur').value = t.currency; exCurChange(); } });
+  exRate = ex?.orig?.rate || 0; exCurChange(true);
   if (ex) $('exPaid').value = ex.paidBy;
 }
+/* ---------- Gastos en otra moneda (viajes) ----------
+   El monto se guarda convertido a la moneda de Ajustes (para saldos y presupuestos) y el original en orig { cur, amount, rate }.
+   Tipo de cambio del día: open.er-api.com (gratis, sin clave), guardado en el teléfono un día; si no hay internet se escribe a mano. */
+const home = () => S.settings.currency || 'USD';
+let exRate = 0;
+function curOpts(ex, preset) {
+  const trip = S.data.trips.find(t => t.id === (ex?.tripId || preset.tripId));
+  const sel = ex?.orig?.cur || (ex ? home() : trip?.currency || home());
+  const list = [...new Set([home(), trip?.currency, 'USD', 'EUR', ...CURRENCIES.map(c => c[0])].filter(Boolean))];
+  return list.map(c => `<option value="${c}" ${c === sel ? 'selected' : ''}>${c}</option>`).join('');
+}
+async function rateFor(cur) {
+  const k = `futari-rate-${home()}-${cur}`;
+  try { const c = JSON.parse(localStorage.getItem(k)); if (c && c.day === todayKey()) return c.r; } catch {}
+  const j = await (await fetch(`https://open.er-api.com/v6/latest/${home()}`)).json();
+  const r = j?.rates?.[cur]; if (!r) throw 0;
+  const v = 1 / r; // cuánto vale 1 de esa moneda en la de Ajustes
+  try { localStorage.setItem(k, JSON.stringify({ day: todayKey(), r: v })); } catch {}
+  return v;
+}
+async function exCurChange(keep) {
+  const cur = $('exCur')?.value; if (!cur) return;
+  const txt = $('exConvTxt');
+  if (cur === home()) { exRate = 0; if (txt) txt.hidden = true; return; }
+  if (!keep || !exRate) { exRate = 0; if (txt) { txt.hidden = false; txt.textContent = 'Buscando el tipo de cambio…'; } try { exRate = await rateFor(cur); } catch { exRate = 0; } }
+  exConv();
+}
+function exConv() {
+  const cur = $('exCur')?.value, txt = $('exConvTxt'); if (!txt || !cur || cur === home()) return;
+  txt.hidden = false;
+  if (!exRate) { txt.innerHTML = `Sin internet para el tipo de cambio: 1 ${esc(cur)} = <input id="exRateIn" inputmode="decimal" style="width:90px;padding:4px 8px" oninput="exRateTyped(this.value)"> ${esc(home())}`; return; }
+  const a = parseAmount($('exAmount').value);
+  txt.textContent = `${a > 0 ? `≈ ${fmtMoney(a * exRate)} · ` : ''}1 ${cur} = ${fmtMoney(exRate)} (tipo de cambio de hoy)`;
+}
+function exRateTyped(v) { exRate = parseAmount(v) || 0; }
+
 // Lista de lo que se compró: «Leche 1200» → { t: 'Leche', a: 1200 }; sin precio → { t: 'Pan' }
 const itemTxt = it => typeof it === 'string' ? it : `${it.t}${it.a ? ' ' + it.a : ''}`;
 function parseItems(txt) {
@@ -300,17 +340,22 @@ function saveExpense() {
   const desc = $('exDesc').value.trim(), its = parseItems($('exItems').value);
   let amount = parseAmount($('exAmount').value);
   if (!(amount > 0) && its.length && its.every(i => i.a)) amount = its.reduce((s, i) => s + i.a, 0); // sin total: la suma de la lista
+  const cur = $('exCur')?.value || home(); let orig = null;
+  if (cur !== home() && amount > 0) {
+    if (!exRate) return toast('Falta el tipo de cambio');
+    orig = { cur, amount: Math.round(amount * 100) / 100, rate: exRate }; amount = amount * exRate;
+  }
   if (!desc || !(amount > 0)) return toast('Pon en qué y un monto válido');
   const o = outing(), cat = $('exCat').value;
   if (!editingEx) keepSplit($('exSplit').value);
   if (editingEx && S.data.expenses.some(e => e.id === editingEx)) {
-    write(updateDoc(ref('expenses', editingEx), { items: its, desc, amount: Math.round(amount * 100) / 100, paidBy: $('exPaid').value, split: $('exSplit').value, cat, date: $('exDate').value || todayKey(), tripId: $('exTrip')?.value || null }));
+    write(updateDoc(ref('expenses', editingEx), { orig: orig || deleteField(), items: its, desc, amount: Math.round(amount * 100) / 100, paidBy: $('exPaid').value, split: $('exSplit').value, cat, date: $('exDate').value || todayKey(), tripId: $('exTrip')?.value || null }));
     editingEx = null; closeSheet(); return toast('Cambios guardados');
   }
   write(setDoc(newRef('expenses'), {
     desc, amount: Math.round(amount * 100) / 100, paidBy: $('exPaid').value, split: $('exSplit').value,
     cat, date: $('exDate').value || todayKey(), tripId: $('exTrip')?.value || null, createdAt: Date.now(), by: uid(),
-    ...(its.length ? { items: its } : {}),
+    ...(its.length ? { items: its } : {}), ...(orig ? { orig } : {}),
     ...(o && !$('exTrip')?.value ? { outing: o.oid, outName: o.name } : {}),
   }));
   closeSheet(); toast('Gasto guardado');
@@ -538,6 +583,6 @@ async function syncOutNotif() {
   } catch (e) { console.warn('outing notif', e); }
 }
 on('expenses trips money', () => { render(); rollWeek(); syncOutFab(); syncOutNotif(); });
-expose({ editExpense, mvFilter, openExpense, saveExpense, settleUp, delExpense, quickSpend, qsKey, qsAdd, qsToggle, qsMore, qsBack, qsFreq, qsRepeat, qsSave, qsDescIn,
+expose({ exConv, exCurChange, exRateTyped, editExpense, mvFilter, openExpense, saveExpense, settleUp, delExpense, quickSpend, qsKey, qsAdd, qsToggle, qsMore, qsBack, qsFreq, qsRepeat, qsSave, qsDescIn,
   startOuting, saveOuting, endOuting, budgetSheet, saveBudget, goalSheet, saveGoal, goalAdd, saveGoalAdd, goalStar, goalDel,
   bankTutorial, copyBankUrl, bankTry, bankTryOpen });

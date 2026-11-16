@@ -16,7 +16,7 @@
 //   COUPLE_ID          (texto, opcional) por defecto nosotros
 // Ver docs/NOTIFICACIONES.md. Sin dependencias: se pega tal cual en el editor de Cloudflare.
 
-const WORKER_VERSION = 9; // súbelo al cambiar este archivo (la app lo muestra en el diagnóstico)
+const WORKER_VERSION = 10; // súbelo al cambiar este archivo (la app lo muestra en el diagnóstico)
 const enc = new TextEncoder();
 const b64u = buf => btoa(String.fromCharCode(...new Uint8Array(buf))).replace(/\+/g, '-').replace(/\//g, '_').replace(/=+$/, '');
 const unb64u = s => Uint8Array.from(atob(s.replace(/-/g, '+').replace(/_/g, '/') + '==='.slice((s.length + 3) % 4)), c => c.charCodeAt(0));
@@ -294,6 +294,19 @@ export async function runSchedule(env, when = Date.now(), { dryRun = false } = {
 
   // 2b. Notas programadas: le llegan a la pareja a su hora
   for (const n of notesDue) for (const u of members.filter(x => x !== n.fromUid)) add(u, 'notes', { title: `💌 ${n.fromName || couple.members[n.fromUid]?.name || 'Tu pareja'} te dejó una nota para hoy`, body: 'Sácala del frasco 🫙', url: './?open=notes', tag: 'note-' + n.id });
+
+  // 2c. Viajes: 30 días, 7 días y 1 día antes (a las 10:00), con lo que falta de «Antes de salir»
+  if (onTheHour && hour === 10) {
+    for (const n of [30, 7, 1]) for (const t of await db.query('trips', 'start', shift(today, n))) {
+      const left = (t.todo || []).filter(x => !x.done);
+      for (const u of members) {
+        const mine = left.filter(x => !x.who || x.who === 'ambos' || x.who === u);
+        const title = n === 1 ? `✈️ ¡Mañana se van a ${t.dest || t.name}!` : `✈️ Faltan ${n} días para «${t.name}»`;
+        const body = mine.length ? `Te falta: ${mine.slice(0, 3).map(x => x.text).join(', ')}${mine.length > 3 ? ` y ${mine.length - 3} más` : ''}` : n === 1 ? 'Revisen la maleta y las reservas 🧳' : 'Todo listo en «Antes de salir» ✅';
+        add(u, 'trips', { title, body, url: './?open=trips', tag: 'trip-' + t.id });
+      }
+    }
+  }
 
   // 3. Fechas especiales, aniversarios y mesiversarios: hoy (8:00) y mañana (9:00)
   if (onTheHour && (hour === TODAY_HOUR || hour === TOMORROW_HOUR)) {

@@ -54,6 +54,8 @@ manifest.json   PWA (nombre, íconos, colores)
 | `lock.js` | PIN opcional por teléfono (hash SHA-256 en localStorage) |
 | `tracking.js`, `admin.js`, `testing.js` | Registro de ingresos, errores y tiempo por sección; Administración (solo `TESTERS`) con pestañas Ingresos, Estadísticas (uso, notificaciones, quién hace más) y Pruebas (mascota de pruebas con todo desbloqueado y sin guardar nada, avisos, herramientas, zona de pruebas) |
 
+- `trips-extra.js` (pestañas Ideas, Antes de salir, Reservas, Diario y clima de Open-Meteo) y `trips-dreams.js` (Viajes → Por conocer), los usa `trips.js`.
+
 ## El núcleo (`core.js`)
 
 **Estado:** `S = { me, settings, data: {colección: [docs]}, priv: {gifts: [...]}}`. `app.js` mantiene `S.data` al día con

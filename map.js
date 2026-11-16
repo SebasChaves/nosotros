@@ -1,7 +1,7 @@
 // Mapa de nosotros: pines de los lugares donde han estado. Mapa de OpenStreetMap con Leaflet (sin claves).
 import { setDoc, deleteDoc } from 'https://www.gstatic.com/firebasejs/11.0.2/firebase-firestore.js';
 import { $, S, esc, icon, paint, on, onShow, expose, go, toast, openSheet, closeSheet, write, ref, newRef, ask, celebrate,
-         todayKey, parseDate, fmtShort, nameOf, plural, uid, softDelete } from './core.js';
+         todayKey, parseDate, fmtShort, nameOf, plural, uid, softDelete, fmtMoney } from './core.js';
 import { backBar } from './lists.js';
 import { myDailyDone } from './daily.js';
 import { loadLeaflet, placeField, initPlace } from './location.js';
@@ -40,7 +40,7 @@ async function render() {
       <div class="glass center"><div class="money grad-text">${c.length}</div><div class="small muted">${c.length === 1 ? 'país' : 'países'}</div></div></div>
     ${years.length > 1 || year ? `<div class="chips scroll"><button class="chip ${!year ? 'on' : ''}" onclick="pinYear('')">Todos los años</button>${years.map(y => `<button class="chip ${year === y ? 'on' : ''}" onclick="pinYear('${y}')">${y}</button>`).join('')}</div>` : ''}
     ${year ? (() => { const yp = pins.filter(p => (p.date || '').startsWith(year)), yc = new Set(yp.map(p => p.country).filter(Boolean)); return `<div class="glass small center">📅 En ${year} fueron a <b>${yp.length} ${yp.length === 1 ? 'lugar' : 'lugares'}</b>${yc.size ? ` en <b>${yc.size} ${yc.size === 1 ? 'país' : 'países'}</b> (${[...yc].map(esc).join(', ')})` : ''}</div>`; })() : ''}
-    <div class="chips scroll"><button class="chip ${!filter ? 'on' : ''}" onclick="pinFilter('')">Todos</button>${PIN_KINDS.map(([e, l]) => `<button class="chip ${filter === e ? 'on' : ''}" onclick="pinFilter('${e}')">${e} ${l}</button>`).join('')}</div>
+    <div class="chips scroll"><button class="chip ${!filter ? 'on' : ''}" onclick="pinFilter('')">Todos</button>${PIN_KINDS.map(([e, l]) => `<button class="chip ${filter === e ? 'on' : ''}" onclick="pinFilter('${e}')">${e} ${l}</button>`).join('')}${S.data.dreams.some(d => d.place && !d.went) ? `<button class="chip ${filter === '✨' ? 'on' : ''}" onclick="pinFilter('✨')">✨ Por conocer</button>` : ''}</div>
     <div class="glass" style="padding:6px 14px">${list.length ? list.map(p => `<button class="result-row" onclick="flyPin('${p.id}')"><span class="e">${esc(p.kind)}</span>
       <span class="grow" style="min-width:0"><b style="display:block">${esc(p.title)}</b><span class="tiny muted">${[p.date ? fmtShort(parseDate(p.date)) : '', p.place, nameOf(p.by)].filter(Boolean).map(esc).join(' · ')}</span></span></button>`).join('')
       : '<p class="empty">Agreguen el primer lugar donde han estado juntos</p>'}</div>
@@ -74,6 +74,9 @@ function drawPins(fit) {
     const st = Object.values(p.ratings || {}), avgR = st.length ? (st.reduce((a, b) => a + b, 0) / st.length).toFixed(1) : '';
     marks.push({ lat: p.loc.lat, lng: p.loc.lng, html: `<div class="map-pin food"><span>🍽️</span></div>`, popup: `<b>${esc(p.name)}</b><br>${esc(p.status === 'been' ? 'Ya fueron' : 'Quieren ir')}${p.kind ? ' · ' + esc(p.kind) : ''}${avgR ? ` · ★ ${avgR}` : ''}<br><a href="#" onclick="go('s-places');return false">Ver en Restaurantes</a>` });
   }
+  // Lugares por conocer (Viajes)
+  if (!filter || filter === '✨') for (const d of S.data.dreams.filter(d => d.place && !d.went))
+    marks.push({ lat: d.place.lat, lng: d.place.lng, html: `<div class="map-pin dream"><span>✨</span></div>`, popup: `<b>${esc(d.kind || '')} ${esc(d.name)}</b><br>Por conocer${d.cost ? ` · ≈ ${fmtMoney(d.cost)}` : ''}<br><a href="#" onclick="go('s-trips');tripsView('dreams');return false">Ver en Viajes</a>` });
   const groups = [];
   if (map.getZoom() < 15) {
     for (const m of marks) {
@@ -139,6 +142,6 @@ function savePin() {
 }
 function delPin(id) { softDelete('pins', id, 'el lugar del mapa', { after: () => map?.closePopup() }); }
 
-on('pins moments daily places', () => { if ($('mapBox') && $('s-map').classList.contains('active')) render(); });
+on('pins moments daily places dreams', () => { if ($('mapBox') && $('s-map').classList.contains('active')) render(); });
 onShow('s-map', render);
 expose({ pinYear, showOnMap, addPin, pinFromPlace, myLocation, pickOnMap, cancelPick, savePin, delPin, flyPin, pinFilter });
