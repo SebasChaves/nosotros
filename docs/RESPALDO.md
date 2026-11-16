@@ -8,7 +8,7 @@ falla. En la app hay una versión corta en **Ajustes → Respaldo → «🆘 ¿S
 | Capa | Qué guarda | Dónde | Cuánto dura |
 |---|---|---|---|
 | **Deshacer** | Lo que se borró hace unos segundos (momentos, notas, gastos, recetas…) | En la app (barrita «Deshacer» abajo) | ~5 segundos |
-| **Respaldo automático** | Toda la base y las fotos | Cloudflare KV `RESPALDOS` (Worker `futari-push` v12) | Últimos 7 días + un domingo por semana del último mes |
+| **Respaldo automático** | Toda la base y las fotos | Cloudflare KV `RESPALDOS` (Worker `futari-push` v13) | Últimos 7 días + un domingo por semana del último mes |
 | **Respaldo a mano** | Toda la base (y las fotos si se pide) | Un archivo `.json` en el teléfono | Lo que lo guarden (Drive, iCloud, correo…) |
 
 Qué **no** se respalda en ninguna: `push` (direcciones de los teléfonos para avisos, se vuelven a crear solas), lo
@@ -44,7 +44,7 @@ En Cloudflare → Workers → `futari-push`:
 1. **Settings → Triggers → Cron**: debe existir `* * * * *` (cada minuto). Sin él tampoco llegan los recordatorios.
 2. **Settings → Bindings**: debe estar el KV namespace con el nombre de variable **`RESPALDOS`** (y `AI` para el chef).
 3. **Variables and Secrets**: `FIREBASE_SA` (la cuenta de servicio de solo lectura) y `FIREBASE_PROJECT_ID`.
-4. **Edit code**: arriba debe decir `const WORKER_VERSION = 12` o más. Si no, pegar `notificaciones/worker.js` y Deploy.
+4. **Edit code**: arriba debe decir `const WORKER_VERSION = 13` o más. Si no, pegar `notificaciones/worker.js` y Deploy.
 5. **Logs** (Observability): buscar errores con «respaldo».
 Mientras se arregla: «💾 Respaldar ahora» (si el servicio responde) o «Descargar con fotos» (no necesita Cloudflare).
 

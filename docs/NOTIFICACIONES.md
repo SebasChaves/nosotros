@@ -146,7 +146,7 @@ receta con IA. No guarda nada; la app la guarda solo si tocan «Guardar».
   una clave real**: revisar la primera vez.
 - Errores: `old-worker` (falta pegar v9 o más nuevo), `no-ai` (falta el binding), `limit`, `ai` (otro error; detalle en *Logs*).
 
-## Respaldo automático (Worker v11; «Respaldar ahora» desde v12)
+## Respaldo automático (Worker v11; «Respaldar ahora» desde v12; v13 aguanta el límite de KV)
 
 Guía de uso y de recuperación: docs/RESPALDO.md.
 
@@ -169,7 +169,7 @@ o lo restaura (se junta con lo actual, no borra nada). Errores: `no-kv` (falta e
 **«💾 Respaldar ahora» (v12):** `{action:'start'}` reinicia el respaldo de hoy (máximo 4 veces al día por el límite de
 escrituras de KV; si no, `{error:'limit'}`) y la app pide `{action:'step'}` una y otra vez (cada pedido = un paso:
 una colección o ~8 fotos; con el botón, hasta 120 fotos y las demás siguen en la noche) mostrando «Respaldando… 12 de 40»
-hasta recibir `{phase:'done'}`.
+hasta recibir `{phase:'done'}`. **Ojo (v13):** KV deja escribir la misma clave (p. ej. `state`) solo una vez por segundo; si no, lanza 429. Por eso la app espera 1,2 s entre pasos y reintenta hasta 3 veces, el Worker usa `kvPut` (reintenta tras 1,1 s) y cualquier error de `/respaldo` vuelve como `{error:'fail', detail}` con CORS, para que la app muestre el motivo en vez de «no se pudo hablar».
 
 Prueba local: `backupStep(env, fecha)` con `env.TEST_FIRESTORE` (emulador), un KV simulado (`get/put/delete`) y
 `env.BACKUP_ANYTIME = true` para correrlo fuera de horario.

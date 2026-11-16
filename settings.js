@@ -303,17 +303,23 @@ function fromV1(d) {
    o se restauran (se juntan con lo actual, igual que «Restaurar desde un respaldo»). */
 async function bkCall(body) {
   if (!PUSH?.url) throw new Error('no-worker');
-  const r = await fetch(PUSH.url.replace(/\/$/, '') + '/respaldo', { method: 'POST', headers: { Authorization: 'Bearer ' + await auth.currentUser.getIdToken(), 'Content-Type': 'application/json' }, body: JSON.stringify(body) });
+  let r;
+  try { r = await fetch(PUSH.url.replace(/\/$/, '') + '/respaldo', { method: 'POST', headers: { Authorization: 'Bearer ' + await auth.currentUser.getIdToken(), 'Content-Type': 'application/json' }, body: JSON.stringify(body) }); }
+  catch { throw new Error(navigator.onLine === false ? 'offline' : 'net'); }
   if (r.status === 404) throw new Error('old-worker');
   if (r.status === 501) throw new Error('no-kv');
-  if (!r.ok) throw new Error('error');
+  if (r.status === 401 || r.status === 403) throw new Error('auth');
+  if (!r.ok) { let d = ''; try { d = (await r.json()).detail || ''; } catch {} const e = new Error('fail'); e.detail = d || 'código ' + r.status; throw e; }
   return body.action === 'get' ? r.blob() : r.json();
 }
-const BK_ERR = { 'no-worker': 'Falta configurar el servicio de avisos.', 'old-worker': 'Falta pegar el servicio de avisos versión 12 en Cloudflare.',
-  'no-kv': 'Falta conectar el espacio «RESPALDOS» en Cloudflare (Settings → Bindings → KV namespace).', error: 'No se pudo hablar con el servicio. Revisa el internet.' };
+const BK_ERR = { 'no-worker': 'Falta configurar el servicio de avisos.', 'old-worker': 'Falta pegar la última versión del servicio de avisos (notificaciones/worker.js) en Cloudflare.',
+  'no-kv': 'Falta conectar el espacio «RESPALDOS» en Cloudflare (Settings → Bindings → KV namespace).', offline: 'No hay internet en este momento.',
+  net: 'El servicio no respondió (puede que se haya caído a medio camino). Revisa que en Cloudflare esté la versión 13 o más del servicio de avisos.',
+  auth: 'El servicio no reconoció tu cuenta (revisa ALLOWED_UIDS en Cloudflare).', error: 'No se pudo hablar con el servicio. Revisa el internet.' };
+const bkErr = e => e.message === 'fail' ? `El servicio falló: ${e.detail}` : BK_ERR[e.message] || BK_ERR.error;
 async function autoBackups() {
   openSheet('<div class="stack"><h2>🌙 Respaldos automáticos</h2><p class="small muted" style="margin:0">Buscando…</p></div>');
-  let d; try { d = await bkCall({ action: 'list' }); } catch (e) { return openSheet(`<div class="stack"><h2>🌙 Respaldos automáticos</h2><p class="small" style="margin:0">😕 ${esc(BK_ERR[e.message] || BK_ERR.error)}</p></div>`); }
+  let d; try { d = await bkCall({ action: 'list' }); } catch (e) { return openSheet(`<div class="stack"><h2>🌙 Respaldos automáticos</h2><p class="small" style="margin:0">😕 ${esc(bkErr(e))}</p></div>`); }
   const fmt = m => new Date(m.at).toLocaleString('es', { weekday: 'long', day: 'numeric', month: 'short', hour: 'numeric', minute: '2-digit' });
   const n = m => Object.values(m.counts || {}).reduce((a, b) => a + b, 0);
   openSheet(`<div class="stack"><h2>🌙 Respaldos automáticos</h2>
@@ -333,14 +339,17 @@ async function autoBackupNow() {
     const s = await bkCall({ action: 'start' });
     if (!s.ok && !s.error) throw new Error('old-worker'); // el servicio todavía no conoce «Respaldar ahora»
     if (s.error === 'limit') { toast('Ya se respaldó 4 veces hoy: el próximo se hace solo esta noche 🌙'); if (btn) btn.disabled = false; return say('💾 Respaldar ahora'); }
-    for (let k = 0; k < 200; k++) {
-      const r = await bkCall({ action: 'step' });
+    const wait = ms => new Promise(r => setTimeout(r, ms));
+    for (let k = 0, fails = 0; k < 200; k++) {
+      await wait(1200); // Cloudflare deja guardar lo mismo una vez por segundo: pasos con calma
+      let r; try { r = await bkCall({ action: 'step' }); fails = 0; }
+      catch (e) { if (++fails > 3 || ['old-worker', 'no-kv', 'auth', 'offline'].includes(e.message)) throw e; say('Reintentando…'); await wait(3000); k--; continue; }
       if (r.phase === 'data') say(`Respaldando… ${r.idx} de ${r.total}`);
       else if (r.phase === 'photos') say(`Guardando fotos nuevas…${r.left ? ` (faltan ${r.left})` : ''}`);
       else break;
     }
     toast('Respaldo listo ✓'); bkStatusCheck(true); autoBackups();
-  } catch (e) { toast(BK_ERR[e.message] || BK_ERR.error); if (btn) btn.disabled = false; say('💾 Respaldar ahora'); }
+  } catch (e) { toast(bkErr(e)); if (btn) btn.disabled = false; say('💾 Respaldar ahora'); }
 }
 // Tarjeta de respaldos: solo la ve el dueño (isOwner de gifts.js: su uid en TESTERS; en el emulador, la primera cuenta)
 function backupCard() {
@@ -388,7 +397,7 @@ async function autoBackupGet(day, photos) {
     const blob = await bkCall({ action: 'get', day, photos }), a = document.createElement('a');
     a.href = URL.createObjectURL(blob); a.download = `futari-respaldo-${day}${photos ? '-con-fotos' : ''}.json`; a.click();
     setTimeout(() => URL.revokeObjectURL(a.href), 2000); toast('Respaldo descargado ✓');
-  } catch (e) { toast(BK_ERR[e.message] || BK_ERR.error); }
+  } catch (e) { toast(bkErr(e)); }
 }
 async function autoBackupRestore(day) {
   if (!(await ask(`¿Restaurar el respaldo del ${day}? Se junta con lo que tienen ahora (no se borra nada) y se recuperan también las fotos que falten.`, { ok: 'Restaurar' }))) return;

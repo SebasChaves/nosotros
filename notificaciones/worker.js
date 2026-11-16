@@ -18,7 +18,7 @@
 //   Cada noche de 3:00 a 6:00 copia la base (una colección por minuto) y las fotos nuevas. Ver docs/NOTIFICACIONES.md.
 // Ver docs/NOTIFICACIONES.md. Sin dependencias: se pega tal cual en el editor de Cloudflare.
 
-const WORKER_VERSION = 12; // súbelo al cambiar este archivo (la app lo muestra en el diagnóstico)
+const WORKER_VERSION = 13; // súbelo al cambiar este archivo (la app lo muestra en el diagnóstico)
 const enc = new TextEncoder();
 const b64u = buf => btoa(String.fromCharCode(...new Uint8Array(buf))).replace(/\+/g, '-').replace(/\//g, '_').replace(/=+$/, '');
 const unb64u = s => Uint8Array.from(atob(s.replace(/-/g, '+').replace(/_/g, '/') + '==='.slice((s.length + 3) % 4)), c => c.charCodeAt(0));
@@ -46,10 +46,12 @@ export default {
     if (url.pathname === '/respaldo') { // respaldos automáticos (lista o descargar uno)
       if (!env.RESPALDOS) return json({ error: 'no-kv' }, 501);
       let b4; try { b4 = await req.json(); } catch { return json({ error: 'bad-json' }, 400); }
-      if (b4.action === 'get') return backupDownload(env, String(b4.day || ''), !!b4.photos, cors);
-      if (b4.action === 'start') return json(await backupStart(env)); // «Respaldar ahora» (Ajustes): la app pide los pasos uno por uno
-      if (b4.action === 'step') return json(await backupStep(env, Date.now(), { manual: true }) || { phase: 'done' });
-      return json(await backupList(env));
+      try { // si algo falla, responder con el motivo (y con CORS) para que la app lo muestre
+        if (b4.action === 'get') return backupDownload(env, String(b4.day || ''), !!b4.photos, cors);
+        if (b4.action === 'start') return json(await backupStart(env)); // «Respaldar ahora» (Ajustes): la app pide los pasos uno por uno
+        if (b4.action === 'step') return json(await backupStep(env, Date.now(), { manual: true }) || { phase: 'done' });
+        return json(await backupList(env));
+      } catch (e) { console.error('respaldo', e); return json({ error: 'fail', detail: String(e.message || e).slice(0, 200) }, 500); }
     }
     if (url.pathname === '/chef') { // «Pregúntale al chef» (recipes.js): arma una receta con IA
       let b3; try { b3 = await req.json(); } catch { return json({ error: 'bad-json' }, 400); }
@@ -97,6 +99,8 @@ const BACKUP_COLS = ['bucket', 'ideas', 'notes', 'coupons', 'dates', 'moments', 
   'trips', 'quiz', 'profiles', 'shows', 'events', 'cards', 'games', 'thinks', 'daily', 'pins', 'recipes', 'recipefav', 'menu', 'songs', 'reminders', 'snaps',
   'activity', 'pet', 'guess', 'cravings', 'arrows', 'bus', 'money', 'cooked', 'dreams', 'vacations', 'fruta'];
 const kvJSON = async (env, k, d = null) => { const v = await env.RESPALDOS.get(k); return v ? JSON.parse(v) : d; };
+// KV deja escribir la misma clave como máximo una vez por segundo: si choca (429), espera y reintenta
+const kvPut = async (env, k, v) => { for (let i = 0; ; i++) { try { return await env.RESPALDOS.put(k, v); } catch (e) { if (i >= 3 || !/429|too many/i.test(String(e.message || e))) throw e; await new Promise(r => setTimeout(r, 1100)); } } };
 async function listAll(env, db, col, mask) {
   const out = []; let token = '';
   const base = db.base;
@@ -118,23 +122,23 @@ export async function backupStep(env, when = Date.now(), { manual = false } = {}
   const db = await firestoreReader(env);
   if (st.day !== day) { st.day = day; st.idx = 0; st.dataDone = false; st.nightPhotos = 0; }
   if (!st.dataDone) {
-    if (st.idx === 0) { const c = await db.get(''); await env.RESPALDOS.put(`d:${day}:_couple`, JSON.stringify({ start: c?.start || '', currency: c?.currency || '', members: c?.members || {} })); }
+    if (st.idx === 0) { const c = await db.get(''); await kvPut(env, `d:${day}:_couple`, JSON.stringify({ start: c?.start || '', currency: c?.currency || '', members: c?.members || {} })); }
     const col = BACKUP_COLS[st.idx];
     let docs = await listAll(env, db, col);
     if (col === 'cards') docs = docs.filter(x => x.level !== 'ours');
-    await env.RESPALDOS.put(`d:${day}:${col}`, JSON.stringify(docs));
+    await kvPut(env, `d:${day}:${col}`, JSON.stringify(docs));
     (st.counts ||= {})[col] = docs.length;
     st.idx++;
     if (st.idx >= BACKUP_COLS.length) {
       st.dataDone = true; st.lastAt = Date.now();
-      await env.RESPALDOS.put(`d:${day}:_meta`, JSON.stringify({ day, at: st.lastAt, counts: st.counts }));
+      await kvPut(env, `d:${day}:_meta`, JSON.stringify({ day, at: st.lastAt, counts: st.counts }));
       const days = [...new Set([...(await kvJSON(env, 'days', [])), day])].sort();
       const keep = days.filter((d, i) => i >= days.length - 7 || (new Date(d + 'T12:00').getDay() === 0 && (Date.parse(day) - Date.parse(d)) < 31 * 864e5));
       for (const old of days.filter(d => !keep.includes(d))) for (const c of ['_couple', '_meta', ...BACKUP_COLS]) await env.RESPALDOS.delete(`d:${old}:${c}`);
-      await env.RESPALDOS.put('days', JSON.stringify(keep));
+      await kvPut(env, 'days', JSON.stringify(keep));
       st.counts = {};
     }
-    await env.RESPALDOS.put('state', JSON.stringify(st));
+    await kvPut(env, 'state', JSON.stringify(st));
     return { phase: 'data', step: col, idx: st.idx, total: BACKUP_COLS.length };
   }
   // Fotos: se copian solo las nuevas (las que ya están en KV no se vuelven a leer)
@@ -143,17 +147,17 @@ export async function backupStep(env, when = Date.now(), { manual = false } = {}
   const index = new Set(await kvJSON(env, 'photos-index', []));
   let ids = await kvJSON(env, 'photo-todo', null);
   if (!ids) ids = (await listAll(env, db, 'photos', true)).filter(id => !index.has(id));
-  if (!ids.length) { if (st.photosDoneDay !== day) { st.photosDoneDay = day; await env.RESPALDOS.put('state', JSON.stringify(st)); } return null; }
+  if (!ids.length) { if (st.photosDoneDay !== day) { st.photosDoneDay = day; await kvPut(env, 'state', JSON.stringify(st)); } return null; }
   const batch = ids.splice(0, 8);
   for (const id of batch) {
     const d = await db.get('photos/' + id); if (!d?.data) continue;
-    await env.RESPALDOS.put('p:' + id, JSON.stringify({ id, data: d.data })); index.add(id); st.nightPhotos++;
+    await kvPut(env, 'p:' + id, JSON.stringify({ id, data: d.data })); index.add(id); st.nightPhotos++;
   }
-  await env.RESPALDOS.put('photos-index', JSON.stringify([...index]));
-  await env.RESPALDOS.put('photo-todo', JSON.stringify(ids.length ? ids : []));
+  await kvPut(env, 'photos-index', JSON.stringify([...index]));
+  await kvPut(env, 'photo-todo', JSON.stringify(ids.length ? ids : []));
   if (!ids.length) await env.RESPALDOS.delete('photo-todo');
   if (manual) st.manualPhotos = (st.manualPhotos || 0) + batch.length;
-  await env.RESPALDOS.put('state', JSON.stringify(st));
+  await kvPut(env, 'state', JSON.stringify(st));
   return { phase: 'photos', copied: batch.length, left: ids.length };
 }
 // «Respaldar ahora»: vuelve a empezar el respaldo de hoy (como máximo 4 veces al día, por el límite gratis de escrituras)
@@ -164,7 +168,7 @@ export async function backupStart(env) {
   const manualToday = st.day === day ? (st.manualRuns || 0) : 0;
   if (manualToday >= 4) return { error: 'limit' };
   const next = { day, idx: 0, dataDone: false, counts: {}, nightPhotos: st.day === day ? st.nightPhotos || 0 : 0, photosDoneDay: null, manualRuns: manualToday + 1, manualPhotos: 0, lastAt: st.lastAt };
-  await env.RESPALDOS.put('state', JSON.stringify(next));
+  await kvPut(env, 'state', JSON.stringify(next));
   return { ok: true, total: BACKUP_COLS.length };
 }
 async function backupList(env) {

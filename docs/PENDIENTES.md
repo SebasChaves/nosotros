@@ -27,7 +27,7 @@
   app instalada); en iPhone no existen esos accesos directos.
 
 - Avisos programados: confirmado en los dos teléfonos (recordatorios a su hora con la app cerrada y el teléfono bloqueado,
-  desde el Worker v4 con prioridad alta). Worker v5 pegado en Cloudflare (resumen del domingo). **Falta pegar el Worker v12** (KV `RESPALDOS` ya creado y conectado por el dueño) y activar Workers AI (binding `AI`, ver NOTIFICACIONES.md → Chef) (v6: resumen de gastos del domingo 19:30; v7: `/link` para enlaces cortos de Google Maps; v8: notas programadas del frasco; v9: `/chef` de Recetas; v10: avisos de viajes 30/7/1 días antes y textos «historia»; v11: respaldo automático cada noche a KV; v12: «Respaldar ahora»). Falta ver llegar el de las
+  desde el Worker v4 con prioridad alta). Worker v5 pegado en Cloudflare (resumen del domingo). **Falta pegar el Worker v13** (KV `RESPALDOS` ya creado y conectado por el dueño) y activar Workers AI (binding `AI`, ver NOTIFICACIONES.md → Chef) (v6: resumen de gastos del domingo 19:30; v7: `/link` para enlaces cortos de Google Maps; v8: notas programadas del frasco; v9: `/chef` de Recetas; v10: avisos de viajes 30/7/1 días antes y textos «historia»; v11: respaldo automático cada noche a KV; v12: «Respaldar ahora»; v13: reintenta si KV dice 429 y responde el motivo del error). Falta ver llegar el de las
   20:00 (racha/mascota), fechas especiales y el primer resumen del domingo.
   Ojo: un cambio en el Cron de Cloudflare puede tardar hasta 15 minutos en activarse.
 - Mascota (v38): probar en los teléfonos los juegos con el dedo (Atrapa y Salta) y que se vea fluido.
