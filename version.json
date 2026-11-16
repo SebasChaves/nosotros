@@ -1,7 +1,8 @@
 {
-  "version": "1.8.4",
-  "notes": ["Arreglos pequeños."],
+  "version": "1.8.5",
+  "notes": ["Las novedades ya no se repiten."],
   "history": [
+    { "version": "1.8.5", "notes": ["Las novedades ya no se repiten."] },
     { "version": "1.8.4", "notes": ["Arreglos pequeños."] },
     { "version": "1.8.3", "notes": ["Ajustes un poco más ordenado."] },
     { "version": "1.8.2", "notes": ["🆘 En Ajustes → Respaldo: una guía «¿Se borró algo? Qué hacer» y una línea que dice cuándo fue el último respaldo automático (y avisa si deja de funcionar)"] },

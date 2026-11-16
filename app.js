@@ -45,7 +45,7 @@ import { logVisit } from './tracking.js';
 import { maybeStartTour, resetTourCheck } from './tour.js';
 
 // Versión de esta copia de la app. Súbela junto con version.json y la caché de sw.js al publicar.
-export const APP_VERSION = '1.8.4';
+export const APP_VERSION = '1.8.5';
 window.FUTARI_VERSION = APP_VERSION; // lo guarda el registro de ingresos (panel de administración)
 
 // Si la app estuvo abierta hace poco (Android la cierra sola al salir), se vuelve rápido a la misma pantalla.
@@ -286,12 +286,17 @@ async function updateNow(btn) {
 // Muestra todo lo nuevo desde la última versión que se abrió en este teléfono (acumulado, de lo más nuevo a lo más viejo).
 // Espera a que no haya PIN, guía ni otra ventana abierta, y queda como vista solo cuando se cierra después de verla.
 const markNewsSeen = () => { try { localStorage.setItem('futari-version', APP_VERSION); } catch {} };
+const newsSeen = () => { try { return localStorage.getItem('futari-version') === APP_VERSION; } catch { return true; } };
+let newsBusy = false;
 async function showNews(seen, tries = 0) {
+  if (newsSeen() || newsBusy) return; // ya se vieron (o ya están en pantalla): no repetir
   if ($('lockScreen') || $('tour') || document.querySelector('.dialog') || $('sheet')?.classList.contains('show') || document.hidden) {
     if (tries < 600) setTimeout(() => showNews(seen, tries + 1), 1000);
     return;
   }
-  let v; try { v = await getVersion(); } catch { return; } // sin internet: salen la próxima vez que abran la app
+  newsBusy = true;
+  let v; try { v = await getVersion(); } catch { newsBusy = false; return; } // sin internet: salen la próxima vez que abran la app
+  newsBusy = false; if (newsSeen() || $('sheet')?.classList.contains('show')) return showNews(seen, tries + 1);
   const hist = (v?.history || [{ version: v?.version, notes: v?.notes || [] }])
     .filter(h => vnum(h.version) > vnum(seen) && vnum(h.version) <= vnum(APP_VERSION) && h.notes?.length)
     .sort((a, b) => vnum(b.version) - vnum(a.version));
@@ -300,13 +305,15 @@ async function showNews(seen, tries = 0) {
   openSheet(`<div class="stack" id="newsSheet"><h2>✨ Novedades <span class="tiny muted" style="font-weight:500">versión ${esc(APP_VERSION)}</span></h2>${hist.length > 1 ? `<p class="small muted" style="margin:0">Lo nuevo de las últimas ${hist.length} actualizaciones</p>` : ''}
     <ul class="news" style="margin:0;padding-left:20px;max-height:52vh;overflow:auto">${notes.map(n => `<li>${esc(n)}</li>`).join('')}</ul>
     <button class="btn" onclick="markNewsSeen();closeSheet()">¡Genial!</button></div>`);
-  // Si la cierran de otra forma (deslizando, atrás) después de verla un rato, también cuenta; si otra ventana la
-  // reemplazó enseguida, se vuelve a mostrar después.
-  const shownAt = Date.now();
+  // Cerrarla de cualquier forma («¡Genial!», deslizando, atrás) cuenta como vista. Solo si otra ventana la reemplazó
+  // enseguida (antes de 2,5 s) se vuelve a mostrar cuando esa se cierre.
+  newsBusy = true; const shownAt = Date.now();
   const watch = setInterval(() => {
     if ($('newsSheet') && $('sheet').classList.contains('show')) return;
-    clearInterval(watch);
-    if (Date.now() - shownAt > 2500) markNewsSeen(); else setTimeout(() => showNews(seen), 3000);
+    clearInterval(watch); newsBusy = false;
+    if (newsSeen()) return;
+    if ($('sheet')?.classList.contains('show') && Date.now() - shownAt < 2500) setTimeout(() => showNews(seen), 3000);
+    else markNewsSeen();
   }, 500);
 }
 
