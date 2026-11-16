@@ -1,7 +1,7 @@
 // Panel de administración (solo visible para TESTERS), en tres pestañas:
 //   Ingresos (por día, horas, teléfonos, datos, errores) · Estadísticas (uso, notificaciones, quién hace más) · Pruebas.
 import { query, where, orderBy, limit, getDocs, getCountFromServer, writeBatch } from 'https://www.gstatic.com/firebasejs/11.0.2/firebase-firestore.js';
-import { $, S, db, esc, icon, paint, onShow, expose, toast, ask, col, ref, avatar, loadPhotos, nameOf, openSheet, celebrate,
+import { $, S, db, esc, icon, paint, on, onShow, expose, toast, ask, col, ref, avatar, loadPhotos, nameOf, openSheet, celebrate,
          today, dayKey, todayKey, parseDate, fmtShort, fmtDay, plural, COLLECTIONS, uid, EMU, vnum, vlabel } from './core.js';
 import { isTester, testerCard } from './testing.js';
 import { giftAdminCards } from './gifts.js';
@@ -9,6 +9,7 @@ import { NOTIF_TYPES, pushHere } from './push.js';
 import { SPECIES, STAGES } from './pet.js';
 import { sceneSVG, petSVG, ITEMS, SLOTS } from './pet-art.js';
 import { GAMES, playGame } from './pet-games.js';
+import { juegosHTML } from './admin-juegos.js';
 
 let range = 14, selDay = null, visits = [], errors = [], usage = [], stats = [], photoCount = null, loading = false, tab = 'ingresos';
 const COLORS = ['var(--g1)', 'var(--g2)'];
@@ -124,10 +125,11 @@ function render() {
 
   const head = `<div class="topbar"><div class="row start"><button class="icon-btn" aria-label="Volver" onclick="go('s-more')">${icon('back')}</button><h1>Admin</h1></div>
       <button class="btn ghost small" onclick="admReload()">${loading ? 'Cargando…' : 'Actualizar'}</button></div>
-    <div class="seg">${[['ingresos', 'Ingresos'], ['stats', 'Estadísticas'], ['pruebas', 'Pruebas']].map(([k, l]) => `<button class="${tab === k ? 'on' : ''}" onclick="admTab('${k}')">${l}</button>`).join('')}</div>
-    ${tab !== 'pruebas' ? `<div class="chips">${[7, 14, 30].map(n => `<button class="chip ${range === n ? 'on' : ''}" onclick="admRange(${n})">${n} días</button>`).join('')}</div>` : ''}`;
+    <div class="seg">${[['ingresos', 'Ingresos'], ['stats', 'Estadísticas'], ['juegos', '🎮 Juegos'], ['pruebas', 'Pruebas']].map(([k, l]) => `<button class="${tab === k ? 'on' : ''}" onclick="admTab('${k}')">${l}</button>`).join('')}</div>
+    ${!['pruebas', 'juegos'].includes(tab) ? `<div class="chips">${[7, 14, 30].map(n => `<button class="chip ${range === n ? 'on' : ''}" onclick="admRange(${n})">${n} días</button>`).join('')}</div>` : ''}`;
   if (tab === 'stats') { paint('s-admin', head + statsHTML(ids, days)); loadPhotos($('s-admin')); return; }
   if (tab === 'pruebas') { paint('s-admin', head + testsHTML()); showVersion(); return; }
+  if (tab === 'juegos') { paint('s-admin', head + juegosHTML()); return; }
   paint('s-admin', `${head}
     <div class="stack" style="gap:14px">${summary}</div>
     <div class="glass stack"><div class="row"><span class="label">Ingresos por día</span><span class="small muted">${visits.length} en ${range} días</span></div>${chart}${legend}</div>
@@ -282,6 +284,8 @@ async function showVersion() {
 }
 
 function admRange(n) { range = n; load(); }
+window.admRender = () => { if ($('s-admin')?.classList.contains('active')) render(); };
+on('fruta arrows bus', () => { if (tab === 'juegos' && $('s-admin')?.classList.contains('active')) render(); });
 function admTab(t) { tab = t; render(); window.scrollTo?.(0, 0); }
 function admDay(d) { selDay = d; render(); }
 function admReload() { load(); }

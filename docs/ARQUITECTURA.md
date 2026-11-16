@@ -56,6 +56,8 @@ manifest.json   PWA (nombre, íconos, colores)
 
 - `trips-extra.js` (pestañas Ideas, Antes de salir, Reservas, Diario y clima de Open-Meteo) y `trips-dreams.js` (Viajes → Por conocer), los usa `trips.js`.
 
+- `fruta.js` + `fruta-engine.js` (Pura fruta, ver docs/FRUTA.md) y `admin-juegos.js` (Administración → Juegos de los tres juegos).
+
 ## El núcleo (`core.js`)
 
 **Estado:** `S = { me, settings, data: {colección: [docs]}, priv: {gifts: [...]}}`. `app.js` mantiene `S.data` al día con

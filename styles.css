@@ -1314,3 +1314,21 @@ html:not([data-ts="n"]) .topbar h1 { font-size: 26px; }
 .ar-levels button { position: relative; }
 .fr-them { position: absolute; top: -6px; right: -4px; font-style: normal; font-size: 9.5px; font-weight: 700; background: #8fd3ff; color: #04202e; border-radius: 8px; padding: 0 4px; }
 .fr-board { z-index: 0; isolation: isolate; } .fr-view .ar-end { z-index: 20; }
+
+/* Administración → Juegos (1.6.0) */
+.aj-levels button small { color: inherit; }
+.aj-board { display: grid; gap: 3px; justify-content: center; padding: 8px; border-radius: 16px; background: linear-gradient(145deg, #c98b55, #a5653a); }
+.aj-cell { width: 34px; height: 34px; border-radius: 8px; border: 0; background: #fff3d6; font-size: 16px; padding: 0; cursor: pointer; }
+.aj-cell.hole { background: transparent; box-shadow: inset 0 0 0 1px rgba(255,255,255,.25); }
+.aj-cell.l1 { background: #b9ec95; } .aj-cell.l2 { background: #6cc45a; }
+.aj-cell.s1, .aj-cell.s2 { background: #9a938a; }
+.aj-cell.vn { box-shadow: inset 0 0 0 3px #7a4a24; }
+.aj-goals { display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px; }
+.aj-goals label { display: flex; align-items: center; gap: 6px; font-size: 20px; }
+.aj-goals input { width: 100%; min-width: 0; }
+.aj-sim { display: flex; flex-direction: column; gap: 4px; padding: 10px 12px; border-radius: 14px; background: var(--soft); }
+.aj-sim b { font-size: 18px; }
+.aj-table { overflow-x: auto; }
+.aj-table table { width: 100%; border-collapse: collapse; font-size: 13px; }
+.aj-table th, .aj-table td { padding: 6px 4px; text-align: center; border-bottom: 1px solid var(--line); white-space: nowrap; }
+.aj-table tr.wall td { background: color-mix(in srgb, #ff6a3d 16%, transparent); }

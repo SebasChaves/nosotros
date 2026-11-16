@@ -39,3 +39,16 @@ primeros 10 y 15 después). Si cambias el generador, recalibra con `simulate()` 
 
 ## Solo en el teléfono
 Deslizar el dedo en iPhone y Samsung, que las animaciones vayan fluidas y la vibración en combos.
+
+## Administración → 🎮 Juegos (1.6.0, `admin-juegos.js`, solo el dueño)
+Para Pura fruta, Flechas y La parada:
+- **Panel**: nivel y estrellas de cada uno; mostrar u ocultar el juego (`<juego>/cfg.off`, se aplica con `gates`);
+  BETA de Figuras/Mixto (`arrows/cfg.beta`); regalos sorpresa; saltar o reiniciar tu progreso.
+- **Niveles**: Pura fruta con tablero dibujado (`fruta/lv-<n>.level`); Flechas (`arrows/lv-<n>.params { n0, maxLen, mods, seed }`,
+  aplicado en `liveLevel`) y La parada (`bus/lv-<n>.params { w, h, count, colors, diag, seed }`, en `liveBusLevel`). Probar el
+  borrador sin guardar, «probar 200 veces» (solo Pura fruta, con `simulate`), publicar, despublicar, volver al generado,
+  copiar a otro número e intercambiar dos niveles.
+- **Estadísticas**: `<juego>/stats { a{n}, w{n} }` (intentos al empezar un nivel de la escalera, ganados al pasarlo) y niveles pared.
+- **Reto programado**: `<juego>/day-<día> { num }`: ese día el reto usa el tablero de ese nivel.
+- **Sorpresas**: `<juego>/msg-<n> { from, to, text }`: sale en «¡Nivel listo!» cuando la pareja lo pasa.
+- **Economía**: `<juego>/cfg` (monedas por nivel y precio de ayudas; vacío = el de siempre).

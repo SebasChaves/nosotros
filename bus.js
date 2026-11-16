@@ -93,7 +93,10 @@ export function levelSpec(L) {
 }
 // Reto del día: el mismo para los dos; más grande hacia el fin de semana
 const DAY_LEVEL = [80, 30, 40, 50, 60, 70, 90]; // domingo..sábado → tamaño como ese nivel
-export const dailySpec = (day = todayKey()) => { const w = new Date(day + 'T12:00').getDay(), base = levelSpec(DAY_LEVEL[w]); return { ...base, key: 'd' + day, title: 'Reto del día', seed: hash('parada-dia-' + day), day: true, boss: false }; };
+export const dailySpec = (day = todayKey()) => {
+  const prog = S.data.bus?.find(d => d.id === 'day-' + day)?.num; // reto programado en Administración
+  if (prog) return { ...liveBusLevel(prog), key: 'd' + day, title: 'Reto del día', seed: hash('parada-dia-' + day), day: true, boss: false };
+  const w = new Date(day + 'T12:00').getDay(), base = levelSpec(DAY_LEVEL[w]); return { ...base, key: 'd' + day, title: 'Reto del día', seed: hash('parada-dia-' + day), day: true, boss: false }; };
 const DUEL_SIZES = { rapido: [25, 'Rápido'], normal: [50, 'Normal'], largo: [75, 'Largo'] };
 const duelSpec = d => ({ ...levelSpec(DUEL_SIZES[d.size]?.[0] || 50), key: 'duel' + d.did, title: '⚔️ Duelo', seed: d.seed, duel: d.did, boss: false });
 
@@ -108,7 +111,18 @@ const stars = n => '★'.repeat(n) + '☆'.repeat(3 - n);
 const expertOn = () => { try { return localStorage.getItem('futari-bus-expert') === '1'; } catch { return false; } };
 // Puntaje del reto y duelo: tiempo + 20 s por ayuda + 15 s por cada vez que se llenó la parada (menos es mejor)
 const score = r => r.ms + (r.help || 0) * 20000 + (r.fails || 0) * 15000;
-const UNLOCK_COST = 15; // abrir un lugar 🔒 con monedas (con una foto es gratis)
+// Administración → Juegos: bus/cfg { unlock, sort, tow, coins{easy,normal,boss}, off } · bus/lv-<n> { on, params{ w, h, count, colors, diag, seed } }
+//   · bus/day-<día> { num } · bus/msg-<n> { from, to, text } · bus/stats { a{n}, w{n} }
+export const busCfg = () => S.data.bus.find(d => d.id === 'cfg') || {};
+const UNLOCK_BASE = 15; // abrir un lugar 🔒 con monedas (con una foto es gratis)
+const unlockCost = () => busCfg().unlock ?? UNLOCK_BASE;
+export function liveBusLevel(L, params) {
+  const sp = levelSpec(L), o = params || S.data.bus.find(d => d.id === 'lv-' + L && d.on)?.params; if (!o) return sp;
+  return { ...sp, ...o, seed: o.seed ?? sp.seed, num: L, key: 'l' + L, custom: true };
+}
+let busDraft = null;
+export function playBusDraft(L, params) { busDraft = { L, params }; playBus('tdraft'); }
+const busStat = (k, L) => write(setDoc(ref('bus', 'stats'), { [k]: { [L]: increment(1) } }, { merge: true }));
 const HELP = { sort: [20, '🔀', 'Acomodar la fila', 'Pasa adelante a los pasajeros de los colores que ya están en la parada'], tow: [25, '🏗️', 'Grúa', 'Saca cualquier vehículo, aunque esté bloqueado'] };
 export const busAlerts = () => { const d = duelDoc(); return busVisible() && !busWrapped() && d?.state === 'invite' && d.to === uid() && Date.now() - d.at < 3600e3 ? 1 : 0; };
 
@@ -235,9 +249,10 @@ const C = 34, LANE = 22, ROAD = 36, BAY_P = 46, BAY_L = 146, BY0 = 104, LY0 = 28
 function specOf(what) {
   if (what === 'day') return dailySpec();
   if (what === 'duel') { const d = duelDoc(); return d ? duelSpec(d) : null; }
+  if (what === 'tdraft' && busDraft) return isOwner() ? { ...liveBusLevel(busDraft.L, busDraft.params), test: true, title: '🧪 Borrador nivel ' + busDraft.L } : null;
   if (what === 'tday') return isOwner() ? { ...dailySpec(), test: true, day: false, title: '🧪 Reto de hoy' } : null;
-  const t = /^t(\d+)$/.exec(String(what)); if (t) return isOwner() ? { ...levelSpec(Math.max(1, Math.min(LEVELS, Number(t[1])))), test: true, title: '🧪 Nivel ' + t[1] } : null;
-  const m = /^l(\d+)$/.exec(String(what)); return levelSpec(Math.max(1, Math.min(LEVELS, m ? Number(m[1]) : myLevel())));
+  const t = /^t(\d+)$/.exec(String(what)); if (t) return isOwner() ? { ...liveBusLevel(Math.max(1, Math.min(LEVELS, Number(t[1])))), test: true, title: '🧪 Nivel ' + t[1] } : null;
+  const m = /^l(\d+)$/.exec(String(what)); return liveBusLevel(Math.max(1, Math.min(LEVELS, m ? Number(m[1]) : myLevel())));
 }
 // Medidas del plano (en px del plano, antes de la cámara)
 function layout(b) {
@@ -258,6 +273,7 @@ function playBus(what) {
   if (!busVisible() || busWrapped()) return;
   const spec = specOf(what); if (!spec) return;
   if (spec.day && daily()[uid()]) return toast('Ya hiciste el reto de hoy');
+  if (!spec.test && !spec.day && !spec.duel && spec.num) busStat('a', spec.num);
   const board = spec.board ??= generateLot(spec), occ = new Int32Array(board.w * board.h).fill(-1);
   for (const v of board.list) for (const [x, y] of v.cells) occ[y * board.w + x] = v.id;
   const keep = G && G.spec.key === spec.key && G.spec.duel ? { fails: G.fails + 1, t0: G.t0 } : null; // en el duelo, reintentar no reinicia el reloj
@@ -539,7 +555,7 @@ function lose() {
 }
 // Botones para abrir un lugar con candado (foto gratis · monedas · gratis en pruebas)
 function unlockButtons() {
-  const p = pet(), cost = UNLOCK_COST, pn = partnerName();
+  const p = pet(), cost = unlockCost(), pn = partnerName();
   return `${partnerUid() ? `<button class="btn src-btn" onclick="busPhoto()">📸 Mandarle una foto a ${esc(pn || 'tu pareja')}<small>${G.spec.test ? 'En pruebas no se manda' : 'Gratis · le llega como historia'}</small></button>` : ''}
     ${G.expert ? '' : `<button class="btn ghost" onclick="busUnlock('coins')" ${!G.spec.test && !(p?.hatchedAt && coins(p) >= cost) ? 'disabled' : ''}>🪙 Abrir con monedas · ${G.spec.test ? 'gratis' : cost}</button>`}
     ${G.spec.test ? `<button class="btn ghost" onclick="busUnlock('free')">🧪 Abrir sin foto (prueba)</button>` : ''}`;
@@ -562,7 +578,7 @@ function openBay() {
 async function busUnlock(how) {
   if (!G || G.over || G.spec.duel) return;
   if (how === 'free') { if (!G.spec.test) return; return openBay(); }
-  const cost = UNLOCK_COST, p = pet();
+  const cost = unlockCost(), p = pet();
   if (!G.spec.test) {
     if (G.expert) return;
     if (!p?.hatchedAt) return toast('Las monedas son de su mascota 🐣');
@@ -596,7 +612,7 @@ function busRetry() { if (G) playBus(G.what); }
 // Ayudas (monedas de la mascota; gratis en la zona de pruebas)
 async function busHelp(k) {
   if (!G || G.over || G.expert || G.spec.duel) return;
-  const [cost, , name] = HELP[k], p = pet();
+  const [base, , name] = HELP[k], cost = busCfg()[k] ?? base, p = pet();
   if (!G.spec.test) {
     if (!p?.hatchedAt) return toast('Las ayudas se pagan con las monedas de su mascota 🐣');
     if (coins(p) < cost) return toast(`Faltan monedas: ${name} cuesta ${cost} 🪙`);
@@ -634,7 +650,7 @@ function win() {
     G.duelEnd = { done: true, ms }; duelPush(true); countStat('acts', 'bus-duel');
     return overlay(`<div style="font-size:46px">⚔️</div><h2>¡Todos a bordo!</h2><p style="margin:0">${info}</p><p class="center ar-duel-res" style="margin:0">${duelResultTxt(duelDoc() || {})}</p><button class="btn ghost" onclick="closeBus()">Listo</button>`);
   }
-  let msg = '', next = '';
+  let msg = '', next = '', next2 = '';
   if (sp.day) {
     const day = todayKey(), d = daily(day), first = !Object.keys(d).some(k => k !== 'id' && d[k]?.ms);
     const r = { ms, moves: G.moves, help: G.help, fails: G.fails, at: Date.now(), ...(G.expert ? { expert: true } : {}) };
@@ -645,7 +661,9 @@ function win() {
     if (them) msg += `<br>${score(r) < score(them) ? '🏆 ¡Le ganaste a ' : score(r) === score(them) ? '🤝 Empate con ' : '😅 Te ganó '}${esc(nameOf(p))} (${fmtMs(them.ms)})`;
     notify('bus', { title: `🚏 ${meForPartner()} terminó el reto de La parada en ${fmtMs(ms)}`, body: them ? (score(r) < score(them) ? 'Te ganó hoy 😏' : 'Le ganaste hoy 🏆') : '¿Le ganas? El estacionamiento es el mismo para los dos', url: './?open=bus', tag: 'bus-' + day });
   } else {
-    const pr = progress(), num = sp.num, had = pr.ls?.[num] || 0, coinsWon = num <= 10 ? 5 : sp.boss ? 20 : 10;
+    const pr = progress(), num = sp.num, had = pr.ls?.[num] || 0, coinsWon = busCfg().coins?.[sp.boss ? 'boss' : num <= 10 ? 'easy' : 'normal'] ?? (num <= 10 ? 5 : sp.boss ? 20 : 10);
+    busStat('w', num);
+    const sm = S.data.bus.find(d => d.id === 'msg-' + num); if (sm?.to === uid() && sm.text) next2 = `<div class="fr-surprise">💌 ${esc(nameOf(sm.from))} te dejó un mensaje:<br><b>${esc(sm.text)}</b></div>`;
     b.set(ref('bus', 'p-' + uid()), { lv: Math.max(pr.lv || 1, num + 1), ls: { [num]: Math.max(had, s) }, ...(G.expert ? { lx: { [num]: true } } : {}) }, { merge: true });
     if (!had && pt?.hatchedAt) b.update(ref('pet', 'main'), { bonus: increment(coinsWon) });
     msg = `<span class="ar-stars">${stars(s)}</span>${G.expert ? '<br>💀 ¡En modo experto!' : ''}<br>${info}${!had && pt?.hatchedAt ? ` · +${coinsWon} 🪙` : ''}${num === LEVELS ? `<br><b>🏆 ¡Completaste los ${LEVELS} niveles!</b>` : ''}`;
@@ -653,7 +671,7 @@ function win() {
     if (!had && (sp.boss || num === LEVELS)) notify('bus', { title: num === LEVELS ? `🏆 ${meForPartner()} completó los ${LEVELS} niveles de La parada` : `👑 ${meForPartner()} venció al jefe del nivel ${num} de La parada`, body: info, url: './?open=bus', tag: 'bus-l' + num });
   }
   write(b.commit()); countStat('acts', sp.day ? 'bus-day' : 'bus');
-  overlay(`<div style="font-size:46px">🚌</div><h2>${sp.day ? '¡Reto del día listo!' : `¡${esc(sp.title)} listo!`}</h2><p style="margin:0" class="center">${msg}</p>
+  overlay(`<div style="font-size:46px">🚌</div><h2>${sp.day ? '¡Reto del día listo!' : `¡${esc(sp.title)} listo!`}</h2><p style="margin:0" class="center">${msg}</p>${next2}
     <div class="${next ? 'grid2' : 'stack'}"><button class="btn ghost" onclick="closeBus()">${next ? 'Salir' : 'Listo'}</button>${next}</div>`);
 }
 

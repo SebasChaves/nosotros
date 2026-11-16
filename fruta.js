@@ -25,6 +25,7 @@ const myLevel = () => progress().lv || 1;
 const daily = (day = todayKey()) => doc('d-' + day) || {};
 const duelDoc = () => doc('duel');
 const cfg = () => doc('cfg') || {};
+const statInc = (k, L) => write(setDoc(ref('fruta', 'stats'), { [k]: { [L]: increment(1) } }, { merge: true }));
 const stars = n => '★'.repeat(n) + '☆'.repeat(3 - n);
 // Nivel publicado desde Administración (si hay) o el generado
 export function levelOf(L) {
@@ -120,7 +121,10 @@ function duelWatch() {
 /* ---------- Jugar ---------- */
 let G = null, view = null, busy = false, hintT = null, sel = -1;
 function specOf(what) {
-  if (what === 'day') return { ...E.dailySpec(todayKey()), what };
+  if (what === 'day') {
+    const prog = doc('day-' + todayKey())?.num; // reto programado en Administración: ese tablero, 25 movimientos, gana más puntos
+    return prog ? { ...levelOf(prog), title: 'Reto del día', day: true, boss: false, seed: E.hash('fruta-dia-' + todayKey()), goals: { score: 999999999 }, moves: 25, what } : { ...E.dailySpec(todayKey()), what };
+  }
   if (what === 'duel') { const d = duelDoc(); return d ? { ...levelOf(d.level), seed: d.seed, duel: d.did, what, title: `⚔️ Duelo · nivel ${d.level}` } : null; }
   const t = /^t(\d+)$/.exec(what); if (t) return isOwner() ? { ...levelOf(Number(t[1])), test: true, what, title: '🧪 Nivel ' + t[1] } : null;
   if (what?.custom) return { ...what, test: true }; // desde el editor de Administración
@@ -131,6 +135,7 @@ export function playFruta(what, seed) {
   const spec = specOf(what); if (!spec) return;
   if (spec.day && daily()[uid()]) return toast('Ya hiciste el reto de hoy');
   if (spec.duel && duelDoc()?.p?.[uid()]) return toast('Ya jugaste este duelo');
+  if (!spec.test && !spec.day && !spec.duel && spec.num) statInc('a', spec.num);
   const st = E.createGame(spec, seed ?? (spec.day || spec.duel ? spec.seed : spec.seed + Math.floor(Math.random() * 1e6)));
   G = { spec, st, els: new Map(), pos: new Map(), help: 0, startAt: Date.now() };
   view?.remove();
@@ -335,6 +340,7 @@ function end() {
   }
   if (!win) { G.over = true; return overlay(`<div style="font-size:46px">😅</div><h2>Se acabaron los movimientos</h2><p style="margin:0">${E.goalList(st).filter(g => g.have < g.need).map(g => `Faltaron ${g.need - g.have} ${g.label}`).join(' · ')}</p><div class="grid2"><button class="btn ghost" onclick="closeFruta()">Salir</button><button class="btn" onclick="frutaRetry()">Reintentar</button></div>`); }
   const L = spec.num, pr = progress(), had = pr.ls?.[L] || 0, coinsWon = coinsFor(L), msgDoc = doc('msg-' + L);
+  statInc('w', L);
   b.set(ref('fruta', 'p-' + uid()), { lv: Math.max(pr.lv || 1, L + 1), ls: { [L]: Math.max(had, s) }, best: { [L]: Math.max(pr.best?.[L] || 0, st.score) } }, { merge: true });
   if (!had && pt?.hatchedAt) b.update(ref('pet', 'main'), { bonus: increment(coinsWon) });
   write(b.commit());

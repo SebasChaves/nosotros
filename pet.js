@@ -7,7 +7,7 @@
 // Monedas = 10 por cada día que comió + bonus − spent (son de los dos). Dibujos: pet-art.js · juegos: pet-games.js.
 import { setDoc, updateDoc, increment } from 'https://www.gstatic.com/firebasejs/11.0.2/firebase-firestore.js';
 import { $, S, esc, icon, paint, onShow, on, expose, toast, openSheet, closeSheet, write, ref, today, dayKey, todayKey, parseDate, nameOf, partnerUid,
-         plural, uid, celebrate, go, ask, fmtMoney } from './core.js';
+         plural, uid, celebrate, go, ask, fmtMoney, gateOn } from './core.js';
 import { bothDid, didSomething, streak } from './home.js';
 import { backBar } from './lists.js';
 import { sceneSVG, petSVG, ITEMS, SLOTS, timeOfDay } from './pet-art.js';
@@ -15,12 +15,12 @@ import { GAMES, playGame } from './pet-games.js';
 import { arrowsVisible, arrowsWrapped } from './arrows.js';
 import { busVisible, busWrapped } from './bus.js';
 // La parada (bus.js), igual: envuelta si todavía no la abre
-const frutaRow = () => `<div class="pet-game"><span class="pet-game-ic">🍍</span><div class="grow"><b>Pura fruta</b><span class="tiny muted" style="display:block">Junta 3 o más frutas tropicales. 100 niveles, reto del día y duelos</span></div><button class="btn small" onclick="go('s-fruta')">Jugar</button></div>`;
-const busRow = () => !busVisible() ? '' : busWrapped()
+const frutaRow = () => !gateOn('s-fruta') ? '' : `<div class="pet-game"><span class="pet-game-ic">🍍</span><div class="grow"><b>Pura fruta</b><span class="tiny muted" style="display:block">Junta 3 o más frutas tropicales. 100 niveles, reto del día y duelos</span></div><button class="btn small" onclick="go('s-fruta')">Jugar</button></div>`;
+const busRow = () => !busVisible() || !gateOn('s-bus') && !busWrapped() ? '' : busWrapped()
   ? `<div class="pet-game gift-row"><span class="pet-game-ic">🎁</span><div class="grow"><b>Un juego sorpresa</b><span class="tiny muted" style="display:block">Está envuelto para ti</span></div><button class="btn small" onclick="unwrapGift('bus')">Abrir</button></div>`
   : `<div class="pet-game"><span class="pet-game-ic">🚏</span><div class="grow"><b>La parada</b><span class="tiny muted" style="display:block">Saca los vehículos y lleva a los pasajeros de su color. Niveles, reto del día y duelos</span></div><button class="btn small" onclick="go('s-bus')">Jugar</button></div>`;
 // Flechas (arrows.js) también sale aquí; envuelto como regalo si la pareja aún no lo abre
-const arrowsRow = () => !arrowsVisible() ? '' : arrowsWrapped()
+const arrowsRow = () => !arrowsVisible() || !gateOn('s-arrows') && !arrowsWrapped() ? '' : arrowsWrapped()
   ? `<div class="pet-game gift-row"><span class="pet-game-ic">🎁</span><div class="grow"><b>Un juego sorpresa</b><span class="tiny muted" style="display:block">Está envuelto para ti</span></div><button class="btn small" onclick="unwrapGift('arrows')">Abrir</button></div>`
   : `<div class="pet-game"><span class="pet-game-ic">🏹</span><div class="grow"><b>Flechas</b><span class="tiny muted" style="display:block">Saca todas las flechas del tablero sin chocar. Niveles y reto del día</span></div><button class="btn small" onclick="go('s-arrows')">Jugar</button></div>`;
 import { notify, meForPartner } from './push.js';
