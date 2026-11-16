@@ -27,6 +27,8 @@ const duelDoc = () => doc('duel');
 const cfg = () => doc('cfg') || {};
 const statInc = (k, L) => write(setDoc(ref('fruta', 'stats'), { [k]: { [L]: increment(1) } }, { merge: true }));
 const stars = n => '★'.repeat(n) + '☆'.repeat(3 - n);
+// Niveles extra (101, 102…) creados en Administración → Juegos: cuentan mientras estén publicados y seguidos
+export const totalLevels = () => { let n = E.LEVELS; while (doc('lv-' + (n + 1))?.on) n++; return n; };
 // Nivel publicado desde Administración (si hay) o el generado
 export function levelOf(L) {
   const c = doc('lv-' + L);
@@ -40,22 +42,22 @@ export const frutaAlerts = () => { const d = duelDoc(); return d?.state === 'inv
 /* ---------- Pantalla principal ---------- */
 function render() {
   const el = $('s-fruta'); if (!el) return;
-  const L = Math.min(myLevel(), E.LEVELS), pr = progress(), st = pr.ls || {}, done = myLevel() > E.LEVELS, p = partnerUid();
-  const total = Object.values(st).reduce((a, b) => a + b, 0), sp = levelOf(L), [ze, zn] = E.zoneOf(L);
+  const T = totalLevels(), L = Math.min(myLevel(), T), pr = progress(), st = pr.ls || {}, done = myLevel() > T, p = partnerUid();
+  const total = Object.values(st).reduce((a, b) => a + b, 0), sp = levelOf(L), [ze, zn] = L > E.LEVELS ? ['✨', 'Niveles nuevos'] : E.zoneOf(L);
   const d = daily(), me = d[uid()], them = p && d[p];
   const theirs = p ? progress(p).ls || {} : {};
   const lvBtn = n => n > myLevel() ? `<button disabled aria-label="Nivel ${n} bloqueado"><b>${n}</b><small>${E.isBoss(n) ? '👑' : '🔒'}</small></button>`
     : `<button class="${n === myLevel() ? 'cur' : ''}${E.isBoss(n) ? ' boss' : ''}" onclick="playFruta('l${n}')" aria-label="Nivel ${n}"><b>${n}</b><small>${st[n] ? stars(st[n]) : n === myLevel() ? 'nuevo' : E.isBoss(n) ? '👑' : ''}</small>${theirs[n] ? `<i class="fr-them" title="${esc(nameOf(p))}: ${theirs[n]} estrellas">${theirs[n]}★</i>` : ''}</button>`;
-  const zone = (a, b) => { const [e, nm] = E.zoneOf(a); return `<span class="label fr-zone">${e} ${nm} · ${a}–${b}</span><div class="ar-levels">${Array.from({ length: b - a + 1 }, (_, i) => lvBtn(a + i)).join('')}</div>`; };
+  const zone = (a, b) => { if (b < a) return ''; const [e, nm] = a > E.LEVELS ? ['✨', 'Niveles nuevos'] : E.zoneOf(a); return `<span class="label fr-zone">${e} ${nm} · ${a}–${b}</span><div class="ar-levels">${Array.from({ length: b - a + 1 }, (_, i) => lvBtn(a + i)).join('')}</div>`; };
   el.innerHTML = `${backBar('Pura fruta', 's-more', `<span class="pill">⭐ ${total}</span>`)}
     ${isOwner() ? `<details class="glass stack ar-test"><summary class="label">🧪 Zona de pruebas · solo tú</summary>
-      <div class="add-row" style="margin-top:8px"><input id="frTestLv" type="number" min="1" max="${E.LEVELS}" inputmode="numeric" placeholder="Probar nivel (1-${E.LEVELS})" aria-label="Nivel a probar"><button class="btn small" onclick="frutaTest()">Probar</button></div>
+      <div class="add-row" style="margin-top:8px"><input id="frTestLv" type="number" min="1" max="${totalLevels()}" inputmode="numeric" placeholder="Probar nivel (1-${totalLevels()})" aria-label="Nivel a probar"><button class="btn small" onclick="frutaTest()">Probar</button></div>
       <p class="tiny muted" style="margin:0">Sin guardar nada y con ayudas gratis. Los niveles se editan en Administración → Juegos.</p></details>` : ''}
     <div class="glass stack ar-hero fr-hero"><div class="ar-hero-ic">${done ? '🏆' : sp.boss ? '👑' : ze}</div>
-      <div class="stack" style="gap:2px;align-items:center"><span class="label">${done ? `¡Completaste los ${E.LEVELS} niveles!` : `Nivel ${L} de ${E.LEVELS} · ${zn}${sp.boss ? ' · jefe' : ''}`}</span>
+      <div class="stack" style="gap:2px;align-items:center"><span class="label">${done ? `¡Completaste los ${T} niveles!` : `Nivel ${L} de ${T} · ${zn}${sp.boss ? ' · jefe' : ''}`}</span>
       <span class="small">${goalsTxt(sp)}</span><span class="tiny muted">${sp.moves} movimientos</span></div>
       <button class="btn" onclick="playFruta('l${L}')">${done ? `Repetir el ${L}` : `Jugar nivel ${L}`}</button>
-      <div class="ar-bar"><i style="width:${Math.min(100, (myLevel() - 1) / E.LEVELS * 100)}%"></i></div></div>
+      <div class="ar-bar"><i style="width:${Math.min(100, (myLevel() - 1) / T * 100)}%"></i></div></div>
     <div class="glass stack"><div class="row"><span class="label">🗓️ Reto del día</span><span class="tiny muted">El mismo tablero para los dos</span></div>
       <p class="tiny muted" style="margin:0">25 movimientos: gana quien haga más puntos.</p>
       <div class="row"><span>Tú</span><b>${me ? me.score.toLocaleString('es') : '<span class="muted small">sin jugar</span>'}</b></div>
@@ -63,7 +65,7 @@ function render() {
       ${me && them ? `<p class="small center" style="margin:0"><b>${me.score === them.score ? '¡Empate! 🤝' : me.score > them.score ? '¡Hoy ganas tú! 🏆' : `Hoy gana ${esc(nameOf(p))} 🏆`}</b></p>` : ''}
       ${me ? '<p class="tiny muted center" style="margin:0">Mañana hay otro 😉</p>' : `<button class="btn ghost" onclick="playFruta('day')">Jugar el reto de hoy</button>`}</div>
     ${duelCard()}
-    <div class="glass stack">${zone(1, 33)}${zone(34, 66)}${zone(67, 100)}</div>
+    <div class="glass stack">${zone(1, 33)}${zone(34, 66)}${zone(67, 100)}${zone(101, T)}</div>
     <p class="tiny muted center" style="margin:0 8px">Junta 3 o más frutas iguales. Con 4 en línea sale un 🔪 machete, en L o T un 🥥 coco explosivo, con 5 en línea una 🌺 flor y con un cuadrito una 🦜 lapa. Junten dos especiales para un efecto más grande. Ayudas con las monedas de su mascota 🪙.</p>`;
 }
 function goalsTxt(sp) {
@@ -72,7 +74,7 @@ function goalsTxt(sp) {
   if (g.leaf) out.push('🍃 limpiar las hojas'); if (g.stone) out.push('🪨 romper las piedras'); if (g.pinas) out.push(`🍍 bajar ${sp.pinas || 3} piñas`);
   return out.join(' · ') || 'Hacer puntos';
 }
-function frutaTest() { const n = Number($('frTestLv')?.value); if (!(n >= 1 && n <= E.LEVELS)) return toast(`Escribe un nivel del 1 al ${E.LEVELS}`); playFruta('t' + n); }
+function frutaTest() { const n = Number($('frTestLv')?.value); if (!(n >= 1 && n <= totalLevels())) return toast(`Escribe un nivel del 1 al ${totalLevels()}`); playFruta('t' + n); }
 
 /* ---------- Duelo (cada uno juega cuando pueda; gana quien lo pase con más movimientos de sobra) ---------- */
 function duelCard() {
@@ -128,7 +130,7 @@ function specOf(what) {
   if (what === 'duel') { const d = duelDoc(); return d ? { ...levelOf(d.level), seed: d.seed, duel: d.did, what, title: `⚔️ Duelo · nivel ${d.level}` } : null; }
   const t = /^t(\d+)$/.exec(what); if (t) return isOwner() ? { ...levelOf(Number(t[1])), test: true, what, title: '🧪 Nivel ' + t[1] } : null;
   if (what?.custom) return { ...what, test: true }; // desde el editor de Administración
-  const m = /^l(\d+)$/.exec(what); const L = Math.max(1, Math.min(E.LEVELS, m ? Number(m[1]) : myLevel()));
+  const m = /^l(\d+)$/.exec(what); const L = Math.max(1, Math.min(totalLevels(), m ? Number(m[1]) : myLevel()));
   return { ...levelOf(L), what };
 }
 export function playFruta(what, seed) {
@@ -349,7 +351,7 @@ function end() {
   // Mensaje sorpresa que dejó la pareja para este nivel (Administración → Juegos)
   const surprise = msgDoc && msgDoc.to === uid() && msgDoc.text ? `<div class="fr-surprise">💌 ${esc(nameOf(msgDoc.from))} te dejó un mensaje:<br><b>${esc(msgDoc.text)}</b></div>` : '';
   overlay(`<div style="font-size:46px">🍹</div><h2>¡${esc(spec.title)} listo!</h2><p style="margin:0" class="center"><span class="ar-stars">${stars(s)}</span><br>${st.score.toLocaleString('es')} puntos${!had && pt?.hatchedAt ? ` · +${coinsWon} 🪙` : ''}${L === E.LEVELS ? `<br><b>🏆 ¡Completaste los ${E.LEVELS} niveles!</b>` : ''}</p>${surprise}
-    <div class="${L < E.LEVELS ? 'grid2' : 'stack'}"><button class="btn ghost" onclick="closeFruta()">Salir</button>${L < E.LEVELS ? `<button class="btn" onclick="playFruta('l${L + 1}')">${E.isBoss(L + 1) ? '👑 ' : ''}Nivel ${L + 1} →</button>` : ''}</div>`);
+    <div class="${L < totalLevels() ? 'grid2' : 'stack'}"><button class="btn ghost" onclick="closeFruta()">Salir</button>${L < totalLevels() ? `<button class="btn" onclick="playFruta('l${L + 1}')">${E.isBoss(L + 1) ? '👑 ' : ''}Nivel ${L + 1} →</button>` : ''}</div>`);
 }
 async function frutaMore() {
   const cost = helpCost('plus'), p = pet();

@@ -8,17 +8,20 @@
 // También aplica «ocultar juego» para todos (gates): por eso app.js lo importa aunque la pantalla sea solo del dueño.
 import { setDoc, deleteDoc } from 'https://www.gstatic.com/firebasejs/11.0.2/firebase-firestore.js';
 import { $, S, esc, expose, toast, write, ref, uid, partnerUid, nameOf, todayKey, gates, ask, softDelete } from './core.js';
-import { isOwner, giftAdminCards } from './gifts.js';
+import { isOwner, giftAdminCards, giftInfo } from './gifts.js';
+import { notify, meForPartner } from './push.js';
 import * as FE from './fruta-engine.js';
-import { levelOf as frutaLevelOf, playFruta } from './fruta.js';
-import { LEVELS as AR_LEVELS, MODS_INFO, arrowsLevelInfo, playArrowsDraft } from './arrows.js';
-import { LEVELS as BUS_LEVELS, levelSpec as busLevelSpec, playBusDraft } from './bus.js';
+import { levelOf as frutaLevelOf, playFruta, totalLevels as frutaTotal } from './fruta.js';
+import { LEVELS as AR_LEVELS, MODS_INFO, arrowsLevelInfo, playArrowsDraft, arrowsTotal } from './arrows.js';
+import { LEVELS as BUS_LEVELS, levelSpec as busLevelSpec, playBusDraft, busTotal } from './bus.js';
 
 export const GAMES = {
   fruta: { name: 'Pura fruta', e: '🍍', screen: 's-fruta', levels: FE.LEVELS },
   arrows: { name: 'Flechas', e: '🏹', screen: 's-arrows', levels: AR_LEVELS },
   bus: { name: 'La parada', e: '🚏', screen: 's-bus', levels: BUS_LEVELS },
 };
+// Total con los niveles extra publicados (101, 102… o 91, 92… en Flechas)
+const totalOf = g => g === 'fruta' ? frutaTotal() : g === 'arrows' ? arrowsTotal() : busTotal();
 const docOf = (g, id) => (S.data[g] || []).find(d => d.id === id) || null;
 const cfgOf = g => docOf(g, 'cfg') || {};
 const prog = (g, who) => docOf(g, 'p-' + who) || {};
@@ -45,7 +48,7 @@ function ajPart(p) { part = p; rerender(); }
 /* ---------- 1. Panel ---------- */
 function panel(G) {
   const me = uid(), p = partnerUid(), c = cfgOf(game);
-  const row = who => { const pr = prog(game, who), st = Object.values(pr.ls || {}).reduce((a, b) => a + b, 0); return `<div class="row"><span>${esc(who === me ? 'Tú' : nameOf(who))}</span><span class="small">Nivel <b>${Math.min(pr.lv || 1, G.levels)}</b> de ${G.levels} · ⭐ ${st}${pr.dw ? ` · ⚔️ ${pr.dw}` : ''}</span></div>`; };
+  const row = who => { const pr = prog(game, who), st = Object.values(pr.ls || {}).reduce((a, b) => a + b, 0); return `<div class="row"><span>${esc(who === me ? 'Tú' : nameOf(who))}</span><span class="small">Nivel <b>${Math.min(pr.lv || 1, totalOf(game))}</b> de ${totalOf(game)} · ⭐ ${st}${pr.dw ? ` · ⚔️ ${pr.dw}` : ''}</span></div>`; };
   return `<div class="glass stack"><span class="label">${G.e} ${G.name}: en qué van</span>${row(me)}${p ? row(p) : ''}</div>
     <div class="glass stack"><label class="row"><span>Mostrar el juego a los dos</span><input type="checkbox" ${c.off ? '' : 'checked'} onchange="ajCfg('off', !this.checked)"></label>
       <p class="tiny muted" style="margin:0">Si lo apagas, desaparece de Más, de la barra y de los juegos de la mascota (el progreso no se pierde).</p>
@@ -53,7 +56,7 @@ function panel(G) {
         <label class="row"><span>🔀 Mixto con etiqueta BETA</span><input type="checkbox" ${c.beta?.mix === false ? '' : 'checked'} onchange="ajCfg('beta.mix', this.checked)"></label>` : ''}</div>
     ${game !== 'fruta' ? giftAdminCards() : ''}
     <div class="glass stack"><span class="label">🧪 Tu progreso (para probar)</span>
-      <div class="add-row"><input id="ajJump" type="number" min="1" max="${G.levels}" inputmode="numeric" placeholder="Saltar al nivel…" aria-label="Saltar al nivel"><button class="btn small" onclick="ajJump()">Saltar</button></div>
+      <div class="add-row"><input id="ajJump" type="number" min="1" max="${totalOf(game)}" inputmode="numeric" placeholder="Saltar al nivel…" aria-label="Saltar al nivel"><button class="btn small" onclick="ajJump()">Saltar</button></div>
       <button class="btn ghost small danger" onclick="ajReset()">Reiniciar mi progreso en ${G.name}</button>
       <p class="tiny muted" style="margin:0">Solo cambia tu progreso, no el de tu pareja.</p></div>`;
 }
@@ -62,7 +65,7 @@ async function ajCfg(path, v) {
   write(setDoc(ref(game, 'cfg'), data, { merge: true })); toast('Guardado');
 }
 function ajJump() {
-  const n = Number($('ajJump')?.value), G = GAMES[game]; if (!(n >= 1 && n <= G.levels)) return toast(`Del 1 al ${G.levels}`);
+  const n = Number($('ajJump')?.value), max = totalOf(game); if (!(n >= 1 && n <= max)) return toast(`Del 1 al ${max}`);
   write(setDoc(ref(game, 'p-' + uid()), { lv: n }, { merge: true })); toast(`Ahora vas en el nivel ${n}`);
 }
 async function ajReset() {
@@ -81,18 +84,21 @@ const pick = s => ({ w: s.w, h: s.h, colors: s.colors, moves: s.moves, mask: s.m
 function edit(G) {
   if (!draft) draft = current(edL);
   const c = published(edL);
-  const list = Array.from({ length: G.levels }, (_, i) => i + 1).map(n => { const d = published(n); return `<button class="${n === edL ? 'cur' : ''}" onclick="ajLevel(${n})"><b>${n}</b><small>${d ? (d.on ? '✏️' : '⏸️') : ''}</small></button>`; }).join('');
-  return `<div class="glass stack"><div class="row"><span class="label">Nivel ${edL}</span><span class="tiny muted">${c ? (c.on ? '✏️ Editado y publicado' : '⏸️ Editado, sin publicar') : 'Generado automáticamente'}</span></div>
+  const T = totalOf(game), isNew = edL > T, extra = edL > G.levels;
+  const list = Array.from({ length: T }, (_, i) => i + 1).map(n => { const d = published(n); return `<button class="${n === edL ? 'cur' : ''}" onclick="ajLevel(${n})"><b>${n}</b><small>${d ? (d.on ? '✏️' : '⏸️') : ''}</small></button>`; }).join('');
+  return `<div class="glass stack"><div class="row"><span class="label">Nivel ${edL}</span><span class="tiny muted">${isNew ? '✨ Nivel nuevo, sin publicar' : extra ? (c?.on ? '✨ Nivel nuevo publicado' : '✨ Nivel nuevo sin publicar') : c ? (c.on ? '✏️ Editado y publicado' : '⏸️ Editado, sin publicar') : 'Generado automáticamente'}</span></div>
+      ${isNew ? `<p class="tiny muted" style="margin:0">Empieza con un tablero generado parecido a los últimos niveles: cámbialo a tu gusto, pruébalo y publícalo. Aparece en el mapa de los dos en «✨ Niveles nuevos».</p>` : ''}
       ${game === 'fruta' ? frutaEditor() : game === 'arrows' ? arrowsEditor() : busEditor()}
       <div class="grid2"><button class="btn ghost" onclick="ajTest()">▶ Probar</button><button class="btn" onclick="ajPublish()">Publicar</button></div>
       ${game === 'fruta' ? `<button class="btn ghost" onclick="ajSim()">🤖 Probar 200 veces solo</button><div id="ajSim">${simHTML()}</div>` : '<p class="tiny muted" style="margin:0">Estos tableros siempre tienen solución: el generador los arma así.</p>'}
-      <div class="grid2">${c?.on ? `<button class="btn ghost small" onclick="ajUnpublish()">⏸️ Despublicar</button>` : '<span></span>'}${c ? `<button class="btn ghost small" onclick="ajRevert()">↩️ Volver al generado</button>` : '<span></span>'}</div>
-      <input id="ajOther" type="number" min="1" max="${G.levels}" inputmode="numeric" placeholder="Otro nivel (para copiar o intercambiar)" aria-label="Otro nivel">
+      ${extra ? (edL === T && c ? `<button class="btn ghost small danger" onclick="ajRevert()">🗑️ Quitar este nivel nuevo</button>` : '') : `<div class="grid2">${c?.on ? `<button class="btn ghost small" onclick="ajUnpublish()">⏸️ Despublicar</button>` : '<span></span>'}${c ? `<button class="btn ghost small" onclick="ajRevert()">↩️ Volver al generado</button>` : '<span></span>'}</div>`}
+      <input id="ajOther" type="number" min="1" max="${T}" inputmode="numeric" placeholder="Otro nivel (para copiar o intercambiar)" aria-label="Otro nivel">
       <div class="grid2"><button class="btn ghost small" onclick="ajCopy()">📋 Copiar ahí</button><button class="btn ghost small" onclick="ajSwap()">🔁 Intercambiar</button></div>
       <p class="tiny muted" style="margin:0">«Publicar» lo cambia para los dos al instante. «Copiar ahí» pone este borrador en otro número (para hacer variantes); «Intercambiar» cambia de lugar dos niveles en el mapa.</p></div>
-    <div class="glass stack"><span class="label">Todos los niveles</span><div class="ar-levels aj-levels">${list}</div><p class="tiny muted" style="margin:0">✏️ editado · ⏸️ editado sin publicar</p></div>`;
+    <div class="glass stack"><div class="row"><span class="label">Todos los niveles</span><button class="btn small" onclick="ajNew()">＋ Nivel nuevo (${T + 1})</button></div><div class="ar-levels aj-levels">${list}${isNew ? `<button class="cur"><b>${edL}</b><small>✨</small></button>` : ''}</div><p class="tiny muted" style="margin:0">✏️ editado · ⏸️ editado sin publicar · los números después del ${G.levels} son niveles nuevos tuyos</p></div>`;
 }
 function ajLevel(n) { edL = n; draft = null; sim = null; rerender(); }
+function ajNew() { edL = totalOf(game) + 1; draft = null; sim = null; rerender(); window.scrollTo?.({ top: 0, behavior: 'smooth' }); }
 // Pura fruta: tablero dibujado
 const TOOLS = [['cell', '⬜', 'Casilla'], ['hole', '✖️', 'Hueco'], ['leaf1', '🍃', 'Hoja'], ['leaf2', '🌿', 'Hoja doble'], ['stone1', '🪨', 'Piedra'], ['stone2', '⛰️', 'Piedra doble'], ['vine', '🕸️', 'Bejuco']];
 function frutaEditor() {
@@ -159,14 +165,25 @@ function ajTest() {
 }
 async function ajPublish() {
   if (game === 'fruta' && !Object.keys(draft.goals || {}).length) return toast('Ponle al menos un objetivo');
-  write(setDoc(ref(game, 'lv-' + edL), { on: true, ...toSave(), by: uid(), at: Date.now() })); toast(`Nivel ${edL} publicado ✏️`);
+  const T = totalOf(game), fresh = edL > T, p = partnerUid();
+  if (edL > T + 1) return toast(`Primero crea el nivel ${T + 1}`);
+  write(setDoc(ref(game, 'lv-' + edL), { on: true, ...toSave(), by: uid(), at: Date.now() })); toast(fresh ? `✨ Nivel ${edL} creado y publicado` : `Nivel ${edL} publicado ✏️`);
+  // Si tu pareja ya había terminado todos, le avisa que hay uno nuevo (La parada solo si ya se regaló)
+  if (fresh && p && (prog(game, p).lv || 1) > T && (game !== 'bus' || giftInfo('bus').on)) {
+    const G = GAMES[game];
+    notify(game, { title: `✨ Hay un nivel nuevo en ${G.name} ${G.e}`, body: `${meForPartner()} hizo el nivel ${edL}. ¿Lo pasas?`, url: './?open=' + game, tag: game + '-new' });
+  }
 }
-function ajUnpublish() { write(setDoc(ref(game, 'lv-' + edL), { on: false }, { merge: true })); toast('Despublicado: vuelve el generado'); }
+function ajUnpublish() {
+  if (edL > GAMES[game].levels) return toast('Los niveles nuevos se quitan con «Quitar este nivel nuevo»'); write(setDoc(ref(game, 'lv-' + edL), { on: false }, { merge: true })); toast('Despublicado: vuelve el generado'); }
 async function ajRevert() {
-  if (!(await ask(`¿Borrar la edición del nivel ${edL} y volver al generado?`, { ok: 'Volver', danger: true }))) return;
+  const T = totalOf(game), extra = edL > GAMES[game].levels;
+  if (extra && edL !== T) return toast('Solo se puede quitar el último nivel nuevo');
+  if (!(await ask(extra ? `¿Quitar el nivel nuevo ${edL}? Desaparece del mapa de los dos.` : `¿Borrar la edición del nivel ${edL} y volver al generado?`, { ok: extra ? 'Quitar' : 'Volver', danger: true }))) return;
+  if (extra) { write(deleteDoc(ref(game, 'lv-' + edL))); edL = Math.max(1, T - 1); draft = null; return toast('Nivel quitado'); }
   write(deleteDoc(ref(game, 'lv-' + edL))); draft = null; toast('Volvió al generado');
 }
-function otherNum() { const n = Number($('ajOther')?.value), max = GAMES[game].levels; if (!(n >= 1 && n <= max) || n === edL) { toast(`Elige otro nivel del 1 al ${max}`); return 0; } return n; }
+function otherNum() { const n = Number($('ajOther')?.value), max = totalOf(game); if (!(n >= 1 && n <= max) || n === edL) { toast(`Elige otro nivel del 1 al ${max}`); return 0; } return n; }
 function ajCopy() { const n = otherNum(); if (!n) return; write(setDoc(ref(game, 'lv-' + n), { on: true, ...toSave(), by: uid(), at: Date.now() })); toast(`Copiado al nivel ${n} y publicado`); }
 async function ajSwap() {
   const n = otherNum(); if (!n) return;
@@ -203,7 +220,7 @@ function ajSim() {
 function stats(G) {
   const st = docOf(game, 'stats') || {}, a = st.a || {}, w = st.w || {}, me = uid(), p = partnerUid();
   const mine = prog(game, me).ls || {}, theirs = p ? prog(game, p).ls || {} : {};
-  const rows = []; for (let L = 1; L <= G.levels; L++) if (a[L] || mine[L] || theirs[L]) rows.push(L);
+  const rows = []; for (let L = 1; L <= totalOf(game); L++) if (a[L] || mine[L] || theirs[L]) rows.push(L);
   const wall = rows.filter(L => (a[L] || 0) >= 5 && (w[L] || 0) / a[L] < 0.35);
   return `${wall.length ? `<div class="glass stack" style="border-color:rgba(255,110,60,.5)"><span class="label">🧱 Niveles pared</span><p class="small" style="margin:0">Donde más se atascan (5+ intentos y menos de 35 % ganados): ${wall.map(L => `<button class="link" onclick="ajPart('edit');ajLevel(${L})">${L}</button>`).join(', ')}. Tócalos para ajustarlos.</p></div>` : ''}
     <div class="glass stack"><span class="label">📈 Por nivel</span>
@@ -216,12 +233,12 @@ function day(G) {
   const list = (S.data[game] || []).filter(d => /^day-/.test(d.id) && d.id.slice(4) >= todayKey()).sort((a, b) => a.id.localeCompare(b.id));
   return `<div class="glass stack"><span class="label">🗓️ Programar el reto de un día</span>
       <p class="tiny muted" style="margin:0">Ese día, el reto para los dos usa el tablero del nivel que elijas (por ejemplo uno en forma de corazón para su aniversario). Los demás días se arma solo.</p>
-      <div class="grid2"><input type="date" id="ajDay" min="${todayKey()}" aria-label="Día"><input type="number" id="ajDayL" min="1" max="${G.levels}" inputmode="numeric" placeholder="Nivel (1-${G.levels})" aria-label="Nivel"></div>
+      <div class="grid2"><input type="date" id="ajDay" min="${todayKey()}" aria-label="Día"><input type="number" id="ajDayL" min="1" max="${totalOf(game)}" inputmode="numeric" placeholder="Nivel (1-${totalOf(game)})" aria-label="Nivel"></div>
       <button class="btn" onclick="ajDaySave()">Programar</button></div>
     <div class="glass"><ul class="list">${list.length ? list.map(d => `<li><div class="txt">${esc(d.id.slice(4))}<span class="sub">Tablero del nivel ${d.num}</span></div><button class="del" aria-label="Quitar" onclick="ajDayDel('${d.id}')">✕</button></li>`).join('') : '<li class="empty">Nada programado</li>'}</ul></div>`;
 }
 function ajDaySave() {
-  const d = $('ajDay').value, n = Number($('ajDayL').value), max = GAMES[game].levels;
+  const d = $('ajDay').value, n = Number($('ajDayL').value), max = totalOf(game);
   if (!d || !(n >= 1 && n <= max)) return toast('Elige el día y un nivel');
   write(setDoc(ref(game, 'day-' + d), { num: n, by: uid(), at: Date.now() })); toast('Reto programado 🗓️');
 }
@@ -232,15 +249,15 @@ function msg(G) {
   const p = partnerUid(), list = (S.data[game] || []).filter(d => /^msg-/.test(d.id)).sort((a, b) => Number(a.id.slice(4)) - Number(b.id.slice(4)));
   const pl = p ? prog(game, p).lv || 1 : 1;
   return `<div class="glass stack"><span class="label">💌 Mensaje al pasar un nivel</span>
-      <p class="tiny muted" style="margin:0">Cuando ${esc(p ? nameOf(p) : 'tu pareja')} pase ese nivel por primera vez, le sale tu mensaje en la pantalla de «¡Nivel listo!». Va en el nivel ${Math.min(pl, G.levels)}.</p>
-      <input type="number" id="ajMsgL" min="1" max="${G.levels}" inputmode="numeric" placeholder="Nivel (1-${G.levels})" aria-label="Nivel">
+      <p class="tiny muted" style="margin:0">Cuando ${esc(p ? nameOf(p) : 'tu pareja')} pase ese nivel por primera vez, le sale tu mensaje en la pantalla de «¡Nivel listo!». Va en el nivel ${Math.min(pl, totalOf(game))}.</p>
+      <input type="number" id="ajMsgL" min="1" max="${totalOf(game)}" inputmode="numeric" placeholder="Nivel (1-${totalOf(game)})" aria-label="Nivel">
       <textarea id="ajMsgT" rows="2" maxlength="200" placeholder="Ej: ¡Ya vas a la mitad! Te amo 💕" aria-label="Mensaje"></textarea>
       <button class="btn" onclick="ajMsgSave()" ${p ? '' : 'disabled'}>Guardar mensaje</button>
       <p class="tiny muted" style="margin:0">Las monedas de la mascota son de los dos, así que no hace falta regalarlas: las ayudas salen de ahí.</p></div>
     <div class="glass"><ul class="list">${list.length ? list.map(d => `<li><div class="txt">Nivel ${d.id.slice(4)}: ${esc(d.text)}<span class="sub">${Number(d.id.slice(4)) < pl ? 'Ya lo pasó (le salió si fue después de guardarlo)' : 'Esperando'}</span></div><button class="del" aria-label="Quitar" onclick="ajMsgDel('${d.id}')">✕</button></li>`).join('') : '<li class="empty">Sin mensajes</li>'}</ul></div>`;
 }
 function ajMsgSave() {
-  const n = Number($('ajMsgL').value), t = $('ajMsgT').value.trim(), max = GAMES[game].levels;
+  const n = Number($('ajMsgL').value), t = $('ajMsgT').value.trim(), max = totalOf(game);
   if (!(n >= 1 && n <= max) || !t) return toast('Escribe el nivel y el mensaje');
   write(setDoc(ref(game, 'msg-' + n), { from: uid(), to: partnerUid(), text: t, at: Date.now() })); toast('Mensaje guardado 💌');
 }
@@ -260,5 +277,5 @@ function eco(G) {
 }
 function ajCfgNum(path, v) { const [a, b] = path.split('.'), n = v === '' ? null : Math.max(0, Math.round(Number(v))); write(setDoc(ref(game, 'cfg'), b ? { [a]: { [b]: n } } : { [a]: n }, { merge: true })); toast('Guardado'); }
 
-expose({ ajGame, ajPart, ajCfg, ajJump, ajReset, ajLevel, ajTool, ajPaint, ajSize, ajSet, ajGoal, ajPinas, ajMod, ajSeed, ajTest, ajPublish, ajUnpublish, ajRevert,
+expose({ ajNew, ajGame, ajPart, ajCfg, ajJump, ajReset, ajLevel, ajTool, ajPaint, ajSize, ajSet, ajGoal, ajPinas, ajMod, ajSeed, ajTest, ajPublish, ajUnpublish, ajRevert,
   ajCopy, ajSwap, ajSim, ajDaySave, ajDayDel, ajMsgSave, ajMsgDel, ajCfgNum });

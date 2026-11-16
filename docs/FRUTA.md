@@ -52,3 +52,9 @@ Para Pura fruta, Flechas y La parada:
 - **Reto programado**: `<juego>/day-<día> { num }`: ese día el reto usa el tablero de ese nivel.
 - **Sorpresas**: `<juego>/msg-<n> { from, to, text }`: sale en «¡Nivel listo!» cuando la pareja lo pasa.
 - **Economía**: `<juego>/cfg` (monedas por nivel y precio de ayudas; vacío = el de siempre).
+
+### Niveles nuevos (1.7.0)
+«＋ Nivel nuevo» crea el siguiente número después del último (101, 102… en Pura fruta y La parada; 91, 92… en Flechas), en
+`<juego>/lv-<n>` con `on: true`. Cuentan mientras estén publicados y seguidos (`totalLevels` / `busTotal` / `arrowsTotal`):
+salen en «✨ Niveles nuevos» al final del mapa y se desbloquean en orden. Solo se puede quitar el último. Si la pareja ya había
+terminado todos, le llega un aviso (La parada solo si ya se regaló). En Flechas se juegan antes del modo infinito.

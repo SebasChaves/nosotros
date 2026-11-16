@@ -116,6 +116,7 @@ const score = r => r.ms + (r.help || 0) * 20000 + (r.fails || 0) * 15000;
 export const busCfg = () => S.data.bus.find(d => d.id === 'cfg') || {};
 const UNLOCK_BASE = 15; // abrir un lugar 🔒 con monedas (con una foto es gratis)
 const unlockCost = () => busCfg().unlock ?? UNLOCK_BASE;
+export const busTotal = () => { let n = LEVELS; while (S.data.bus.find(d => d.id === 'lv-' + (n + 1) && d.on)) n++; return n; };
 export function liveBusLevel(L, params) {
   const sp = levelSpec(L), o = params || S.data.bus.find(d => d.id === 'lv-' + L && d.on)?.params; if (!o) return sp;
   return { ...sp, ...o, seed: o.seed ?? sp.seed, num: L, key: 'l' + L, custom: true };
@@ -129,7 +130,7 @@ export const busAlerts = () => { const d = duelDoc(); return busVisible() && !bu
 /* ---------- Pantalla ---------- */
 function render() {
   if (!busVisible()) { $('s-bus').innerHTML = `${backBar('La parada')}<p class="empty">Todavía no 😉</p>`; return; }
-  const L = Math.min(myLevel(), LEVELS), pr = progress(), st = pr.ls || {}, lx = pr.lx || {}, done = myLevel() > LEVELS;
+  const T = busTotal(), L = Math.min(myLevel(), T), pr = progress(), st = pr.ls || {}, lx = pr.lx || {}, done = myLevel() > T;
   const total = Object.values(st).reduce((a, b) => a + b, 0), sp = levelSpec(L);
   const d = daily(), me = d[uid()], p = partnerUid(), them = p && d[p], ds = dailySpec();
   const surprise = isOwner() && !giftInfo('bus').on;
@@ -145,21 +146,21 @@ function render() {
       <p class="tiny muted" style="margin:0">Se ve tal cual, sin desbloquear ni guardar nada; las ayudas y los lugares 🔒 son gratis (con foto se prueba sin mandarla).</p></details>` : ''}
     ${duelCard()}
     <div class="glass stack ar-hero ${sp.boss ? 'boss' : 'hard'}"><div class="ar-hero-ic">${done ? '🏆' : sp.boss ? '👑' : '🚏'}</div>
-      <div class="stack" style="gap:2px;align-items:center"><span class="label">${done ? `¡Completaste los ${LEVELS} niveles!` : `Nivel ${L} de ${LEVELS}${sp.boss ? ' · jefe' : ''}`}</span>
+      <div class="stack" style="gap:2px;align-items:center"><span class="label">${done ? `¡Completaste los ${T} niveles!` : `Nivel ${L} de ${T}${sp.boss ? ' · jefe' : ''}`}</span>
       <span class="tiny muted">${sp.count} vehículos · ${sp.colors} colores</span></div>
       <button class="btn" onclick="playBus('l${L}')">${done ? `Repetir el ${L}` : `Jugar nivel ${L}`}</button>
-      <div class="ar-bar"><i style="width:${Math.min(100, (myLevel() - 1) / LEVELS * 100)}%"></i></div>
+      <div class="ar-bar"><i style="width:${Math.min(100, (myLevel() - 1) / T * 100)}%"></i></div>
       <label class="row ar-xp"><input type="checkbox" ${expertOn() ? 'checked' : ''} onchange="busExpert(this.checked)"><span class="small">💀 Modo experto: sin ayudas</span></label></div>
     <div class="glass stack"><div class="row"><span class="label">🗓️ Reto del día</span><span class="tiny muted">El mismo para los dos</span></div>
       <p class="tiny muted" style="margin:0">Hoy: ${ds.count} vehículos · ${ds.colors} colores. Más grande hacia el fin de semana.</p>
       ${dayRow('Tú', me)}${p ? dayRow(esc(nameOf(p)), them) : ''}
       ${winner ? `<p class="small center" style="margin:0"><b>${winner}</b></p>` : ''}
       ${me ? '<p class="tiny muted center" style="margin:0">Mañana hay otro 😉</p>' : `<button class="btn ghost" onclick="playBus('day')">Jugar el reto de hoy</button>`}</div>
-    <div class="glass stack"><span class="label">🗺️ Niveles</span><div class="ar-levels">${Array.from({ length: LEVELS }, (_, i) => lvBtn(i + 1)).join('')}</div></div>
+    <div class="glass stack"><span class="label">🗺️ Niveles</span><div class="ar-levels">${Array.from({ length: LEVELS }, (_, i) => lvBtn(i + 1)).join('')}</div>${T > LEVELS ? `<span class="label" style="margin-top:6px">✨ Niveles nuevos</span><div class="ar-levels">${Array.from({ length: T - LEVELS }, (_, i) => lvBtn(LEVELS + i + 1)).join('')}</div>` : ''}</div>
     <p class="tiny muted center" style="margin:0 8px">Toca un vehículo: sale si su camino está libre y se va a la parada. Los pasajeros suben solos al vehículo de su color. Si la parada se llena y el siguiente no tiene vehículo, pierdes: piensa qué sacar primero. Los lugares 🔒 se abren mandando una foto 📸. Ayudas con las monedas de su mascota 🪙.</p>`;
 }
 function busExpert(v) { try { localStorage.setItem('futari-bus-expert', v ? '1' : '0'); } catch {} render(); }
-function busTestLevel() { const n = Number($('busTestLv')?.value); if (!(n >= 1 && n <= LEVELS)) return toast(`Escribe un nivel del 1 al ${LEVELS}`); playBus('t' + n); }
+function busTestLevel() { const n = Number($('busTestLv')?.value); if (!(n >= 1 && n <= busTotal())) return toast(`Escribe un nivel del 1 al ${busTotal()}`); playBus('t' + n); }
 
 /* ---------- Duelo en vivo ---------- */
 function duelCard() {
@@ -251,8 +252,8 @@ function specOf(what) {
   if (what === 'duel') { const d = duelDoc(); return d ? duelSpec(d) : null; }
   if (what === 'tdraft' && busDraft) return isOwner() ? { ...liveBusLevel(busDraft.L, busDraft.params), test: true, title: '🧪 Borrador nivel ' + busDraft.L } : null;
   if (what === 'tday') return isOwner() ? { ...dailySpec(), test: true, day: false, title: '🧪 Reto de hoy' } : null;
-  const t = /^t(\d+)$/.exec(String(what)); if (t) return isOwner() ? { ...liveBusLevel(Math.max(1, Math.min(LEVELS, Number(t[1])))), test: true, title: '🧪 Nivel ' + t[1] } : null;
-  const m = /^l(\d+)$/.exec(String(what)); return liveBusLevel(Math.max(1, Math.min(LEVELS, m ? Number(m[1]) : myLevel())));
+  const t = /^t(\d+)$/.exec(String(what)); if (t) return isOwner() ? { ...liveBusLevel(Math.max(1, Math.min(busTotal(), Number(t[1])))), test: true, title: '🧪 Nivel ' + t[1] } : null;
+  const m = /^l(\d+)$/.exec(String(what)); return liveBusLevel(Math.max(1, Math.min(busTotal(), m ? Number(m[1]) : myLevel())));
 }
 // Medidas del plano (en px del plano, antes de la cámara)
 function layout(b) {
@@ -667,7 +668,7 @@ function win() {
     b.set(ref('bus', 'p-' + uid()), { lv: Math.max(pr.lv || 1, num + 1), ls: { [num]: Math.max(had, s) }, ...(G.expert ? { lx: { [num]: true } } : {}) }, { merge: true });
     if (!had && pt?.hatchedAt) b.update(ref('pet', 'main'), { bonus: increment(coinsWon) });
     msg = `<span class="ar-stars">${stars(s)}</span>${G.expert ? '<br>💀 ¡En modo experto!' : ''}<br>${info}${!had && pt?.hatchedAt ? ` · +${coinsWon} 🪙` : ''}${num === LEVELS ? `<br><b>🏆 ¡Completaste los ${LEVELS} niveles!</b>` : ''}`;
-    next = num < LEVELS ? `<button class="btn" onclick="playBus('l${num + 1}')">${isBoss(num + 1) ? '👑 ' : ''}Nivel ${num + 1} →</button>` : '';
+    next = num < busTotal() ? `<button class="btn" onclick="playBus('l${num + 1}')">${isBoss(num + 1) ? '👑 ' : ''}Nivel ${num + 1} →</button>` : '';
     if (!had && (sp.boss || num === LEVELS)) notify('bus', { title: num === LEVELS ? `🏆 ${meForPartner()} completó los ${LEVELS} niveles de La parada` : `👑 ${meForPartner()} venció al jefe del nivel ${num} de La parada`, body: info, url: './?open=bus', tag: 'bus-l' + num });
   }
   write(b.commit()); countStat('acts', sp.day ? 'bus-day' : 'bus');

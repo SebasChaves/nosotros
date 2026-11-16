@@ -1,7 +1,8 @@
 {
-  "version": "1.6.0",
-  "notes": ["🎮 Mejoras por dentro en los tres juegos (Pura fruta, Flechas y La parada): los niveles se pueden ir afinando sin esperar una versión nueva"],
+  "version": "1.7.0",
+  "notes": ["✨ Los juegos ahora pueden tener niveles nuevos después del último: cuando aparezcan, están al final del mapa en «Niveles nuevos» y les llega un aviso si ya habían terminado todos"],
   "history": [
+    { "version": "1.7.0", "notes": ["✨ Los juegos ahora pueden tener niveles nuevos después del último: cuando aparezcan, están al final del mapa en «Niveles nuevos» y les llega un aviso si ya habían terminado todos"] },
     { "version": "1.6.0", "notes": ["🎮 Mejoras por dentro en los tres juegos (Pura fruta, Flechas y La parada): los niveles se pueden ir afinando sin esperar una versión nueva"] },
     { "version": "1.5.0", "notes": ["🍍 Juego nuevo: «Pura fruta». Junten 3 o más frutas tropicales iguales (toquen una y la de al lado, o deslicen el dedo). Está en Más y en los juegos de su mascota", "🔪🥥🌺🦜 Frutas especiales: 4 en línea hacen un machete, en L o T un coco explosivo, 5 en línea una flor tropical y un cuadrito una lapa. Junten dos especiales para un efecto gigante", "🍃🪨🕸️🍍 100 niveles (la playa, la selva y el volcán) con hojas, piedras, bejucos y piñas que hay que bajar; 1 a 3 estrellas y monedas para su mascota", "🗓️ Reto del día con el mismo tablero para los dos y ⚔️ duelos en un nivel; ayudas con monedas: martillo, mezclar, +5 movimientos y lapa"] },
     { "version": "1.4.2", "notes": ["🔒 Vacaciones: las tuyas solo las puedes editar o borrar tú; las de tu pareja se ven sin poder cambiarlas (las «de los dos» las edita cualquiera)"] },

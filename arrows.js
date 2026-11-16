@@ -386,7 +386,7 @@ const testSpec = kind => {
     return { key: 'test', title: `🧪 ${SHAPES[shape].e} ${SHAPES[shape].name}`, n: N, minLen: 2, maxLen: 3, seed, test: kind, cube: true, shape, vox, mods: modsFor(['stones'], N, 90) }; }
   if (/^cv\d+$/.test(kind)) { const sp = cubeSpec(clamp(Number(kind.slice(2)), 1, CUBE_LEVELS)); return { ...sp, cubeL: 0, key: 'test', title: '🧪 ' + sp.title, test: kind }; }
   if (kind === 'draft' && draft) { const sp = liveLevel(draft.L, draft.params); return { ...sp, key: 'test', title: '🧪 Borrador nivel ' + draft.L, test: kind }; }
-  if (/^lv\d+$/.test(kind)) { const L = clamp(Number(kind.slice(2)), 1, LEVELS), sp = liveLevel(L); return { ...sp, key: 'test', title: '🧪 ' + sp.title, test: kind }; }
+  if (/^lv\d+$/.test(kind)) { const L = clamp(Number(kind.slice(2)), 1, arrowsTotal()), sp = liveLevel(L); return { ...sp, key: 'test', title: '🧪 ' + sp.title, test: kind }; }
   const seed = Math.floor(Math.random() * 2 ** 31), all = kind === 'all' || kind === 'xp' || kind === 'duel', N = all ? 16 : 12, n0 = all ? 75 : 45;
   const keys = kind === 'tt' ? ['stones', 'ice'] : all ? Object.keys(MODS_INFO) : [kind];
   const title = kind === 'all' ? 'Prueba: todos' : kind === 'xp' ? 'Prueba experto' : kind === 'tt' ? 'Prueba contrarreloj' : kind === 'duel' ? 'Prueba duelo' : `Prueba: ${MODS_INFO[kind][1]}`;
@@ -418,6 +418,8 @@ const LIFE_EVERY = 50;
 const contCost = () => arrowsCfg().cont ?? 15; // seguir sin vidas
 const coinsOf = (num, boss) => arrowsCfg().coins?.[boss ? 'boss' : num <= 5 ? 'easy' : 'normal'] ?? (num <= 5 ? 3 : boss ? 20 : 10);
 // Nivel editado en Administración (si está publicado) sobre el generado
+// Niveles extra (91, 92…) de Administración: se juegan antes del modo infinito
+export const arrowsTotal = () => { let n = LEVELS; while (S.data.arrows.find(d => d.id === 'lv-' + (n + 1) && d.on)) n++; return n; };
 export function liveLevel(L, params) {
   const sp = levelSpec(L), o = params || S.data.arrows.find(d => d.id === 'lv-' + L && d.on)?.params; if (!o) return sp;
   const n0 = o.n0 || levelTarget(L), N = sizeFor(n0);
@@ -441,7 +443,7 @@ function render() {
   const modList = m => Object.keys(m).map(k => MODS_INFO[k][0]).join(' ');
   const dayRow = (who, r) => `<div class="row"><span>${who}</span><span class="small">${r ? `${r.expert ? '💀 ' : ''}<b>${fmtMs(r.ms)}</b> · ${r.errors} ${r.errors === 1 ? 'error' : 'errores'}${r.hints ? ` · ${r.hints} 💡` : ''}` : '<span class="muted">sin terminar</span>'}</span></div>`;
   const winner = me && them ? (score(me) === score(them) ? '¡Empate! 🤝' : score(me) < score(them) ? '¡Hoy ganas tú! 🏆' : `Hoy gana ${esc(nameOf(p))} 🏆`) : '';
-  const done = L > LEVELS, cur = done ? infSpec(myInf()) : levelSpec(L), nm = done ? null : newModAt(L);
+  const T = arrowsTotal(), done = L > T, cur = done ? infSpec(myInf()) : liveLevel(L), nm = done || L > LEVELS ? null : newModAt(L);
   const lvBtn = n => n > L ? `<button disabled aria-label="Nivel ${n} bloqueado"><b>${n}</b><small>${isBoss(n) ? '👑' : CUBES_IN_LADDER.has(n) ? '🧊' : '🔒'}</small></button>`
     : `<button class="${n === L ? 'cur' : ''}${isBoss(n) ? ' boss' : ''}" onclick="playArrows('l${n}')" aria-label="Nivel ${n}"><b>${lx[n] ? '💀' : ''}${n}</b><small>${st[n] ? stars(st[n]) : n === L ? 'nuevo' : isBoss(n) ? '👑' : CUBES_IN_LADDER.has(n) ? '🧊' : ''}</small></button>`;
   $('s-arrows').innerHTML = `${backBar('Flechas', 's-more', `<span class="pill">⭐ ${total}</span>`)}
@@ -449,11 +451,11 @@ function render() {
     ${testCard()}
     ${duelCard()}
     <div class="glass stack ar-hero ${cur.boss ? 'boss' : 'hard'}"><div class="ar-hero-ic">${done ? '🏆' : cur.boss ? '👑' : L <= 5 ? '🌱' : '🔥'}</div>
-      <div class="stack" style="gap:2px;align-items:center"><span class="label">📄 Plano · ${done ? `¡completaste los ${LEVELS} niveles!` : `nivel ${L} de ${LEVELS}${cur.boss ? ' · jefe' : ''}`}</span>
-      <span class="tiny muted">${done ? `♾️ Modo infinito · tablero ${myInf()} · ` : ''}Unas ${done ? 700 : levelTarget(L)} flechas${Object.keys(cur.mods).length ? ' · ' + modList(cur.mods) : ''}${cont(cur)}</span>
+      <div class="stack" style="gap:2px;align-items:center"><span class="label">📄 Plano · ${done ? `¡completaste los ${T} niveles!` : `nivel ${L} de ${T}${L > LEVELS ? ' · ✨ nuevo' : cur.boss ? ' · jefe' : ''}`}</span>
+      <span class="tiny muted">${done ? `♾️ Modo infinito · tablero ${myInf()} · ` : ''}Unas ${done ? 700 : (S.data.arrows.find(d => d.id === 'lv-' + L && d.on)?.params?.n0 || levelTarget(L))} flechas${Object.keys(cur.mods).length ? ' · ' + modList(cur.mods) : ''}${cont(cur)}</span>
       ${nm ? `<span class="small">✨ Se estrena: ${MODS_INFO[nm][0]} ${MODS_INFO[nm][1]}</span>` : ''}</div>
       <button class="btn" onclick="playArrows('${done ? 'i' + myInf() : 'l' + L}')">${loadSave(cur.key) ? 'Continuar' : done ? 'Jugar infinito' : `Jugar nivel ${L}`}</button>
-      <div class="ar-bar"><i style="width:${Math.min(100, (L - 1) / LEVELS * 100)}%"></i></div>
+      <div class="ar-bar"><i style="width:${Math.min(100, (L - 1) / T * 100)}%"></i></div>
       <label class="row ar-xp"><input type="checkbox" ${xp ? 'checked' : ''} onchange="arrowsExpert(this.checked)"><span class="small">💀 Modo experto: sin pistas, sin recuperar vidas ni pagar para seguir (desde el nivel 6 y en el reto)</span></label></div>
     <div class="glass stack"><div class="row"><span class="label">🗓️ Reto del día</span><span class="tiny muted">El mismo para los dos</span></div>
       <p class="tiny muted" style="margin:0">Hoy: ${ds.n}×${ds.n} · ${modList(ds.mods)}${cont(ds)}. Crece durante la semana: el domingo es el más grande.</p>
@@ -466,7 +468,7 @@ function render() {
     <p class="tiny muted center" style="margin:4px 8px 0">Modos en prueba: pueden cambiar y tener detalles todavía.</p>
     ${cubeCard()}
     ${mixCard()}
-    <div class="glass stack"><span class="label">🗺️ Niveles</span><div class="ar-levels">${Array.from({ length: LEVELS }, (_, i) => lvBtn(i + 1)).join('')}</div></div>
+    <div class="glass stack"><span class="label">🗺️ Niveles</span><div class="ar-levels">${Array.from({ length: LEVELS }, (_, i) => lvBtn(i + 1)).join('')}</div>${T > LEVELS ? `<span class="label" style="margin-top:6px">✨ Niveles nuevos</span><div class="ar-levels">${Array.from({ length: T - LEVELS }, (_, i) => lvBtn(LEVELS + i + 1)).join('')}</div>` : ''}</div>
     <div class="glass stack"><span class="label">📖 Obstáculos</span>${Object.entries(MODS_INFO).map(([k, [e, t, txt]]) => `<p class="small" style="margin:0">${e} <b>${t}</b> <span class="tiny muted">(desde el nivel ${MOD_FROM[k]})</span><br><span class="muted">${txt}</span></p>`).join('')}</div>
     <p class="tiny muted center" style="margin:0 8px">Toca una flecha: avanza hacia donde apunta y sale si nada la bloquea. Si choca pierdes una vida ❤️; cada ${LIFE_EVERY} flechas recuperas una. Con dos dedos acercas o alejas el tablero. Si sales, la partida queda guardada.</p>`;
 }
@@ -501,7 +503,7 @@ function testCard() {
     <div class="grid3">${Object.entries(SHAPES).map(([k, x]) => b('fig-' + k, `${x.e} ${x.name}`)).join('')}</div></details>`;
 }
 function arrowsTestCube() { const n = Number($('arTestLv')?.value); if (!(n >= 1 && n <= CUBE_LEVELS)) return toast(`Escribe una figura del 1 al ${CUBE_LEVELS}`); playArrows('t:cv' + n); }
-function arrowsTestLevel() { const n = Number($('arTestLv')?.value); if (!(n >= 1 && n <= LEVELS)) return toast(`Escribe un nivel del 1 al ${LEVELS}`); playArrows('t:lv' + n); }
+function arrowsTestLevel() { const n = Number($('arTestLv')?.value); if (!(n >= 1 && n <= arrowsTotal())) return toast(`Escribe un nivel del 1 al ${arrowsTotal()}`); playArrows('t:lv' + n); }
 function arrowsExpert(v) { try { localStorage.setItem('futari-ar-expert', v ? '1' : '0'); } catch {} render(); }
 
 /* ---------- Duelo en vivo ---------- */
@@ -599,8 +601,8 @@ function specOf(what) {
   if (String(what).startsWith('t:')) return isOwner() ? testSpec(what.slice(2)) : null;
   const c = /^c(\d+)$/.exec(String(what)); if (c) return cubeSpec(clamp(Number(c[1]), 1, CUBE_LEVELS));
   const mx = /^m(\d+)$/.exec(String(what)); if (mx) return mixSpec(clamp(Number(mx[1]), 1, MIX_LEVELS));
-  const m = /^([li])(\d+)$/.exec(String(what)); if (!m) return liveLevel(Math.min(LEVELS, myLevel()));
-  return m[1] === 'i' ? infSpec(Number(m[2])) : liveLevel(clamp(Number(m[2]), 1, LEVELS));
+  const m = /^([li])(\d+)$/.exec(String(what)); if (!m) return liveLevel(Math.min(arrowsTotal(), myLevel()));
+  return m[1] === 'i' ? infSpec(Number(m[2])) : liveLevel(clamp(Number(m[2]), 1, arrowsTotal()));
 }
 function playArrows(what) {
   if (!arrowsVisible() || arrowsWrapped()) return;
@@ -1339,7 +1341,7 @@ function win() {
       if (!had && pt?.hatchedAt) b.update(ref('pet', 'main'), { bonus: increment(coinsWon) });
       msg = `<span class="ar-stars">${stars(s)}</span>${G.expert && sp.hard ? '<br>💀 ¡En modo experto!' : ''}<br>${n} flechas en ${fmtMs(ms)} · ${errTxt}${!had && pt?.hatchedAt ? ` · +${coinsWon} 🪙` : ''}`;
       if (num === LEVELS) msg += `<br><b>🏆 ¡Completaste los ${LEVELS} niveles!</b><br><span class="small">Se abrió el modo infinito ♾️</span>`;
-      next = num < LEVELS ? `<button class="btn" onclick="playArrows('l${num + 1}')">${isBoss(num + 1) ? '👑 ' : ''}Nivel ${num + 1} →</button>` : `<button class="btn" onclick="playArrows('i1')">♾️ Infinito</button>`;
+      next = num < arrowsTotal() ? `<button class="btn" onclick="playArrows('l${num + 1}')">${isBoss(num + 1) ? '👑 ' : ''}Nivel ${num + 1} →</button>` : `<button class="btn" onclick="playArrows('i1')">♾️ Infinito</button>`;
       // Avisos solo en los momentos grandes (jefes y el final), para no llenar de notificaciones
       if (!had && (sp.boss || num === LEVELS)) notify('arrows', { title: num === LEVELS ? `🏆 ${meForPartner()} completó los ${LEVELS} niveles de Flechas` : `👑 ${meForPartner()} venció al jefe del nivel ${num}${G.expert ? ' en modo experto 💀' : ''}`, body: `${n} flechas en ${fmtMs(ms)} · ${errTxt}`, url: './?open=arrows', tag: 'arrows-l' + num });
       if (num === LEVELS) setTimeout(() => celebrate('hearts'), 600);
