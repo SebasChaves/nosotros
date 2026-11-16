@@ -16,6 +16,7 @@ Lee estos documentos antes de cambiar algo:
 | [docs/DATOS.md](docs/DATOS.md) | Firestore: colecciones, campos, fotos, reglas de seguridad |
 | [docs/PRUEBAS.md](docs/PRUEBAS.md) | Emulador local con dos cuentas de prueba; qué solo se puede probar en el teléfono |
 | [docs/PUBLICAR.md](docs/PUBLICAR.md) | Versiones, aviso de actualización, novedades y cómo publicar |
+| [docs/RESPALDO.md](docs/RESPALDO.md) | Respaldos (deshacer, automático de cada noche, a mano), cómo recuperar algo borrado y qué hacer si algo falla |
 | [docs/NOTIFICACIONES.md](docs/NOTIFICACIONES.md) | Avisos al teléfono y respaldo automático de cada noche: Worker de Cloudflare, cómo agregar un aviso, configuración |
 | [docs/GASTOS.md](docs/GASTOS.md) | Gastos: anotar rápido, salidas, presupuesto, alcancías, aviso del banco y su tutorial |
 | [docs/FLECHAS.md](docs/FLECHAS.md) | Juego Flechas (sorpresa del dueño): modos, regalo, generador, figuras 3D |
@@ -49,6 +50,7 @@ Los juegos sorpresa comparten `gifts.js` (regalo envuelto, `gates`). Ver [docs/P
    `NEW_BY_VERSION` con la siguiente versión de la guía y sube `TOUR_VERSION`, además de las notas de `version.json`.
    Las notas salen en «Novedades»; la guía lleva a cada pantalla y es lo que el dueño llama «el mensaje de lo nuevo».
    Arreglos chicos no necesitan paso. Ver docs/PUBLICAR.md.
+4c. **Colección nueva** en `COLLECTIONS` (core.js) → agrégala también a `BACKUP_COLS` del Worker (respaldo automático).
 5. **Todo módulo nuevo va en la lista `FILES` de `sw.js`** (si no, no funciona sin internet).
 6. **Las funciones que se llaman desde `onclick="..."` deben exponerse** con `expose({ ... })`.
 7. **Privacidad:** si se empieza a guardar un dato nuevo de uso (como en `tracking.js`), actualiza el aviso de

@@ -99,7 +99,9 @@ function renderSettings() {
       <div class="grid2"><button class="btn ghost small" style="width:100%" onclick="exportData()">Descargar</button>
         <button class="btn ghost small" style="width:100%" onclick="exportData(true)">Descargar con fotos</button></div>
       <label class="btn ghost small" style="width:100%">Restaurar desde un respaldo<input type="file" accept="application/json,.json" hidden onchange="importData(this)"></label>
-      <button class="btn ghost small" style="width:100%" onclick="autoBackups()">🌙 Respaldos automáticos de cada noche</button></div></div>
+      <button class="btn ghost small" style="width:100%" onclick="autoBackups()">🌙 Respaldos automáticos de cada noche</button>
+      <p class="small" id="bkStatus" style="margin:0">${bkStatusHTML()}</p>
+      <button class="btn ghost small" style="width:100%" onclick="backupHelp()">🆘 ¿Se borró algo? Qué hacer</button></div></div>
 
     <div class="glass"><span class="label">Ideas propias de la ruleta</span>
       <ul class="list" style="margin-top:6px">${S.data.ideas.length ? S.data.ideas.map(i => `<li><span class="txt">${esc(i.t)}</span>
@@ -112,6 +114,7 @@ function renderSettings() {
     ${isTester() ? `<button class="btn ghost" onclick="go('s-admin')">${icon('gear')} Abrir administración</button>` : ''}
     <p class="tiny muted center" style="margin:0">Futari · versión ${esc(window.FUTARI_VERSION || '')}</p>`);
   loadPhotos($('s-settings'));
+  bkStatusCheck();
 }
 /* ---------- Notificaciones (push.js) ---------- */
 function notifCard(prefs, p) {
@@ -342,8 +345,37 @@ async function autoBackupNow() {
       else if (r.phase === 'photos') say(`Guardando fotos nuevas…${r.left ? ` (faltan ${r.left})` : ''}`);
       else break;
     }
-    toast('Respaldo listo ✓'); autoBackups();
+    toast('Respaldo listo ✓'); bkStatusCheck(true); autoBackups();
   } catch (e) { toast(BK_ERR[e.message] || BK_ERR.error); if (btn) btn.disabled = false; say('💾 Respaldar ahora'); }
+}
+// Estado del respaldo automático (se pregunta al servicio como mucho cada 15 minutos; se recuerda en el teléfono)
+let bkStatus = (() => { try { return JSON.parse(localStorage.getItem('futari-bk-status')) || null; } catch { return null; } })(), bkAsked = 0;
+function bkStatusHTML() {
+  if (!bkStatus) return '<span class="muted">🌙 Revisando el respaldo automático…</span>';
+  if (bkStatus.err) return `<span class="muted">🌙 Respaldo automático: ${esc(BK_ERR[bkStatus.err] || 'no se pudo revisar ahora')}</span>`;
+  if (!bkStatus.at) return '<span class="muted">🌙 Todavía no hay respaldos automáticos: el primero se hace esta noche.</span>';
+  const days = Math.floor((Date.now() - bkStatus.at) / 864e5), when = new Date(bkStatus.at).toLocaleString('es', { weekday: 'long', hour: 'numeric', minute: '2-digit' });
+  return days >= 2 ? `⚠️ <b>No hay respaldo automático desde hace ${days} días.</b> Descarguen uno a mano («Descargar con fotos») y revisen el servicio en Cloudflare (ver «¿Se borró algo?»).`
+    : `🌙 Último respaldo automático: ${esc(when)} ✓`;
+}
+async function bkStatusCheck(force) {
+  if (!PUSH?.url || (!force && Date.now() - bkAsked < 15 * 60e3)) return;
+  bkAsked = Date.now();
+  try { const d = await bkCall({ action: 'list' }); bkStatus = { at: d.days?.[0]?.at || 0, n: d.days?.length || 0 }; }
+  catch (e) { bkStatus = { err: e.message }; }
+  try { localStorage.setItem('futari-bk-status', JSON.stringify(bkStatus)); } catch {}
+  const el = $('bkStatus'); if (el) el.innerHTML = bkStatusHTML();
+}
+// Guía para cuando algo se borra (la misma de docs/RESPALDO.md, en palabras sencillas)
+function backupHelp() {
+  openSheet(`<div class="stack"><h2>🆘 ¿Se borró algo?</h2>
+    <p class="small" style="margin:0"><b>1. Si fue hace unos segundos:</b> toca «Deshacer» en la barrita de abajo. Vuelve igual que estaba.</p>
+    <p class="small" style="margin:0"><b>2. Si fue hoy o en los últimos días:</b> Ajustes → Respaldo → «🌙 Respaldos automáticos» → en el día de <u>antes</u> de que se borrara, toca <b>Restaurar</b>. Se junta con lo que tienen ahora: no se pierde lo nuevo y vuelve lo borrado (con sus fotos).</p>
+    <p class="small" style="margin:0"><b>3. Si no hay respaldos automáticos</b> (o el servicio de Cloudflare falla): usen un archivo que hayan descargado con «Descargar con fotos» → «Restaurar desde un respaldo». Por eso conviene bajar uno de vez en cuando y guardarlo en Drive o iCloud.</p>
+    <p class="small" style="margin:0"><b>4. Si alguien borró todo desde Firebase</b> o la app no carga los datos: primero entren a la app (si no deja, revisen Firebase → Authentication y las reglas de Firestore). Después restauren el respaldo más reciente (paso 2 o 3).</p>
+    <p class="small" style="margin:0"><b>Para que siempre haya respaldo:</b> si aquí sale ⚠️ «No hay respaldo automático desde hace X días», en Cloudflare revisen que el servicio <code>futari-push</code> tenga el Cron (cada minuto), el KV <code>RESPALDOS</code> conectado y la versión 12 o más nueva. Mientras tanto, «💾 Respaldar ahora» o «Descargar con fotos».</p>
+    <p class="tiny muted" style="margin:0">«Restaurar» nunca borra: solo vuelve a poner lo que tenía el respaldo. Si algo se había editado, queda como estaba en el respaldo.</p>
+    <button class="btn" onclick="closeSheet()">Entendido</button></div>`);
 }
 async function autoBackupGet(day, photos) {
   toast(photos ? 'Bajando el respaldo con fotos… puede tardar' : 'Bajando el respaldo…');
@@ -411,4 +443,4 @@ on('ideas profiles push', () => { if ($('s-settings').classList.contains('active
 onShow('s-settings', renderSettings);
 window.rerenderSettings = () => { if ($('s-settings').classList.contains('active')) renderSettings(); };
 onShow('s-more', renderMore);
-expose({ autoBackupNow, autoBackups, autoBackupGet, autoBackupRestore, setTextSize, openMenuPrefs, enablePush, disablePush, testPush, setNotif, previewCustomAccent, setCustomAccent, saveNicks, setCounterUnit, saveCounter, toggleHomeCard, moveHomeCard, resetHome, saveSettings, setTheme, setAccent, pickAvatar, removeAvatar, pickBg, removeBg, delIdea, logout, exportData, importData });
+expose({ backupHelp, autoBackupNow, autoBackups, autoBackupGet, autoBackupRestore, setTextSize, openMenuPrefs, enablePush, disablePush, testPush, setNotif, previewCustomAccent, setCustomAccent, saveNicks, setCounterUnit, saveCounter, toggleHomeCard, moveHomeCard, resetHome, saveSettings, setTheme, setAccent, pickAvatar, removeAvatar, pickBg, removeBg, delIdea, logout, exportData, importData });

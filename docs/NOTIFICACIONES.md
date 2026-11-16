@@ -148,6 +148,8 @@ receta con IA. No guarda nada; la app la guarda solo si tocan «Guardar».
 
 ## Respaldo automático (Worker v11; «Respaldar ahora» desde v12)
 
+Guía de uso y de recuperación: docs/RESPALDO.md.
+
 Cada noche, de 3:00 a 5:59 (hora de `TIME_ZONE`), el Cron hace un paso chico por minuto (`backupStep`; el plan gratis da
 10 ms de CPU por vez):
 1. Una colección por minuto → KV `d:<día>:<colección>` (+ `_couple` con fecha de inicio, moneda y miembros, y `_meta`).
