@@ -1,7 +1,7 @@
 // Ajustes: datos de la pareja, personalización, respaldo y sesión. También la pantalla "Más".
-import { setDoc, deleteDoc, writeBatch } from 'https://www.gstatic.com/firebasejs/11.0.2/firebase-firestore.js';
+import { setDoc, deleteDoc, writeBatch, getDocs } from 'https://www.gstatic.com/firebasejs/11.0.2/firebase-firestore.js';
 import { signOut } from 'https://www.gstatic.com/firebasejs/11.0.2/firebase-auth.js';
-import { $, S, db, auth, esc, icon, paint, on, onShow, expose, toast, write, ref, privRef, coupleRef, go,
+import { $, S, db, auth, esc, icon, paint, on, onShow, expose, toast, write, ref, col, privRef, coupleRef, go,
          COLLECTIONS, PRIVATE, cachePhoto, forgetPhoto, compressImage, photoError, loadPhotos, parseDate, today, dayKey,
          fmtMoney, nameOf, partnerUid, partnerName, myName, profile, plural, uid, avatar, ask, inBar, gateOn } from './core.js';
 import { ACCENTS, CURRENCIES, accentFromColor } from './data.js';
@@ -91,9 +91,10 @@ function renderSettings() {
       ${pinEnabled() ? `<div class="grid2"><button class="btn ghost small" style="width:100%" onclick="setupPin()">Cambiar PIN</button><button class="btn ghost small" style="width:100%" onclick="disablePin()">Desactivar</button></div>` : `<button class="btn ghost" onclick="setupPin()">Activar bloqueo con PIN</button>`}</div>
 
     <div class="glass stack"><span class="label">Respaldo</span>
-      <p class="small muted" style="margin:0">Todo está guardado en la nube. Igual pueden descargar una copia (sin las fotos). ${S.settings.lastBackup ? `Último respaldo: ${new Date(S.settings.lastBackup).toLocaleDateString('es', { day: 'numeric', month: 'long', year: 'numeric' })}.` : 'Aún no han descargado ninguno.'}</p>
+      <p class="small muted" style="margin:0">Todo está guardado en la nube. Igual pueden descargar una copia de todo: gastos, alcancías, recetas, momentos, viajes, juegos… «Con fotos» también guarda las fotos (pesa más y tarda). ${S.settings.lastBackup ? `Último respaldo: ${new Date(S.settings.lastBackup).toLocaleDateString('es', { day: 'numeric', month: 'long', year: 'numeric' })}.` : 'Aún no han descargado ninguno.'}</p>
       <div class="grid2"><button class="btn ghost small" style="width:100%" onclick="exportData()">Descargar</button>
-        <label class="btn ghost small" style="width:100%">Subir respaldo<input type="file" accept="application/json,.json" hidden onchange="importData(this)"></label></div></div>
+        <button class="btn ghost small" style="width:100%" onclick="exportData(true)">Descargar con fotos</button></div>
+      <label class="btn ghost small" style="width:100%">Restaurar desde un respaldo<input type="file" accept="application/json,.json" hidden onchange="importData(this)"></label></div></div>
 
     <div class="glass"><span class="label">Ideas propias de la ruleta</span>
       <ul class="list" style="margin-top:6px">${S.data.ideas.length ? S.data.ideas.map(i => `<li><span class="txt">${esc(i.t)}</span>
@@ -248,18 +249,26 @@ function delIdea(id) { write(deleteDoc(ref('ideas', id))); }
 async function logout() { if (await ask('¿Cerrar sesión en este teléfono?')) { go('s-home'); signOut(auth); } }
 
 /* ---------- Respaldo ---------- */
-function exportData() {
-  write(setDoc(coupleRef, { lastBackup: Date.now() }, { merge: true }));
-  const out = { version: 4, start: S.settings.start, currency: S.settings.currency, members: S.settings.members };
+async function exportData(withPhotos) {
+  const out = { version: 5, start: S.settings.start, currency: S.settings.currency, members: S.settings.members };
   for (const c of COLLECTIONS) out[c] = S.data[c];
+  delete out.push; // suscripciones de avisos de cada teléfono: no sirven en otro y no deben salir de aquí
+  if (withPhotos) {
+    if (!navigator.onLine) return toast('Para bajar las fotos necesitas internet');
+    toast('Juntando las fotos… puede tardar un poco');
+    try { out.photos = (await getDocs(col('photos'))).docs.map(d => ({ id: d.id, ...d.data() })); }
+    catch (e) { console.error(e); return toast('No se pudieron bajar las fotos'); }
+  }
+  write(setDoc(coupleRef, { lastBackup: Date.now() }, { merge: true }));
   out.cards = S.data.cards.filter(c => c.level !== 'ours'); // las de "Solo nosotros" no salen del teléfono
   for (const c of PRIVATE) out[c] = S.priv[c];
   const blob = new Blob([JSON.stringify(out, null, 2)], { type: 'application/json' });
   const a = document.createElement('a');
   a.href = URL.createObjectURL(blob);
-  a.download = `futari-respaldo-${dayKey(new Date())}.json`;
+  a.download = `futari-respaldo-${dayKey(new Date())}${withPhotos ? '-con-fotos' : ''}.json`;
   a.click();
   setTimeout(() => URL.revokeObjectURL(a.href), 1000);
+  toast(withPhotos ? `Respaldo descargado con ${out.photos.length} fotos ✓` : 'Respaldo descargado ✓');
 }
 // Convierte el formato de la primera versión (solo en el teléfono) al actual.
 function fromV1(d) {
@@ -290,6 +299,15 @@ export async function uploadData(raw) {
     if (!item?.id) continue;
     const { id, ...rest } = item; ops.push(b => b.set(privRef(c, id), rest));
   }
+  // Las fotos pesan: van en lotes chicos para no pasar el límite de 10 MB por escritura.
+  const photoOps = (d.photos || []).filter(x => x?.id && x.data).map(({ id, ...rest }) => b => b.set(ref('photos', id), rest));
+  for (let i = 0; i < photoOps.length; i += 8) {
+    const batch = writeBatch(db);
+    photoOps.slice(i, i + 8).forEach(op => op(batch));
+    await batch.commit();
+  }
+  // Los días viejos (ánimos, preguntas…) se guardan en el teléfono: se vuelven a bajar para incluir lo restaurado.
+  try { Object.keys(localStorage).filter(k => k.startsWith('futari-old-')).forEach(k => localStorage.removeItem(k)); } catch {}
   for (let i = 0; i < ops.length; i += 400) {
     const batch = writeBatch(db);
     ops.slice(i, i + 400).forEach(op => op(batch));
@@ -301,8 +319,12 @@ function importData(input) {
   f.text().then(async txt => {
     const d = JSON.parse(txt);
     if (typeof d !== 'object' || !Array.isArray(d.bucket)) throw 0;
-    if (!await ask('Se agregarán los datos del respaldo a los actuales. ¿Continuar?')) return;
-    return uploadData(d).then(() => toast('Respaldo subido'));
+    const n = c => (d[c] || []).length, parts = [['expenses', 'gasto', 'gastos'], ['moments', 'momento', 'momentos'], ['photos', 'foto', 'fotos'], ['places', 'restaurante', 'restaurantes'], ['recipes', 'receta', 'recetas'],
+      ['trips', 'viaje', 'viajes'], ['shows', 'peli o serie', 'pelis y series'], ['notes', 'nota', 'notas'], ['bucket', 'cosa de la bucket list', 'cosas de la bucket list'], ['events', 'plan', 'planes']].filter(([c]) => n(c)).map(([c, a, b]) => plural(n(c), a, b));
+    const when = f.name.match(/\d{4}-\d{2}-\d{2}/)?.[0];
+    if (!await ask(`Respaldo${when ? ' del ' + when : ''}: ${parts.join(', ') || 'sin datos'}${parts.length ? ' y más' : ''}. Se juntan con lo que ya tienen (no se borra nada y lo repetido no se duplica). ¿Restaurar?`, { ok: 'Restaurar', cancel: 'Cancelar' })) return;
+    toast('Restaurando…');
+    return uploadData(d).then(() => toast('Respaldo restaurado ✓'));
   }).catch(() => toast('Ese archivo no es un respaldo válido'));
   input.value = '';
 }

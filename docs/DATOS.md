@@ -57,6 +57,15 @@ Casi todos los docs llevan `by: uid` (quién lo creó) y `createdAt: ms`. Fechas
 | `quiz`, `games`, `cards` | rondas del quiz; partidas del juego; cartas propias del juego |
 | `profiles` | id = uid: `avatar` (id en photos), `prefs { accent, theme, bg, myNick, partnerNick, counter{unit days|weeks|months|hours, from start|custom, date, label}, home[{id,on}], menu{order[pantallas], bar[hasta 4], hidden[]}, watch{type, styles[], providers[ids TMDB], extras[], gustos} (buscador de pelis), moneyTour (ya vio la guía de Gastos) }` — todo es personal de quien lo configura; `partnerNick` cambia `nameOf()` de la pareja solo en su teléfono |
 
+## Lecturas: días viejos guardados en el teléfono (v73)
+
+`moods`, `answers`, `thinks`, `daily` y `activity` tienen un documento por día (id `AAAA-MM-DD`) y crecen para siempre.
+`app.js` solo los escucha en vivo desde hace 40 días (`where(documentId(), '>=', corte)`). Lo anterior se baja **una vez**
+por teléfono con `getDocs` y queda en localStorage (`futari-old-<colección>`, `{v, upTo, docs}`); cada día solo se baja
+el tramo nuevo. `S.data.<colección>` junta las dos partes, así el resto del código no cambia. Restaurar un respaldo borra
+ese guardado para que se vuelva a bajar. Si alguna vez se edita un día de hace más de 40 días desde la consola, el
+teléfono no lo ve hasta borrar esas claves.
+
 ## Fotos (colección `photos`)
 
 - Doc `{ data: 'data:image/jpeg;base64,...' }`. Límite de Firestore: **1 MB por documento**, por eso

@@ -1117,3 +1117,8 @@ body:not([data-theme="light"]) .map-box .leaflet-tile-pane { filter: invert(1) h
 .out-fab-txt { display: flex; flex-direction: column; align-items: flex-start; line-height: 1.15; }
 .out-fab-txt b { font-size: 16px; } .out-fab-txt small { font-size: 12px; font-weight: 700; opacity: .85; }
 body:has(#sheet.show) .out-fab, body:has(.dialog) .out-fab { display: none; }
+
+/* Sin internet (v73) */
+.net-bar { position: fixed; left: 50%; top: calc(env(safe-area-inset-top) + 6px); transform: translateX(-50%); z-index: 84; pointer-events: none;
+  max-width: calc(100% - 24px); padding: 6px 12px; border-radius: 999px; font-size: 12.5px; font-weight: 600; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+  background: color-mix(in srgb, var(--panel) 92%, #f59e0b); border: 1px solid color-mix(in srgb, var(--line) 60%, #f59e0b); box-shadow: 0 10px 24px -14px rgba(0,0,0,.6); animation: drop .3s ease; }

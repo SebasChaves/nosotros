@@ -1,9 +1,10 @@
 // Arranque: sesión, sincronización en vivo y avisos (puntitos) de la barra de abajo.
 import { onAuthStateChanged, signInWithEmailAndPassword, sendPasswordResetEmail, verifyPasswordResetCode, confirmPasswordReset }
   from 'https://www.gstatic.com/firebasejs/11.0.2/firebase-auth.js';
-import { onSnapshot, disableNetwork, enableNetwork } from 'https://www.gstatic.com/firebasejs/11.0.2/firebase-firestore.js';
+import { onSnapshot, disableNetwork, enableNetwork, query, where, documentId, getDocs, waitForPendingWrites } from 'https://www.gstatic.com/firebasejs/11.0.2/firebase-firestore.js';
 import { $, S, auth, db, go, esc, openSheet, configured, placeTabPill, coupleRef, col, privCol, COLLECTIONS, PRIVATE, toast, expose, rerender, rerenderAll,
-         partnerUid, profile, uid, ask, inBar, setBar, barIds } from './core.js';
+         partnerUid, profile, uid, ask, inBar, setBar, barIds, dayKey, EMU } from './core.js';
+if (EMU) window.__S = S; // solo emulador: para las pruebas automáticas
 import { todayAnswers } from './home.js';
 import './decide.js';
 import './love.js';
@@ -43,7 +44,7 @@ import { logVisit } from './tracking.js';
 import { maybeStartTour, resetTourCheck } from './tour.js';
 
 // Versión de esta copia de la app. Súbela junto con version.json y la caché de sw.js al publicar.
-export const APP_VERSION = '72';
+export const APP_VERSION = '73';
 window.FUTARI_VERSION = APP_VERSION; // lo guarda el registro de ingresos (panel de administración)
 
 // Si la app estuvo abierta hace poco (Android la cierra sola al salir), se vuelve rápido a la misma pantalla.
@@ -143,6 +144,32 @@ async function showResetGate(code) {
 }
 
 /* ---------- Sincronización ---------- */
+// Colecciones de "un documento por día" (crecen para siempre): en vivo solo se escuchan los últimos días.
+// Los días viejos ya no cambian: se bajan una sola vez por teléfono y se guardan aquí, así cada vez que se abre
+// la app no se vuelven a leer cientos de documentos (el plan gratis de Firebase cobra cada lectura).
+const DAY_COLS = ['moods', 'answers', 'thinks', 'daily', 'activity'];
+const LIVE_DAYS = 40, OLD_KEY_PREFIX = 'futari-old-';
+const oldDays = {}, recent = {};
+const cutoffKey = () => { const d = new Date(); d.setDate(d.getDate() - LIVE_DAYS); return dayKey(d); };
+async function loadOld(name, cut) {
+  let saved = null; try { saved = JSON.parse(localStorage.getItem(OLD_KEY_PREFIX + name)); } catch {}
+  if (saved?.v !== 1) saved = { v: 1, upTo: '', docs: [] };
+  oldDays[name] = saved.docs;
+  if (saved.upTo < cut) {
+    try {
+      const q = saved.upTo ? query(col(name), where(documentId(), '>=', saved.upTo), where(documentId(), '<', cut)) : query(col(name), where(documentId(), '<', cut));
+      const snap = await getDocs(q);
+      if (snap.metadata.fromCache && !navigator.onLine) return; // sin internet: se intenta la próxima vez
+      const have = new Set(saved.docs.map(d => d.id));
+      saved.docs.push(...snap.docs.filter(d => !have.has(d.id)).map(d => ({ id: d.id, ...d.data() })));
+      saved.upTo = cut;
+      try { localStorage.setItem(OLD_KEY_PREFIX + name, JSON.stringify(saved)); } catch {}
+      oldDays[name] = saved.docs;
+    } catch (e) { console.warn('días viejos', name, e); return; }
+  }
+  S.data[name] = [...oldDays[name], ...(recent[name] || [])];
+  rerender(name);
+}
 function listen() {
   const fail = err => { console.error(err); if (err.code === 'permission-denied') toast('Esta cuenta no tiene acceso'); };
   unsubs.push(onSnapshot(coupleRef, { includeMetadataChanges: true }, snap => {
@@ -151,8 +178,12 @@ function listen() {
     if (!snap.metadata.fromCache) maybeMigrate();
   }, fail));
   for (const name of COLLECTIONS) {
-    unsubs.push(onSnapshot(col(name), s => {
-      S.data[name] = s.docs.map(d => ({ id: d.id, ...d.data() }));
+    const byDay = DAY_COLS.includes(name), cut = byDay && cutoffKey();
+    if (byDay) loadOld(name, cut);
+    unsubs.push(onSnapshot(byDay ? query(col(name), where(documentId(), '>=', cut)) : col(name), s => {
+      const docs = s.docs.map(d => ({ id: d.id, ...d.data() }));
+      S.data[name] = byDay ? [...(oldDays[name] || []), ...docs] : docs;
+      if (byDay) recent[name] = docs;
       if (name === 'profiles') { applyAccent(profile(uid()).prefs?.accent, profile(uid()).prefs?.customAccent); applyTheme(profile(uid()).prefs?.theme); if (!s.metadata.fromCache || profile(uid()).prefs) maybeStartTour(); }
       if (name === 'profiles') rerenderAll(); else rerender(name); // los apodos cambian nombres en toda la app
       updateBadges();
@@ -204,6 +235,22 @@ document.addEventListener('visibilitychange', () => {
   rerenderAll();
   if (hiddenSince && Date.now() - hiddenSince > 15000) { disableNetwork(db).then(() => enableNetwork(db)).catch(() => {}); checkUpdate(); }
 });
+
+/* ---------- Sin internet ---------- */
+// Una barrita arriba cuando no hay conexión, para que sepan que lo que anotan no se pierde: se sube al volver.
+function netBar() {
+  const off = !navigator.onLine;
+  let bar = $('netBar');
+  if (off && !bar) {
+    bar = document.createElement('div'); bar.id = 'netBar'; bar.className = 'net-bar'; bar.setAttribute('role', 'status');
+    bar.innerHTML = '<span aria-hidden="true">📡</span> Sin conexión: lo que anoten se guarda cuando vuelva';
+    document.body.appendChild(bar); document.body.classList.add('offline');
+  } else if (!off && bar) {
+    bar.remove(); document.body.classList.remove('offline');
+    if (S.me) waitForPendingWrites(db).then(() => toast('De vuelta en línea: todo guardado ✓')).catch(() => {});
+  }
+}
+addEventListener('online', netBar); addEventListener('offline', netBar); netBar();
 
 /* ---------- Versión nueva ---------- */
 let firstIn = true;
