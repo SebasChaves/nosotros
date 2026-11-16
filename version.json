@@ -1,7 +1,8 @@
 {
-  "version": "1.8.2",
-  "notes": ["🆘 En Ajustes → Respaldo: una guía «¿Se borró algo? Qué hacer» y una línea que dice cuándo fue el último respaldo automático (y avisa si deja de funcionar)"],
+  "version": "1.8.3",
+  "notes": ["Ajustes un poco más ordenado."],
   "history": [
+    { "version": "1.8.3", "notes": ["Ajustes un poco más ordenado."] },
     { "version": "1.8.2", "notes": ["🆘 En Ajustes → Respaldo: una guía «¿Se borró algo? Qué hacer» y una línea que dice cuándo fue el último respaldo automático (y avisa si deja de funcionar)"] },
     { "version": "1.8.1", "notes": ["💾 En Ajustes → Respaldo → «Respaldos automáticos» ahora hay un botón «Respaldar ahora» para hacer una copia en el momento, con el avance en pantalla"] },
     { "version": "1.8.0", "notes": ["🌙 Respaldo automático: cada noche se guarda una copia de todo (y de las fotos nuevas). En Ajustes → Respaldo → «Respaldos automáticos» ven los últimos días y pueden bajarlos o restaurar uno si algo se borró sin querer"] },

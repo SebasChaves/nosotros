@@ -15,7 +15,7 @@ import { homeLayout, HOME_CARDS, COUNTER_UNITS } from './home.js';
 import { isTester } from './testing.js';
 import { menuOrder, hiddenInMore, sectionName, sectionIcon, sectionAlerts, menuPrefsCard } from './menu.js';
 import { partnerCravings } from './cravings.js';
-import { giftTile } from './gifts.js';
+import { giftTile, isOwner } from './gifts.js';
 import { NOTIF_TYPES, pushConfigured, pushSupported, iosNeedsInstall, pushPermission, pushHere, subsOf, enablePush, disablePush, testPush } from './push.js';
 
 /* ---------- Más ---------- */
@@ -94,14 +94,8 @@ function renderSettings() {
       <p class="small muted" style="margin:0">Opcional. Pide un código de 4 números al abrir la app en este teléfono (y si estuvo cerrada más de un minuto).</p>
       ${pinEnabled() ? `<div class="grid2"><button class="btn ghost small" style="width:100%" onclick="setupPin()">Cambiar PIN</button><button class="btn ghost small" style="width:100%" onclick="disablePin()">Desactivar</button></div>` : `<button class="btn ghost" onclick="setupPin()">Activar bloqueo con PIN</button>`}</div>
 
-    <div class="glass stack"><span class="label">Respaldo</span>
-      <p class="small muted" style="margin:0">Todo está guardado en la nube. Igual pueden descargar una copia de todo: gastos, alcancías, recetas, momentos, viajes, juegos… «Con fotos» también guarda las fotos (pesa más y tarda). ${S.settings.lastBackup ? `Último respaldo: ${new Date(S.settings.lastBackup).toLocaleDateString('es', { day: 'numeric', month: 'long', year: 'numeric' })}.` : 'Aún no han descargado ninguno.'}</p>
-      <div class="grid2"><button class="btn ghost small" style="width:100%" onclick="exportData()">Descargar</button>
-        <button class="btn ghost small" style="width:100%" onclick="exportData(true)">Descargar con fotos</button></div>
-      <label class="btn ghost small" style="width:100%">Restaurar desde un respaldo<input type="file" accept="application/json,.json" hidden onchange="importData(this)"></label>
-      <button class="btn ghost small" style="width:100%" onclick="autoBackups()">🌙 Respaldos automáticos de cada noche</button>
-      <p class="small" id="bkStatus" style="margin:0">${bkStatusHTML()}</p>
-      <button class="btn ghost small" style="width:100%" onclick="backupHelp()">🆘 ¿Se borró algo? Qué hacer</button></div></div>
+    ${isOwner() ? backupCard() : ''}
+
 
     <div class="glass"><span class="label">Ideas propias de la ruleta</span>
       <ul class="list" style="margin-top:6px">${S.data.ideas.length ? S.data.ideas.map(i => `<li><span class="txt">${esc(i.t)}</span>
@@ -114,7 +108,7 @@ function renderSettings() {
     ${isTester() ? `<button class="btn ghost" onclick="go('s-admin')">${icon('gear')} Abrir administración</button>` : ''}
     <p class="tiny muted center" style="margin:0">Futari · versión ${esc(window.FUTARI_VERSION || '')}</p>`);
   loadPhotos($('s-settings'));
-  bkStatusCheck();
+  if (isOwner()) bkStatusCheck();
 }
 /* ---------- Notificaciones (push.js) ---------- */
 function notifCard(prefs, p) {
@@ -347,6 +341,17 @@ async function autoBackupNow() {
     }
     toast('Respaldo listo ✓'); bkStatusCheck(true); autoBackups();
   } catch (e) { toast(BK_ERR[e.message] || BK_ERR.error); if (btn) btn.disabled = false; say('💾 Respaldar ahora'); }
+}
+// Tarjeta de respaldos: solo la ve el dueño (isOwner de gifts.js: su uid en TESTERS; en el emulador, la primera cuenta)
+function backupCard() {
+  return `<div class="glass stack"><span class="label">💾 Respaldo <span class="tiny muted">· solo tú lo ves</span></span>
+      <p class="small muted" style="margin:0">Todo está en Firebase. Aquí puedes bajar una copia a este teléfono: <b>Descargar</b> = toda la base sin fotos (liviano); <b>Descargar con fotos</b> = la copia completa. Guárdala en Drive o iCloud. ${S.settings.lastBackup ? `Último respaldo: ${new Date(S.settings.lastBackup).toLocaleDateString('es', { day: 'numeric', month: 'long', year: 'numeric' })}.` : 'Aún no han descargado ninguno.'}</p>
+      <div class="grid2"><button class="btn ghost small" style="width:100%" onclick="exportData()">Descargar</button>
+        <button class="btn ghost small" style="width:100%" onclick="exportData(true)">Descargar con fotos</button></div>
+      <label class="btn ghost small" style="width:100%">Restaurar desde un respaldo<input type="file" accept="application/json,.json" hidden onchange="importData(this)"></label>
+      <button class="btn ghost small" style="width:100%" onclick="autoBackups()">🌙 Respaldos automáticos de cada noche</button>
+      <p class="small" id="bkStatus" style="margin:0">${bkStatusHTML()}</p>
+      <button class="btn ghost small" style="width:100%" onclick="backupHelp()">🆘 ¿Se borró algo? Qué hacer</button></div>`;
 }
 // Estado del respaldo automático (se pregunta al servicio como mucho cada 15 minutos; se recuerda en el teléfono)
 let bkStatus = (() => { try { return JSON.parse(localStorage.getItem('futari-bk-status')) || null; } catch { return null; } })(), bkAsked = 0;
