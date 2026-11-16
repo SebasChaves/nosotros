@@ -85,8 +85,21 @@ function togetherBanner() {
     <div class="grid2"><button class="btn small" onclick="vacTrip('${t.from}','${t.to}')">✈️ Planear un viaje</button><button class="btn ghost small" onclick="vacDreams(${t.n})">🗺️ Lugares que caben</button></div></div>`;
 }
 let vacEdit = null, vacColor = VAC_COLORS[0];
+// Las de tu pareja se ven sin poder editarlas (solo en la app); las tuyas y las «de los dos», cualquiera de los dos.
+const canEditVac = v => !v.who || v.who === 'ambos' || v.who === uid();
+function viewVac(v) {
+  const { n, work } = vacDays(v), tk = todayKey(), left = daysBetween(today(), parseDate(v.start));
+  openSheet(`<div class="stack"><div class="vac-row" style="--vc:${esc(v.color || '#3ECF8E')};margin:0;cursor:default"><span style="font-size:28px">${esc(v.emoji || '🏖️')}</span>
+      <span class="grow"><b>${esc(v.title)}</b><span class="tiny muted" style="display:block">De ${esc(nameOf(v.who))}</span></span></div>
+    <p class="small" style="margin:0">📅 ${esc(fmtDay(parseDate(v.start)))}${v.end !== v.start ? ` al ${esc(fmtDay(parseDate(v.end)))}` : ''}</p>
+    <p class="small muted" style="margin:0">${plural(n, 'día', 'días')}${work !== n ? ` · ${plural(work, 'hábil', 'hábiles')}` : ''}${tk < v.start ? ` · ${left === 1 ? 'empiezan mañana' : `faltan ${left} días`}` : tk <= v.end ? ` · va en el día ${daysBetween(parseDate(v.start), today()) + 1}` : ''}</p>
+    ${v.note ? `<p class="small" style="margin:0">📝 ${esc(v.note)}</p>` : ''}
+    <button class="btn ghost" onclick="exportEvent('${v.id}')">${icon('cal')} A mi calendario</button>
+    <p class="tiny muted center" style="margin:0">Solo ${esc(nameOf(v.who))} puede cambiarlas.</p></div>`);
+}
 function openVac(start, id) {
   const v = id ? vacList().find(x => x.id === id) : null, p = partnerUid();
+  if (v && !canEditVac(v)) return viewVac(v);
   vacEdit = v?.id || null; vacColor = v?.color || VAC_COLORS[0];
   const k = v?.kind || '🏖️';
   openSheet(`<div class="stack"><h2>${v ? 'Editar' : '🏖️ Vacaciones o días libres'}</h2>
@@ -139,7 +152,8 @@ function saveVac() {
     notify('vacations', { title: `💞 Coinciden sus días libres`, body: `${meForPartner()} también está libre: ${vacRange({ start: r.from, end: r.to })} (${plural(r.n, 'día', 'días')}). ¿Planean algo?`, url: './?open=cal', tag: 'vac-together' });
   }, 700);
 }
-function delVac(id) { softDelete('vacations', id, 'las vacaciones', { after: closeSheet }); }
+function delVac(id) {
+  const v = vacList().find(x => x.id === id); if (v && !canEditVac(v)) return; softDelete('vacations', id, 'las vacaciones', { after: closeSheet }); }
 function vacTrip(from, to) { window.newTripDates?.(from, to); }
 function vacDreams(n) { go('s-trips'); window.tripsView?.('dreams'); window.dreamsForDays?.(n); }
 
