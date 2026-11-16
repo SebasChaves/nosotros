@@ -2,7 +2,7 @@
 //   Ingresos (por día, horas, teléfonos, datos, errores) · Estadísticas (uso, notificaciones, quién hace más) · Pruebas.
 import { query, where, orderBy, limit, getDocs, getCountFromServer, writeBatch } from 'https://www.gstatic.com/firebasejs/11.0.2/firebase-firestore.js';
 import { $, S, db, esc, icon, paint, onShow, expose, toast, ask, col, ref, avatar, loadPhotos, nameOf, openSheet, celebrate,
-         today, dayKey, todayKey, parseDate, fmtShort, fmtDay, plural, COLLECTIONS, uid, EMU } from './core.js';
+         today, dayKey, todayKey, parseDate, fmtShort, fmtDay, plural, COLLECTIONS, uid, EMU, vnum, vlabel } from './core.js';
 import { isTester, testerCard } from './testing.js';
 import { giftAdminCards } from './gifts.js';
 import { NOTIF_TYPES, pushHere } from './push.js';
@@ -28,13 +28,13 @@ function deviceInfo(v) {
     ['Teléfono', [v.model, v.os + (v.osVersion ? ' ' + v.osVersion : '')].filter(Boolean).join(' · ')],
     ['Navegador', v.browser || 'sin dato (versión vieja)'],
     ['Instalada', v.installed ? 'Sí, como app' : 'No, la abre desde el navegador'],
-    ['Versión', v.app ? (v.app === latest ? `v${v.app} (la última)` : `v${v.app}`) : 'sin dato'],
+    ['Versión', v.app ? (v.app === latest ? `${vlabel(v.app)} (la última)` : vlabel(v.app)) : 'sin dato'],
   ];
   const warn = [];
   if (/Samsung/.test(v.browser || '')) warn.push('Usa Samsung Internet: los accesos directos y algunas funciones van mejor con Chrome. Conviene instalarla desde Chrome.');
   if (/otra app/.test(v.browser || '')) warn.push('La abrió desde dentro de otra app (por ejemplo un enlace en WhatsApp o Instagram). Mejor abrirla desde el ícono instalado.');
   if (!v.installed && (v.os === 'iPhone' || v.os === 'Android')) warn.push('No la tiene instalada: se pierden la pantalla completa y algunas funciones.');
-  if (v.app && latest && Number(v.app) < Number(latest)) warn.push(`Tiene una versión vieja (v${v.app}). Al abrir la app le sale el aviso para actualizar.`);
+  if (v.app && latest && vnum(v.app) < vnum(latest)) warn.push(`Tiene una versión vieja (${vlabel(v.app)}). Al abrir la app le sale el aviso para actualizar.`);
   return `<div class="adm-dev">${rows.map(([k, x]) => `<div><span class="tiny muted">${k}</span><span class="small">${esc(x)}</span></div>`).join('')}</div>
     ${warn.map(w => `<div class="adm-warn">⚠️ ${esc(w)}</div>`).join('')}`;
 }
@@ -90,7 +90,7 @@ function render() {
   const detail = ids.map((id, i) => {
     const list = byDay[selDay]?.[id] || [];
     return `<div style="margin-top:8px"><div class="row"><span class="small"><i class="adm-dot" style="background:${COLORS[i % 2]}"></i>${esc(nameOf(id))}</span><span class="pill">${plural(list.length, 'ingreso', 'ingresos')}</span></div>
-      <div class="chips" style="margin-top:6px">${list.map(v => `<span class="chip" style="padding:5px 10px;font-size:12.5px" title="${esc([v.model, v.os, v.browser, v.app && 'v' + v.app].filter(Boolean).join(' · '))}">${hhmm(v)} <span class="tiny muted">${v.os === 'iPhone' ? 'iOS' : v.os === 'Android' ? 'Android' : 'PC'}${v.browser ? ' · ' + esc(shortBrowser(v.browser)) : ''}</span></span>`).join('') || '<span class="small muted">—</span>'}</div></div>`;
+      <div class="chips" style="margin-top:6px">${list.map(v => `<span class="chip" style="padding:5px 10px;font-size:12.5px" title="${esc([v.model, v.os, v.browser, v.app && 'v' + vlabel(v.app)].filter(Boolean).join(' · '))}">${hhmm(v)} <span class="tiny muted">${v.os === 'iPhone' ? 'iOS' : v.os === 'Android' ? 'Android' : 'PC'}${v.browser ? ' · ' + esc(shortBrowser(v.browser)) : ''}</span></span>`).join('') || '<span class="small muted">—</span>'}</div></div>`;
   }).join('');
 
   // 4. Tabla de todos los días con las horas de cada uno
@@ -278,7 +278,7 @@ function statsHTML(ids, days) {
     <div class="glass stack"><span class="label">🔔 Notificaciones · ${range} días</span>${notif}</div>`;
 }
 async function showVersion() {
-  try { const t = await (await fetch('sw.js', { cache: 'no-store' })).text(); const v = t.match(/CACHE = '([^']+)'/)?.[1]; const el = $('admVersion'); if (el && v) el.textContent += ` · versión ${v.replace('nosotros-', '')}`; } catch {}
+  try { const t = await (await fetch('sw.js', { cache: 'no-store' })).text(); const v = t.match(/CACHE = '([^']+)'/)?.[1]; const el = $('admVersion'); if (el && v) el.textContent += ` · versión ${v.replace('nosotros-v', '')}`; } catch {}
 }
 
 function admRange(n) { range = n; load(); }
@@ -286,7 +286,7 @@ function admTab(t) { tab = t; render(); window.scrollTo?.(0, 0); }
 function admDay(d) { selDay = d; render(); }
 function admReload() { load(); }
 function admCsv() {
-  const rows = [['fecha', 'hora', 'usuario', 'dispositivo', 'sistema', 'modelo', 'navegador', 'instalada', 'versión']].concat([...visits].sort((a, b) => a.at - b.at).map(v => [v.day, hhmm(v), nameOf(v.uid), v.os, v.osVersion || '', v.model || '', v.browser || '', v.installed ? 'sí' : 'no', v.app || '']));
+  const rows = [['fecha', 'hora', 'usuario', 'dispositivo', 'sistema', 'modelo', 'navegador', 'instalada', 'versión']].concat([...visits].sort((a, b) => a.at - b.at).map(v => [v.day, hhmm(v), nameOf(v.uid), v.os, v.osVersion || '', v.model || '', v.browser || '', v.installed ? 'sí' : 'no', vlabel(v.app)]));
   const csv = rows.map(r => r.map(x => `"${String(x).replace(/"/g, '""')}"`).join(',')).join('\n');
   const a = document.createElement('a');
   a.href = URL.createObjectURL(new Blob(['﻿' + csv], { type: 'text/csv' }));

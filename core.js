@@ -5,6 +5,12 @@ import { initializeFirestore, persistentLocalCache, persistentMultipleTabManager
          connectFirestoreEmulator, doc, collection, getDoc, setDoc, deleteDoc, increment } from 'https://www.gstatic.com/firebasejs/11.0.2/firebase-firestore.js';
 import { firebaseConfig } from './firebase-config.js';
 
+/* ================= Versiones =================
+   Desde 1.0.0 se numeran MAYOR.MENOR.ARREGLO (ver docs/PUBLICAR.md). Las de antes eran un número suelto ('76'):
+   se toman como 0.76.0, así se pueden comparar y se muestran como «0.76». */
+export const vnum = v => { const p = String(v || '').split('.').map(Number); if (p.some(isNaN)) return 0; return p.length === 1 ? p[0] * 1e3 : (p[0] || 0) * 1e6 + (p[1] || 0) * 1e3 + (p[2] || 0); };
+export const vlabel = v => !v ? '' : String(v).includes('.') ? String(v) : `0.${v}`;
+
 /* ================= Interfaz ================= */
 export const $ = id => document.getElementById(id);
 export const esc = s => String(s ?? '').replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));

@@ -3,7 +3,7 @@ import { onAuthStateChanged, signInWithEmailAndPassword, sendPasswordResetEmail,
   from 'https://www.gstatic.com/firebasejs/11.0.2/firebase-auth.js';
 import { onSnapshot, disableNetwork, enableNetwork, query, where, documentId, getDocs, waitForPendingWrites } from 'https://www.gstatic.com/firebasejs/11.0.2/firebase-firestore.js';
 import { $, S, auth, db, go, esc, openSheet, configured, placeTabPill, coupleRef, col, privCol, COLLECTIONS, PRIVATE, toast, expose, rerender, rerenderAll,
-         partnerUid, profile, uid, ask, inBar, setBar, barIds, dayKey, EMU, dataReady } from './core.js';
+         partnerUid, profile, uid, ask, inBar, setBar, barIds, dayKey, EMU, dataReady, vnum } from './core.js';
 if (EMU) window.__S = S; // solo emulador: para las pruebas automáticas
 import { todayAnswers } from './home.js';
 import './decide.js';
@@ -44,7 +44,7 @@ import { logVisit } from './tracking.js';
 import { maybeStartTour, resetTourCheck } from './tour.js';
 
 // Versión de esta copia de la app. Súbela junto con version.json y la caché de sw.js al publicar.
-export const APP_VERSION = '76';
+export const APP_VERSION = '1.0.0';
 window.FUTARI_VERSION = APP_VERSION; // lo guarda el registro de ingresos (panel de administración)
 
 // Si la app estuvo abierta hace poco (Android la cierra sola al salir), se vuelve rápido a la misma pantalla.
@@ -284,11 +284,11 @@ async function updateNow(btn) {
 async function showNews(seen) {
   let v; try { v = await getVersion(); } catch { return; }
   const hist = (v?.history || [{ version: v?.version, notes: v?.notes || [] }])
-    .filter(h => Number(h.version) > Number(seen) && Number(h.version) <= Number(APP_VERSION) && h.notes?.length)
-    .sort((a, b) => Number(b.version) - Number(a.version));
+    .filter(h => vnum(h.version) > vnum(seen) && vnum(h.version) <= vnum(APP_VERSION) && h.notes?.length)
+    .sort((a, b) => vnum(b.version) - vnum(a.version));
   if (!hist.length) return;
   const notes = hist.flatMap(h => h.notes);
-  openSheet(`<div class="stack"><h2>✨ Novedades</h2>${hist.length > 1 ? `<p class="small muted" style="margin:0">Lo nuevo de las últimas ${hist.length} actualizaciones</p>` : ''}
+  openSheet(`<div class="stack"><h2>✨ Novedades <span class="tiny muted" style="font-weight:500">versión ${esc(APP_VERSION)}</span></h2>${hist.length > 1 ? `<p class="small muted" style="margin:0">Lo nuevo de las últimas ${hist.length} actualizaciones</p>` : ''}
     <ul class="news" style="margin:0;padding-left:20px;max-height:52vh;overflow:auto">${notes.map(n => `<li>${esc(n)}</li>`).join('')}</ul>
     <button class="btn" onclick="closeSheet()">¡Genial!</button></div>`);
 }

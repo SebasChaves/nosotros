@@ -39,7 +39,7 @@ Los juegos sorpresa comparten `gifts.js` (regalo envuelto, `gates`). Ver [docs/P
 3. **Nunca pongas correos ni datos personales en el código**: el repositorio es público. Para identificar a
    alguien se usa su `uid` de Firebase (como `TESTERS` en `testing.js`). Las reglas reales con los correos
    viven solo en la consola de Firebase; `firestore.rules` del repo tiene correos de ejemplo.
-4. **Cada publicación sube la versión** en tres lugares (`app.js`, `sw.js`, `version.json`). Si no, los
+4. **Cada publicación sube la versión** (`MAYOR.MENOR.ARREGLO`, p. ej. 1.0.1) en tres lugares (`app.js`, `sw.js`, `version.json`). Si no, los
    teléfonos no reciben el cambio ni el aviso. Ver docs/PUBLICAR.md.
 5. **Todo módulo nuevo va en la lista `FILES` de `sw.js`** (si no, no funciona sin internet).
 6. **Las funciones que se llaman desde `onclick="..."` deben exponerse** con `expose({ ... })`.

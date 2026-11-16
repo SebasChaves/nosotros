@@ -8,18 +8,29 @@ GitHub Pages publica la rama `main` tal cual. Los teléfonos reciben la versión
 4. Después de recargar, si la versión cambió desde la última vista en ese teléfono (`futari-version` en
    localStorage), muestra **Novedades**: todas las notas de `history` desde esa versión hasta la actual (acumulado).
 
-## Pasos (siempre los tres números iguales)
+## Número de versión (desde 1.0.0, noviembre 2026)
 
-1. `app.js`: `export const APP_VERSION = 'N';`
-2. `sw.js`: `const CACHE = 'nosotros-vN';` (y agrega a `FILES` cualquier archivo nuevo).
+`MAYOR.MENOR.ARREGLO`, como texto (`'1.0.0'`):
+- **ARREGLO** (1.0.0 → 1.0.1): solo arreglos o ajustes chicos.
+- **MENOR** (1.0.1 → 1.1.0): una tanda con cosas nuevas o mejoras visibles; el arreglo vuelve a 0.
+- **MAYOR** (1.4.2 → 2.0.0): un cambio grande (rediseño, algo que cambia cómo se usa la app).
+
+Las de antes eran un número suelto (`'1'` a `'76'`) y siguen así en `history`. `vnum()` de core.js las toma como
+0.N.0 para comparar y `vlabel()` las muestra como «0.N». Para comparar versiones usa siempre `vnum`, nunca `Number`.
+La versión se ve al final de Ajustes y en el título de Novedades.
+
+## Pasos (siempre los tres iguales)
+
+1. `app.js`: `export const APP_VERSION = 'X.Y.Z';`
+2. `sw.js`: `const CACHE = 'nosotros-vX.Y.Z';` (y agrega a `FILES` cualquier archivo nuevo).
 3. `version.json`:
    ```json
    {
-     "version": "N",
+     "version": "X.Y.Z",
      "notes": ["…notas de esta versión…"],
      "history": [
-       { "version": "N", "notes": ["…las mismas notas…"] },
-       { "version": "N-1", "notes": ["…"] }
+       { "version": "X.Y.Z", "notes": ["…las mismas notas…"] },
+       { "version": "la anterior", "notes": ["…"] }
      ]
    }
    ```
