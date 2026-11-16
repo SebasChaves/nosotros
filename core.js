@@ -407,7 +407,7 @@ sheetDrag(); viewerDrag(); rowSwipe(); // los módulos corren cuando el HTML ya 
 // Repinta un contenedor sin perder lo que el usuario está escribiendo (valores y foco por id).
 // Esqueleto gris mientras llegan los datos la primera vez (teléfono nuevo o sin nada guardado): así no aparece
 // «Aún no tienen…» por un momento cuando sí tienen. Cuando todo llega (dataReady), se repinta.
-const SKEL_SKIP = new Set(['s-arrows', 's-bus', 's-game', 's-search', 's-settings', 's-admin', 's-map']);
+const SKEL_SKIP = new Set(['s-arrows', 's-bus', 's-fruta', 's-game', 's-search', 's-settings', 's-admin', 's-map']);
 const skeleton = () => `<div class="skel-top"><i class="skel" style="width:46%;height:30px"></i><i class="skel" style="width:40px;height:40px;border-radius:14px"></i></div>
   ${[120, 84, 160, 96].map(h => `<div class="glass skel-card"><i class="skel" style="width:38%"></i><i class="skel" style="width:82%"></i><i class="skel" style="width:64%;height:${h - 70}px"></i></div>`).join('')}`;
 const skelOn = new Set();
@@ -462,7 +462,7 @@ export const SECTIONS = [['s-decide', 'dice', '¿Qué hacemos?'], ['s-moments', 
   ['s-reminders', 'bell', 'Recordatorios'], ['s-recipes', 'pot', 'Recetas'], ['s-map', 'map', 'Nuestro mapa'],
   ['s-music', 'music', 'Su playlist'], ['s-pet', 'paw', 'Su mascota'], ['s-badges', 'medal', 'Logros'], ['s-game', 'flame', 'Juego de retos'],
   ['s-us', 'heart', 'Gustos y regalos'], ['s-quiz', 'brain', '¿Cuánto me conoces?'], ['s-bucket', 'list', 'Bucket list'],
-  ['s-summary', 'spark', 'Resumen del año'], ['s-arrows', 'arrow', 'Flechas'], ['s-bus', 'bus', 'La parada'], ['s-admin', 'admin', 'Administración']];
+  ['s-summary', 'spark', 'Resumen del año'], ['s-arrows', 'arrow', 'Flechas'], ['s-bus', 'bus', 'La parada'], ['s-fruta', 'fruit', 'Pura fruta'], ['s-admin', 'admin', 'Administración']];
 // Secciones o avisos que no todos ven todavía (por ejemplo una sorpresa que el dueño pone desde Administración).
 // gates[clave] = () => true/false; claves: id de pantalla ('s-arrows') o 'notif:<tipo>'. Sin gate = siempre visible.
 export const gates = {};
@@ -611,7 +611,7 @@ export const write = p => p.catch(err => {
 
 /* ================= Estado ================= */
 export const COLLECTIONS = ['bucket', 'ideas', 'notes', 'coupons', 'dates', 'moments', 'lists', 'answers',
-  'moods', 'challenges', 'groceries', 'expenses', 'places', 'trips', 'quiz', 'profiles', 'shows', 'events', 'cards', 'games', 'thinks', 'daily', 'pins', 'recipes', 'recipefav', 'menu', 'songs', 'reminders', 'snaps', 'push', 'activity', 'pet', 'guess', 'cravings', 'arrows', 'bus', 'money', 'cooked', 'dreams', 'vacations'];
+  'moods', 'challenges', 'groceries', 'expenses', 'places', 'trips', 'quiz', 'profiles', 'shows', 'events', 'cards', 'games', 'thinks', 'daily', 'pins', 'recipes', 'recipefav', 'menu', 'songs', 'reminders', 'snaps', 'push', 'activity', 'pet', 'guess', 'cravings', 'arrows', 'bus', 'money', 'cooked', 'dreams', 'vacations', 'fruta'];
 export const PRIVATE = ['gifts'];
 export const S = {
   me: null,

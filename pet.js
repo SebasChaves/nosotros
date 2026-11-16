@@ -15,6 +15,7 @@ import { GAMES, playGame } from './pet-games.js';
 import { arrowsVisible, arrowsWrapped } from './arrows.js';
 import { busVisible, busWrapped } from './bus.js';
 // La parada (bus.js), igual: envuelta si todavía no la abre
+const frutaRow = () => `<div class="pet-game"><span class="pet-game-ic">🍍</span><div class="grow"><b>Pura fruta</b><span class="tiny muted" style="display:block">Junta 3 o más frutas tropicales. 100 niveles, reto del día y duelos</span></div><button class="btn small" onclick="go('s-fruta')">Jugar</button></div>`;
 const busRow = () => !busVisible() ? '' : busWrapped()
   ? `<div class="pet-game gift-row"><span class="pet-game-ic">🎁</span><div class="grow"><b>Un juego sorpresa</b><span class="tiny muted" style="display:block">Está envuelto para ti</span></div><button class="btn small" onclick="unwrapGift('bus')">Abrir</button></div>`
   : `<div class="pet-game"><span class="pet-game-ic">🚏</span><div class="grow"><b>La parada</b><span class="tiny muted" style="display:block">Saca los vehículos y lleva a los pasajeros de su color. Niveles, reto del día y duelos</span></div><button class="btn small" onclick="go('s-bus')">Jugar</button></div>`;
@@ -187,7 +188,7 @@ function render() {
       <div class="stack" style="gap:10px">${GAMES.map(g => { const b = p.best?.[g.id] || {}; return `<div class="pet-game"><span class="pet-game-ic">${g.icon}</span>
         <div class="grow"><b>${esc(g.name)}</b><span class="tiny muted" style="display:block">${esc(g.desc)}</span>
           <span class="tiny">🏆 Tú: <b>${b[uid()] || 0}</b>${partner ? ` · ${esc(nameOf(partner))}: <b>${b[partner] || 0}</b>` : ''}</span></div>
-        <button class="btn small" onclick="startGame('${g.id}')">Jugar</button></div>`; }).join('')}${arrowsRow()}${busRow()}</div>`;
+        <button class="btn small" onclick="startGame('${g.id}')">Jugar</button></div>`; }).join('')}${frutaRow()}${arrowsRow()}${busRow()}</div>`;
   }
   paint('s-pet', `${backBar(p.name || 'Su mascota', 's-home', `<span class="pill pet-coins" aria-label="Monedas">🪙 ${money}</span>`)}
     <div class="glass stack">

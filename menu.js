@@ -6,6 +6,7 @@ import { S, esc, icon, on, expose, toast, write, ref, profile, uid, SECTIONS, BA
 import { listNeedsMyVote } from './decide.js';
 import { unreadNotes, couponAlerts } from './love.js';
 import { unseenSnaps, newChats } from './snaps.js';
+import { frutaAlerts } from './fruta.js';
 import { quizWaiting } from './quiz.js';
 import { cravingAlerts } from './cravings.js';
 import { arrowsAlerts } from './arrows.js';
@@ -31,7 +32,7 @@ export const sectionIcon = id => SECTIONS.find(([k]) => k === id)?.[1] || 'grid'
 // Avisos (puntitos) por sección: van en su botón de la barra o, si no está en la barra, se suman en Más
 export const sectionAlerts = () => ({
   's-decide': S.data.lists.filter(listNeedsMyVote).length, 's-love': unreadNotes() + couponAlerts(),
-  's-moments': unseenSnaps().length + newChats().length, 's-quiz': quizWaiting() ? 1 : 0, 's-cravings': cravingAlerts(), 's-arrows': arrowsAlerts(), 's-bus': busAlerts(),
+  's-moments': unseenSnaps().length + newChats().length, 's-quiz': quizWaiting() ? 1 : 0, 's-cravings': cravingAlerts(), 's-arrows': arrowsAlerts(), 's-bus': busAlerts(), 's-fruta': frutaAlerts(),
 });
 
 const saveMenu = patch => write(setDoc(ref('profiles', uid()), { prefs: { menu: { order: menuOrder(), bar: barChoice(), hidden: prefs().hidden || [], ...patch } } }, { merge: true }));

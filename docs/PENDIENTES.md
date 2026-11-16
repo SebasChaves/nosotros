@@ -47,6 +47,10 @@
 
 ## Ideas conversadas, no hechas
 
+- Pura fruta, segunda tanda: 🌊 marea (sube una fila cada tantos movimientos) y 📦 cajas sorpresa. Para recalibrar los
+  movimientos de `fruta-engine.js` (`MOVES`): búsqueda binaria por nivel con `simulate(level, 36)` contra la tasa objetivo de
+  docs/FRUTA.md (≈5 min en 4 procesos de Node).
+
 - De la lista de mejoras (nov 2026), quedaron sin hacer: clima en el saludo, responder instantáneas con texto, agrupar avisos
   que llegan seguidos, horas de silencio, cargar los módulos pesados solo al entrar y miniaturas en todas las listas.
   (El diario de la mascota y el tamaño de letra/botones se hicieron en v75–v76.) Falta revisar en los dos teléfonos

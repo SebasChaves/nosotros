@@ -6,7 +6,7 @@ const standalone = () => matchMedia('(display-mode: standalone)').matches || nav
 const isIOS = () => /iphone|ipad|ipod/i.test(navigator.userAgent);
 
 // Versión de la guía: si alguien ya vio una anterior, le sale una vez «Lo nuevo» (NEW_STEPS) en vez de la completa.
-const TOUR_VERSION = 5;
+const TOUR_VERSION = 6;
 const PET = { screen: 's-home', tab: 'home', emoji: '🐣', title: 'Su mascota',
   text: 'Adopten un huevo en Inicio. Come cada día que <b>los dos</b> hacen algo en Futari:', list: ['Nace a los 3 días y crece hasta leyenda 👑', 'Si un día no come se pone triste, pero no pierde lo que creció', 'Ganan monedas 🪙 para comprarle ropa y detalles', '4 juegos para competir por el récord'] };
 const SNAPS = { screen: 's-home', tab: 'home', emoji: '📸', title: 'Historias',
@@ -37,6 +37,9 @@ const TRAVEL = { screen: 's-trips', emoji: '🗺️', title: 'Viajes, de princip
 const VACATIONS = { screen: 's-cal', emoji: '🏖️', title: 'Vacaciones en el calendario',
   text: 'En «+ Agregar» → <b>Vacaciones o días libres</b>: desde y hasta, de quién, color y nota.', list: ['Se ven como barras de color en el mes', 'Si los dos están libres a la vez, les dice cuántos días coinciden', 'Desde ahí arman un viaje con esas fechas', 'En Inicio, la cuenta regresiva'] };
 
+const FRUTA = { screen: 's-fruta', emoji: '🍍', title: 'Pura fruta: juego nuevo',
+  text: 'Junten 3 o más frutas tropicales iguales (toquen una y la de al lado, o deslicen el dedo). Está en Más y en los juegos de su mascota:', list: ['4 en línea → 🔪 machete · L o T → 🥥 coco explosivo · 5 en línea → 🌺 flor · cuadrito → 🦜 lapa', 'Junten dos especiales para un efecto gigante', '100 niveles con hojas, piedras, bejucos y piñas que bajar', 'Reto del día y duelos entre los dos; las monedas van para su mascota'] };
+
 const STEPS = () => [
   { emoji: '💞', title: `¡Bienvenido${myName() ? ', ' + myName() : ''}!`,
     text: 'Esta es Futari (二人, «los dos» en japonés), su app de pareja. Todo lo que hagan aquí lo ven los dos al instante. Te muestro lo principal en un minuto.' },
@@ -50,7 +53,7 @@ const STEPS = () => [
     text: 'Para consentirse:', list: ['Frasco de notas: escribes para tu pareja y ella saca una cuando quiera', 'Cupones canjeables: "vale por un masaje"…'] },
   { tab: 'more', screen: 's-more', emoji: '✨', title: 'Más',
     text: 'Todo lo demás (y puedes ordenarlo o pasar lo que más usas a la barra de abajo):', list: ['Antojos, súper, gastos y viajes con búsqueda de hospedaje', 'Calendario con fechas especiales y recordatorios con aviso', 'Recetas, nuestro mapa, su playlist y pelis por ver', 'Juego de retos, quiz, gustos y regalos', 'Logros y el resumen del año'] },
-  PET, SNAPS, GUESS, CRAVINGS, GASTOS, TRAVEL, VACATIONS, MENU, WEEK, NOTIFS, GESTURES,
+  PET, SNAPS, GUESS, CRAVINGS, GASTOS, TRAVEL, VACATIONS, FRUTA, MENU, WEEK, NOTIFS, GESTURES,
   { emoji: '🔴', title: 'Los puntitos',
     text: `Cuando hay algo pendiente para ti (una nota nueva, una historia, un voto) aparece un puntito en la barra de abajo. Y con la lupa ${icon('search')} de arriba encuentras cualquier cosa.` },
   standalone()
@@ -61,7 +64,7 @@ const STEPS = () => [
 ];
 // Solo lo nuevo, para quien ya conocía la app
 // Lo nuevo de cada versión de la guía; a quien se saltó varias le salen todas las que no vio
-const NEW_BY_VERSION = { 2: [PET, SNAPS, GUESS, WEEK, NOTIFS, GESTURES], 3: [CRAVINGS, MENU], 4: [GASTOS], 5: [CHAT, COOKED, TRAVEL, VACATIONS, EASIER] };
+const NEW_BY_VERSION = { 2: [PET, SNAPS, GUESS, WEEK, NOTIFS, GESTURES], 3: [CRAVINGS, MENU], 4: [GASTOS], 5: [CHAT, COOKED, TRAVEL, VACATIONS, EASIER], 6: [FRUTA] };
 const NEW_STEPS = seenV => [
   { emoji: '✨', title: 'Lo nuevo en Futari', text: `${myName() ? esc(myName()) + ', a' : 'A'}gregamos ${seenV >= TOUR_VERSION - 1 ? 'algo' : 'varias cosas'}. Te ${seenV >= TOUR_VERSION - 1 ? 'lo' : 'las'} muestro en un minuto.` },
   ...Object.entries(NEW_BY_VERSION).filter(([v]) => Number(v) > seenV).flatMap(([, s]) => s),

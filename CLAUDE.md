@@ -19,6 +19,7 @@ Lee estos documentos antes de cambiar algo:
 | [docs/NOTIFICACIONES.md](docs/NOTIFICACIONES.md) | Avisos al teléfono: Worker de Cloudflare, cómo agregar un aviso, configuración |
 | [docs/GASTOS.md](docs/GASTOS.md) | Gastos: anotar rápido, salidas, presupuesto, alcancías, aviso del banco y su tutorial |
 | [docs/FLECHAS.md](docs/FLECHAS.md) | Juego Flechas (sorpresa del dueño): modos, regalo, generador, figuras 3D |
+| [docs/FRUTA.md](docs/FRUTA.md) | Juego Pura fruta (combinar 3): motor, niveles, especiales, datos y calibración |
 | [docs/PARADA.md](docs/PARADA.md) | Juego La parada (sorpresa del dueño, todavía sin regalar) |
 | [docs/PENDIENTES.md](docs/PENDIENTES.md) | Cosas pospuestas, ideas, servicios externos y trampas conocidas (iPhone/Android) |
 
