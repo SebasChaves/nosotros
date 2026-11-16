@@ -18,7 +18,7 @@
 //   Cada noche de 3:00 a 6:00 copia la base (una colección por minuto) y las fotos nuevas. Ver docs/NOTIFICACIONES.md.
 // Ver docs/NOTIFICACIONES.md. Sin dependencias: se pega tal cual en el editor de Cloudflare.
 
-const WORKER_VERSION = 11; // súbelo al cambiar este archivo (la app lo muestra en el diagnóstico)
+const WORKER_VERSION = 12; // súbelo al cambiar este archivo (la app lo muestra en el diagnóstico)
 const enc = new TextEncoder();
 const b64u = buf => btoa(String.fromCharCode(...new Uint8Array(buf))).replace(/\+/g, '-').replace(/\//g, '_').replace(/=+$/, '');
 const unb64u = s => Uint8Array.from(atob(s.replace(/-/g, '+').replace(/_/g, '/') + '==='.slice((s.length + 3) % 4)), c => c.charCodeAt(0));
@@ -47,6 +47,8 @@ export default {
       if (!env.RESPALDOS) return json({ error: 'no-kv' }, 501);
       let b4; try { b4 = await req.json(); } catch { return json({ error: 'bad-json' }, 400); }
       if (b4.action === 'get') return backupDownload(env, String(b4.day || ''), !!b4.photos, cors);
+      if (b4.action === 'start') return json(await backupStart(env)); // «Respaldar ahora» (Ajustes): la app pide los pasos uno por uno
+      if (b4.action === 'step') return json(await backupStep(env, Date.now(), { manual: true }) || { phase: 'done' });
       return json(await backupList(env));
     }
     if (url.pathname === '/chef') { // «Pregúntale al chef» (recipes.js): arma una receta con IA
@@ -107,11 +109,11 @@ async function listAll(env, db, col, mask) {
   } while (token);
   return out;
 }
-export async function backupStep(env, when = Date.now()) {
+export async function backupStep(env, when = Date.now(), { manual = false } = {}) {
   const tz = env.TIME_ZONE || 'America/Costa_Rica';
   const L = Object.fromEntries(new Intl.DateTimeFormat('en-CA', { timeZone: tz, year: 'numeric', month: '2-digit', day: '2-digit', hour: '2-digit', hourCycle: 'h23' }).formatToParts(new Date(when)).map(p => [p.type, p.value]));
   const hour = Number(L.hour), day = `${L.year}-${L.month}-${L.day}`;
-  if (!env.BACKUP_ANYTIME && (hour < 3 || hour > 5)) return null;
+  if (!manual && !env.BACKUP_ANYTIME && (hour < 3 || hour > 5)) return null;
   const st = await kvJSON(env, 'state', {});
   const db = await firestoreReader(env);
   if (st.day !== day) { st.day = day; st.idx = 0; st.dataDone = false; st.nightPhotos = 0; }
@@ -133,10 +135,11 @@ export async function backupStep(env, when = Date.now()) {
       st.counts = {};
     }
     await env.RESPALDOS.put('state', JSON.stringify(st));
-    return { step: col };
+    return { phase: 'data', step: col, idx: st.idx, total: BACKUP_COLS.length };
   }
   // Fotos: se copian solo las nuevas (las que ya están en KV no se vuelven a leer)
   if (st.nightPhotos >= 600 || st.photosDoneDay === day) return null; // ya se revisaron las fotos esta noche
+  if (manual && st.manualPhotos >= 120) return null; // con el botón, pocas fotos: las demás siguen en la noche
   const index = new Set(await kvJSON(env, 'photos-index', []));
   let ids = await kvJSON(env, 'photo-todo', null);
   if (!ids) ids = (await listAll(env, db, 'photos', true)).filter(id => !index.has(id));
@@ -149,8 +152,20 @@ export async function backupStep(env, when = Date.now()) {
   await env.RESPALDOS.put('photos-index', JSON.stringify([...index]));
   await env.RESPALDOS.put('photo-todo', JSON.stringify(ids.length ? ids : []));
   if (!ids.length) await env.RESPALDOS.delete('photo-todo');
+  if (manual) st.manualPhotos = (st.manualPhotos || 0) + batch.length;
   await env.RESPALDOS.put('state', JSON.stringify(st));
-  return { photos: batch.length };
+  return { phase: 'photos', copied: batch.length, left: ids.length };
+}
+// «Respaldar ahora»: vuelve a empezar el respaldo de hoy (como máximo 4 veces al día, por el límite gratis de escrituras)
+export async function backupStart(env) {
+  const tz = env.TIME_ZONE || 'America/Costa_Rica';
+  const L = Object.fromEntries(new Intl.DateTimeFormat('en-CA', { timeZone: tz, year: 'numeric', month: '2-digit', day: '2-digit' }).formatToParts(new Date()).map(p => [p.type, p.value]));
+  const day = `${L.year}-${L.month}-${L.day}`, st = await kvJSON(env, 'state', {});
+  const manualToday = st.day === day ? (st.manualRuns || 0) : 0;
+  if (manualToday >= 4) return { error: 'limit' };
+  const next = { day, idx: 0, dataDone: false, counts: {}, nightPhotos: st.day === day ? st.nightPhotos || 0 : 0, photosDoneDay: null, manualRuns: manualToday + 1, manualPhotos: 0, lastAt: st.lastAt };
+  await env.RESPALDOS.put('state', JSON.stringify(next));
+  return { ok: true, total: BACKUP_COLS.length };
 }
 async function backupList(env) {
   const days = await kvJSON(env, 'days', []), st = await kvJSON(env, 'state', {}), metas = [];

@@ -146,7 +146,7 @@ receta con IA. No guarda nada; la app la guarda solo si tocan «Guardar».
   una clave real**: revisar la primera vez.
 - Errores: `old-worker` (falta pegar v9 o más nuevo), `no-ai` (falta el binding), `limit`, `ai` (otro error; detalle en *Logs*).
 
-## Respaldo automático (Worker v11)
+## Respaldo automático (Worker v11; «Respaldar ahora» desde v12)
 
 Cada noche, de 3:00 a 5:59 (hora de `TIME_ZONE`), el Cron hace un paso chico por minuto (`backupStep`; el plan gratis da
 10 ms de CPU por vez):
@@ -163,6 +163,11 @@ el Worker v11 y Deploy. Gratis: 1 GB de espacio (alcanza para miles de fotos).
 **En la app:** Ajustes → Respaldo → «🌙 Respaldos automáticos de cada noche» (`POST /respaldo` con `{action:'list'}` o
 `{action:'get', day, photos}`): lista los días, baja el JSON (mismo formato que «Descargar», versión 5, con o sin fotos)
 o lo restaura (se junta con lo actual, no borra nada). Errores: `no-kv` (falta el binding) y `old-worker`.
+
+**«💾 Respaldar ahora» (v12):** `{action:'start'}` reinicia el respaldo de hoy (máximo 4 veces al día por el límite de
+escrituras de KV; si no, `{error:'limit'}`) y la app pide `{action:'step'}` una y otra vez (cada pedido = un paso:
+una colección o ~8 fotos; con el botón, hasta 120 fotos y las demás siguen en la noche) mostrando «Respaldando… 12 de 40»
+hasta recibir `{phase:'done'}`.
 
 Prueba local: `backupStep(env, fecha)` con `env.TEST_FIRESTORE` (emulador), un KV simulado (`get/put/delete`) y
 `env.BACKUP_ANYTIME = true` para correrlo fuera de horario.

@@ -312,7 +312,7 @@ async function bkCall(body) {
   if (!r.ok) throw new Error('error');
   return body.action === 'get' ? r.blob() : r.json();
 }
-const BK_ERR = { 'no-worker': 'Falta configurar el servicio de avisos.', 'old-worker': 'Falta pegar el servicio de avisos versión 11 en Cloudflare.',
+const BK_ERR = { 'no-worker': 'Falta configurar el servicio de avisos.', 'old-worker': 'Falta pegar el servicio de avisos versión 12 en Cloudflare.',
   'no-kv': 'Falta conectar el espacio «RESPALDOS» en Cloudflare (Settings → Bindings → KV namespace).', error: 'No se pudo hablar con el servicio. Revisa el internet.' };
 async function autoBackups() {
   openSheet('<div class="stack"><h2>🌙 Respaldos automáticos</h2><p class="small muted" style="margin:0">Buscando…</p></div>');
@@ -320,12 +320,30 @@ async function autoBackups() {
   const fmt = m => new Date(m.at).toLocaleString('es', { weekday: 'long', day: 'numeric', month: 'short', hour: 'numeric', minute: '2-digit' });
   const n = m => Object.values(m.counts || {}).reduce((a, b) => a + b, 0);
   openSheet(`<div class="stack"><h2>🌙 Respaldos automáticos</h2>
+    <button class="btn" id="bkNow" onclick="autoBackupNow()">💾 Respaldar ahora</button>
     <p class="small muted" style="margin:0">Cada noche, entre las 3 y las 6 a. m., se guarda una copia de todo. Quedan los últimos 7 días y un domingo de cada semana del último mes. Fotos guardadas: ${d.photos}${d.pendingPhotos ? ` (faltan ${d.pendingPhotos}, siguen las próximas noches)` : ''}.</p>
     ${d.days.length ? `<ul class="list">${d.days.map(m => `<li><div class="txt"><span class="main">${esc(fmt(m))}</span><span class="sub">${n(m)} cosas guardadas</span></div>
       <button class="btn ghost small" onclick="autoBackupGet('${m.day}', false)">Bajar</button><button class="btn ghost small" onclick="autoBackupGet('${m.day}', true)">+ fotos</button>
       <button class="btn small" onclick="autoBackupRestore('${m.day}')">Restaurar</button></li>`).join('')}</ul>`
       : '<p class="small" style="margin:0">Todavía no hay ninguno: el primero se hace esta noche 🌙</p>'}
     <p class="tiny muted" style="margin:0">«Restaurar» junta ese día con lo que tienen ahora (no borra nada): sirve para recuperar algo que se borró sin querer.</p></div>`);
+}
+// «Respaldar ahora»: el servicio hace un paso por pedido (una sección o unas fotos) y aquí se va mostrando el avance
+async function autoBackupNow() {
+  const btn = $('bkNow'); if (btn) btn.disabled = true;
+  const say = t => { const b = $('bkNow'); if (b) b.textContent = t; };
+  try {
+    const s = await bkCall({ action: 'start' });
+    if (!s.ok && !s.error) throw new Error('old-worker'); // el servicio todavía no conoce «Respaldar ahora»
+    if (s.error === 'limit') { toast('Ya se respaldó 4 veces hoy: el próximo se hace solo esta noche 🌙'); if (btn) btn.disabled = false; return say('💾 Respaldar ahora'); }
+    for (let k = 0; k < 200; k++) {
+      const r = await bkCall({ action: 'step' });
+      if (r.phase === 'data') say(`Respaldando… ${r.idx} de ${r.total}`);
+      else if (r.phase === 'photos') say(`Guardando fotos nuevas…${r.left ? ` (faltan ${r.left})` : ''}`);
+      else break;
+    }
+    toast('Respaldo listo ✓'); autoBackups();
+  } catch (e) { toast(BK_ERR[e.message] || BK_ERR.error); if (btn) btn.disabled = false; say('💾 Respaldar ahora'); }
 }
 async function autoBackupGet(day, photos) {
   toast(photos ? 'Bajando el respaldo con fotos… puede tardar' : 'Bajando el respaldo…');
@@ -393,4 +411,4 @@ on('ideas profiles push', () => { if ($('s-settings').classList.contains('active
 onShow('s-settings', renderSettings);
 window.rerenderSettings = () => { if ($('s-settings').classList.contains('active')) renderSettings(); };
 onShow('s-more', renderMore);
-expose({ autoBackups, autoBackupGet, autoBackupRestore, setTextSize, openMenuPrefs, enablePush, disablePush, testPush, setNotif, previewCustomAccent, setCustomAccent, saveNicks, setCounterUnit, saveCounter, toggleHomeCard, moveHomeCard, resetHome, saveSettings, setTheme, setAccent, pickAvatar, removeAvatar, pickBg, removeBg, delIdea, logout, exportData, importData });
+expose({ autoBackupNow, autoBackups, autoBackupGet, autoBackupRestore, setTextSize, openMenuPrefs, enablePush, disablePush, testPush, setNotif, previewCustomAccent, setCustomAccent, saveNicks, setCounterUnit, saveCounter, toggleHomeCard, moveHomeCard, resetHome, saveSettings, setTheme, setAccent, pickAvatar, removeAvatar, pickBg, removeBg, delIdea, logout, exportData, importData });

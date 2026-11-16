@@ -1,7 +1,8 @@
 {
-  "version": "1.8.0",
-  "notes": ["🌙 Respaldo automático: cada noche se guarda una copia de todo (y de las fotos nuevas). En Ajustes → Respaldo → «Respaldos automáticos» ven los últimos días y pueden bajarlos o restaurar uno si algo se borró sin querer"],
+  "version": "1.8.1",
+  "notes": ["💾 En Ajustes → Respaldo → «Respaldos automáticos» ahora hay un botón «Respaldar ahora» para hacer una copia en el momento, con el avance en pantalla"],
   "history": [
+    { "version": "1.8.1", "notes": ["💾 En Ajustes → Respaldo → «Respaldos automáticos» ahora hay un botón «Respaldar ahora» para hacer una copia en el momento, con el avance en pantalla"] },
     { "version": "1.8.0", "notes": ["🌙 Respaldo automático: cada noche se guarda una copia de todo (y de las fotos nuevas). En Ajustes → Respaldo → «Respaldos automáticos» ven los últimos días y pueden bajarlos o restaurar uno si algo se borró sin querer"] },
     { "version": "1.7.2", "notes": ["🍍 Pura fruta: ajustes de equilibrio en los niveles"] },
     { "version": "1.7.1", "notes": ["🪙 En los juegos ya no se gastan monedas sin querer: seguir pagando quedó como opción discreta abajo, siempre pregunta antes de cobrar, y los botones del final se activan después de un momento para que el último toque no caiga en uno"] },
