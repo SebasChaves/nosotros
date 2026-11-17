@@ -85,6 +85,7 @@ de solo lectura** y manda, según la hora de Costa Rica (`TIME_ZONE`):
 |---|---|---|
 | 20:00 | «🐱 Mochi tiene hambre» / «🔥 Su racha de N días se acaba hoy» a quien aún no hizo nada hoy (si hay racha o mascota) | `streak` |
 | el minuto exacto del recordatorio (o 8:00) | recordatorios 🔔 de hoy no hechos, a quien le toca | `reminders` |
+| `remind` minutos antes de la hora del plan (o 8:00 ese día / 9:00 la víspera si no tiene hora) | «📅 Cena con mis papás · En 1 hora · a las 19:00»: planes del calendario (`events`, también los que se repiten), a quien es el plan (`who`). Desde `WORKER_VERSION` 14 | `events` |
 | 8:00 / 9:00 | «Hoy es…» / «Mañana es…»: fechas especiales, aniversarios y mesiversarios | `dates` |
 | domingo 19:00 | «📊 Su semana en Futari»: días juntos, corazones e historias o preguntas (como `week.js`) | `week` |
 | el minuto de `showTime` | «💌 … te dejó una nota para hoy»: notas del frasco programadas (`showDay`/`showTime`) a la pareja. Desde `WORKER_VERSION` 8 | `notes` |
@@ -95,6 +96,11 @@ de solo lectura** y manda, según la hora de Costa Rica (`TIME_ZONE`):
 - Para gastar pocas lecturas del plan gratis, cada minuto solo consulta los recordatorios de hoy (`date == hoy`); lo demás
   (pareja, teléfonos, racha, fechas) se lee solo en punto o cuando hay un recordatorio que mandar. Desde el Worker v8 también consulta cada minuto las notas programadas de hoy (`notes` con `showDay == hoy`): unas 3.000 lecturas al día en total (el plan gratis da 50.000).
 - El Worker no escribe nada en la base. Los teléfonos que ya no existen los limpia la app cuando manda un aviso.
+- **Planes del calendario (v14):** en punto se lee `events` una vez (≈24 lecturas × planes al día), se calcula qué avisos
+  caen en los próximos 60 minutos (hoy, mañana y pasado, con `evOccurs`, copia de `occursOn` de calendar.js) y se guardan
+  en KV `RESPALDOS` como `cal:<día>T<hora>` (dura 2 h; solo se escribe si hay algo después del minuto 0). Cada minuto se lee
+  esa clave y se manda lo de ese minuto. Sin el KV, todos los avisos de esa hora salen en punto (antes de tiempo).
+  Al anotar o cambiar (o arrastrar) un plan que no es «solo yo», la app le avisa a la pareja (`evNotify` en calendar.js, tipo `events`).
 - Para cambiar horas o textos: edita `runSchedule` y vuelve a pegar el Worker en Cloudflare.
 - Prueba local: `runSchedule(env, fecha, { dryRun: true })` con `env.TEST_FIRESTORE = 'http://127.0.0.1:8080'`
   (emulador) devuelve la lista de avisos sin mandarlos.

@@ -11,6 +11,8 @@ let vy = today().getFullYear(), vm = today().getMonth(), sel = todayKey();
 let mode = (() => { try { return localStorage.getItem('futari-cal-mode') || 'month'; } catch { return 'month'; } })();
 
 // Repeticiones de un plan: none (una vez), weekly, biweekly, monthly, yearly; "until" opcional.
+// Aviso antes del plan (lo manda el Worker de notificaciones): minutos antes, o 'none'. Sin campo = 1 hora antes.
+export const REMINDS = [['60', '1 hora antes'], ['15', '15 minutos antes'], ['0', 'A la hora'], ['1440', '1 día antes'], ['none', 'Sin aviso']];
 export const REPEATS = [['none', 'No se repite'], ['weekly', 'Cada semana'], ['biweekly', 'Cada 2 semanas'], ['monthly', 'Cada mes'], ['yearly', 'Cada año']];
 const repeatLabel = r => REPEATS.find(x => x[0] === r)?.[1] || '';
 
@@ -248,6 +250,12 @@ function wkDrag() {
     chip.oncontextmenu = e => e.preventDefault();
   });
 }
+// Aviso a la pareja cuando anoto o cambio un plan que también es suyo (no si es «solo yo»)
+function evNotify(ev, verb) {
+  if (ev.who === uid()) return;
+  const when = `${cap(fmtDay(parseDate(ev.date)))}${ev.time ? ' · ' + ev.time : ''}${ev.repeat && ev.repeat !== 'none' ? ' · ' + repeatLabel(ev.repeat).toLowerCase() : ''}`;
+  notify('events', { title: `📅 ${meForPartner()} ${verb}: ${ev.title}`, body: `${when}${ev.who === 'ambos' ? ' · los dos' : ' · para ti'}`, url: './?open=cal', tag: 'ev-' + ev.title.slice(0, 30) });
+}
 // Mover un plan de un día a otro. Si se repite, se corre toda la serie la misma cantidad de días.
 function moveEvent(id, from, to) {
   const ev = S.data.events.find(e => e.id === id); if (!ev || from === to) return;
@@ -255,6 +263,7 @@ function moveEvent(id, from, to) {
   const nd = new Date(parseDate(ev.date)); nd.setDate(nd.getDate() + delta);
   const old = ev.date, date = dayKey(nd);
   write(updateDoc(ref('events', id), { date, editedBy: uid(), editedAt: Date.now() }));
+  evNotify({ ...ev, date }, 'cambió');
   sel = to;
   undoBar(`«${ev.title}» pasó al ${fmtDay(parseDate(to))}${ev.repeat && ev.repeat !== 'none' ? ' (y sus repeticiones)' : ''}`, () => write(updateDoc(ref('events', id), { date: old })), { undoneMsg: 'Listo, volvió a su día' });
 }
@@ -374,21 +383,27 @@ function openEvent(date, id) {
       ${p ? `<option value="${p}">Solo ${esc(nameOf(p))}</option>` : ''}</select></div>
     <div class="grid2"><div><label class="f" for="evRepeat">¿Se repite?</label><select id="evRepeat" onchange="document.getElementById('evUntilBox').hidden=this.value==='none'">${REPEATS.map(([k, l]) => `<option value="${k}">${l}</option>`).join('')}</select></div>
       <div id="evUntilBox" hidden><label class="f" for="evUntil">Hasta (opcional)</label><input type="date" id="evUntil"></div></div>
+    <div><label class="f" for="evRemind">🔔 Avisar al teléfono</label><select id="evRemind">${REMINDS.map(([k, l]) => `<option value="${k}">${l}</option>`).join('')}</select>
+      <p class="tiny muted" style="margin:4px 0 0">Sin hora: avisa ese día a las 8 a. m. (o «1 día antes», la víspera a las 9 a. m.). Le llega a quien es el plan.</p></div>
     <input id="evNote" placeholder="Nota (opcional)" maxlength="120" aria-label="Nota">
     <button class="btn" onclick="saveEvent()">${ev ? 'Guardar cambios' : 'Guardar plan'}</button>
     ${ev ? `<div class="grid2"><button class="btn ghost" onclick="exportEvent('${ev.id}')">${icon('cal')} A mi calendario</button><button class="btn ghost danger" onclick="delEvent('${ev.id}')">${icon('trash')} Borrar</button></div>` : ''}</div>`);
   if (ev) {
     $('evWho').value = ev.who || 'ambos'; $('evRepeat').value = ev.repeat || 'none';
     $('evUntilBox').hidden = (ev.repeat || 'none') === 'none'; $('evUntil').value = ev.until || ''; $('evNote').value = ev.note || '';
+    $('evRemind').value = ev.remind || '60';
   }
 }
 function saveEvent() {
   const title = $('evTitle').value.trim(), date = $('evDate').value;
   if (!title || !date) return toast('Pon el plan y el día');
   const data = { title, date, time: $('evTime').value || '', who: $('evWho').value, note: $('evNote').value.trim(),
-    repeat: $('evRepeat').value, until: $('evRepeat').value !== 'none' ? ($('evUntil').value || '') : '' };
-  if (editing && S.data.events.some(e => e.id === editing)) write(updateDoc(ref('events', editing), { ...data, editedBy: uid(), editedAt: Date.now() }));
+    repeat: $('evRepeat').value, until: $('evRepeat').value !== 'none' ? ($('evUntil').value || '') : '', remind: $('evRemind').value };
+  const prev = editing && S.data.events.find(e => e.id === editing);
+  if (prev) write(updateDoc(ref('events', editing), { ...data, editedBy: uid(), editedAt: Date.now() }));
   else write(setDoc(newRef('events'), { ...data, by: uid(), createdAt: Date.now() }));
+  if (!prev) evNotify(data, 'anotó');
+  else if (prev.title !== data.title || prev.date !== data.date || (prev.time || '') !== data.time || (prev.who || 'ambos') !== data.who) evNotify(data, 'cambió');
   sel = date; const d = parseDate(date); vy = d.getFullYear(); vm = d.getMonth();
   closeSheet(); toast(editing ? 'Cambios guardados' : 'Plan guardado'); editing = null;
 }

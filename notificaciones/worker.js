@@ -18,7 +18,7 @@
 //   Cada noche de 3:00 a 6:00 copia la base (una colección por minuto) y las fotos nuevas. Ver docs/NOTIFICACIONES.md.
 // Ver docs/NOTIFICACIONES.md. Sin dependencias: se pega tal cual en el editor de Cloudflare.
 
-const WORKER_VERSION = 13; // súbelo al cambiar este archivo (la app lo muestra en el diagnóstico)
+const WORKER_VERSION = 14; // súbelo al cambiar este archivo (la app lo muestra en el diagnóstico)
 const enc = new TextEncoder();
 const b64u = buf => btoa(String.fromCharCode(...new Uint8Array(buf))).replace(/\+/g, '-').replace(/\//g, '_').replace(/=+$/, '');
 const unb64u = s => Uint8Array.from(atob(s.replace(/-/g, '+').replace(/_/g, '/') + '==='.slice((s.length + 3) % 4)), c => c.charCodeAt(0));
@@ -100,7 +100,7 @@ const BACKUP_COLS = ['bucket', 'ideas', 'notes', 'coupons', 'dates', 'moments', 
   'activity', 'pet', 'guess', 'cravings', 'arrows', 'bus', 'money', 'cooked', 'dreams', 'vacations', 'fruta'];
 const kvJSON = async (env, k, d = null) => { const v = await env.RESPALDOS.get(k); return v ? JSON.parse(v) : d; };
 // KV deja escribir la misma clave como máximo una vez por segundo: si choca (429), espera y reintenta
-const kvPut = async (env, k, v) => { for (let i = 0; ; i++) { try { return await env.RESPALDOS.put(k, v); } catch (e) { if (i >= 3 || !/429|too many/i.test(String(e.message || e))) throw e; await new Promise(r => setTimeout(r, 1100)); } } };
+const kvPut = async (env, k, v, o) => { for (let i = 0; ; i++) { try { return await env.RESPALDOS.put(k, v, o); } catch (e) { if (i >= 3 || !/429|too many/i.test(String(e.message || e))) throw e; await new Promise(r => setTimeout(r, 1100)); } } };
 async function listAll(env, db, col, mask) {
   const out = []; let token = '';
   const base = db.base;
@@ -337,8 +337,22 @@ export async function encryptPayload(sub, payload, fixed = {}) {
 }
 
 /* ---------- Avisos programados ---------- */
+// Minutos «locales» (fecha y hora de Costa Rica tratadas como UTC): sirven para restar y comparar
+const localMin = (key, t) => { const [y, m, d] = key.split('-').map(Number), [h, mi] = String(t).slice(0, 5).split(':').map(Number); return Date.UTC(y, m - 1, d, h || 0, mi || 0) / 60000; };
+// Igual que occursOn de calendar.js: ¿el plan (o una de sus repeticiones) cae ese día?
+export function evOccurs(ev, key) {
+  if (ev.date === key) return true;
+  if (!ev.repeat || ev.repeat === 'none' || key < ev.date || (ev.until && key > ev.until)) return false;
+  const a = new Date(ev.date + 'T12:00Z'), d = new Date(key + 'T12:00Z');
+  if (ev.repeat === 'weekly') return a.getUTCDay() === d.getUTCDay();
+  if (ev.repeat === 'biweekly') return Math.round((d - a) / 864e5) % 14 === 0;
+  if (ev.repeat === 'monthly') return a.getUTCDate() === d.getUTCDate();
+  if (ev.repeat === 'yearly') return a.getUTCMonth() === d.getUTCMonth() && a.getUTCDate() === d.getUTCDate();
+  return false;
+}
 // Corre cada minuto. Lee Firestore con una cuenta de servicio de solo lectura y decide qué avisar según la hora local:
 //   al minuto exacto del recordatorio (o 8:00 si no tiene hora) los recordatorios de hoy
+//   planes del calendario: X minutos antes (remind), o 8:00 / la víspera 9:00 si no tienen hora
 //   20:00 racha en peligro / mascota con hambre (a quien todavía no ha hecho nada hoy)
 //   8:00 «Hoy es…» y 9:00 «Mañana es…» para fechas especiales, aniversarios y mesiversarios
 //   domingo 19:00 resumen de la semana (lunes a domingo), como el de week.js en la app
@@ -364,7 +378,25 @@ export async function runSchedule(env, when = Date.now(), { dryRun = false } = {
   const moneyTime = weekday === 0 && hour === WEEK_HOUR && L.minute === '30';
   // Notas del frasco programadas para este minuto (love.js: showDay / showTime)
   const notesDue = (await db.query('notes', 'showDay', today)).filter(n => !n.readAt && String(n.showTime || '08:00').slice(0, 5) === hhmm);
-  if (!due.length && !notesDue.length && !onTheHour && !moneyTime) return [];
+  // Planes del calendario (calendar.js, campo remind = minutos antes, 'none' o nada = 60). Para no leer `events` cada minuto,
+  // en punto se calcula qué avisos caen en la próxima hora y se guardan en KV (cal:<día>T<hora>); cada minuto se lee esa
+  // lista (KV, gratis) y se manda lo de ese minuto. Sin KV, se mandan todos en punto (hasta 59 minutos antes de tiempo).
+  const calKey = `cal:${today}T${L.hour}`, kv = !!env.RESPALDOS;
+  let calDue = [];
+  if (onTheHour) {
+    const nowMin = localMin(today, hhmm), plan = [];
+    for (const ev of await db.list('events')) {
+      if (ev.remind === 'none' || !ev.date || !ev.title) continue;
+      for (const k of [today, tomorrow, shift(today, 2)]) {
+        if (!evOccurs(ev, k)) continue;
+        const at = ev.time ? localMin(k, ev.time) - Number(ev.remind ?? 60) : ev.remind === '1440' ? localMin(shift(k, -1), '09:00') : localMin(k, '08:00');
+        if (at >= nowMin && at < nowMin + 60) plan.push({ m: at - nowMin, id: ev.id, day: k, title: ev.title, time: ev.time || '', who: ev.who || 'ambos', note: ev.note || '', remind: ev.remind ?? '60' });
+      }
+    }
+    if (kv && plan.some(p => p.m > 0)) await kvPut(env, calKey, JSON.stringify(plan), { expirationTtl: 7200 });
+    calDue = kv ? plan.filter(p => p.m === 0) : plan;
+  } else if (kv) calDue = (await kvJSON(env, calKey, [])).filter(p => p.m === Number(L.minute));
+  if (!due.length && !notesDue.length && !onTheHour && !moneyTime && !calDue.length) return [];
   const couple = await db.get('');
   if (!couple) return [];
   const members = Object.keys(couple.members || {}).filter(u => (env.ALLOWED_UIDS || '').split(',').map(x => x.trim()).includes(u));
@@ -412,6 +444,14 @@ export async function runSchedule(env, when = Date.now(), { dryRun = false } = {
   for (const r of due) {
     const to = !r.for || r.for === 'ambos' ? members : members.filter(u => u === r.for);
     for (const u of to) add(u, 'reminders', { title: `${r.urgent ? '🔴' : '🔔'} ${r.text}`, body: [r.time, r.note].filter(Boolean).join(' · ') || 'Recordatorio de hoy', url: './?open=reminders', tag: 'rem-' + r.id });
+  }
+
+  // 2a. Planes del calendario: a quien es el plan (los dos, o solo uno)
+  for (const p of calDue) {
+    const to = p.who === 'ambos' ? members : members.filter(u => u === p.who), r = String(p.remind);
+    const title = !p.time ? `📅 ${p.day === today ? 'Hoy' : 'Mañana'}: ${p.title}` : `📅 ${p.title}`;
+    const when = !p.time ? (p.who === 'ambos' ? 'Tienen este plan' : 'Tienes este plan') : r === '0' ? `Ahora · ${p.time}` : r === '1440' ? `Mañana a las ${p.time}` : `En ${r === '60' ? '1 hora' : r + ' minutos'} · a las ${p.time}`;
+    for (const u of to) add(u, 'events', { title, body: [when, p.note].filter(Boolean).join(' · '), url: './?open=cal', tag: `ev-${p.id}-${p.day}` });
   }
 
   // 2b. Notas programadas: le llegan a la pareja a su hora
