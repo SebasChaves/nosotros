@@ -3,6 +3,7 @@ import { setDoc, updateDoc, deleteDoc, arrayUnion } from 'https://www.gstatic.co
 import { $, S, esc, icon, paint, on, expose, toast, openSheet, closeSheet, write, ref, newRef, animatePick,
          nameOf, partnerUid, partnerName, uid, ask, celebrate, mainTop, softDelete } from './core.js';
 import { DEFAULT_IDEAS, LIST_TEMPLATES } from './data.js';
+import { notify, meForPartner } from './push.js';
 
 let tab = 'lists', selList = null, pendingSel = null, mode = null, turns = null, randomResult = null, lastIdea = null;
 const filters = { place: 'todo', cost: 'todo' };
@@ -13,8 +14,18 @@ const costLbl = c => ['Gratis', '$', '$$', '$$$'][c];
 const curList = () => S.data.lists.find(l => l.id === selList);
 const myVotes = l => l.votes?.[uid()] || {};
 const theirVotes = l => { const p = partnerUid(); return (p && l.votes?.[p]) || {}; };
+// Me toca votar si faltan opciones mías y mi pareja ya votó o me invitó a votar (Match, «Elegir juntos» de Pelis).
+// La invitación (l.match = { by, at }) vale 7 días, para que no quede pendiente para siempre.
+const invitedBy = l => { const p = partnerUid(); return !!p && l.match?.by === p && Date.now() - (l.match.at || 0) < 7 * 864e5; };
 export function listNeedsMyVote(l) {
-  return Object.keys(theirVotes(l)).length > 0 && (l.options || []).some(o => !(o in myVotes(l)));
+  return (l.options || []).length >= 2 && (Object.keys(theirVotes(l)).length > 0 || invitedBy(l)) && (l.options || []).some(o => !(o in myVotes(l)));
+}
+// Abre una lista directo en Match (desde Inicio, un aviso o «Elegir juntos»)
+export function openVote(id) {
+  const l = id ? S.data.lists.find(x => x.id === id) : S.data.lists.find(listNeedsMyVote);
+  tab = 'lists'; window.go('s-decide');
+  if (l) { selList = pendingSel = l.id; mode = 'match'; turns = null; randomResult = null; }
+  render();
 }
 
 /* ---------- Pantalla ---------- */
@@ -32,8 +43,10 @@ function decideTab(t) { tab = t; render(); }
 function renderLists() {
   const lists = [...S.data.lists].sort((a, b) => (a.createdAt || 0) - (b.createdAt || 0));
   if (curList()) pendingSel = null;
-  else if (selList !== pendingSel) { selList = lists[0]?.id || null; mode = null; turns = null; }
+  // pendingSel = lista recién creada que todavía no llega a S.data; sin ella, se elige una (primero la que espera mi voto)
+  else if (!pendingSel || selList !== pendingSel) { const w = lists.find(listNeedsMyVote); selList = (w || lists[0])?.id || null; mode = w ? 'match' : null; turns = null; }
   const l = curList();
+  if (l && !mode && listNeedsMyVote(l)) mode = 'match'; // si llega una invitación y no han elegido modo, directo a votar
   let html = `<div class="chips scroll">${lists.map(x =>
     `<button class="chip ${x.id === selList ? 'on' : ''}" onclick="selectList('${x.id}')">${esc(x.emoji)} ${esc(x.name)}${listNeedsMyVote(x) ? ' •' : ''}</button>`).join('')}
     <button class="chip" onclick="newList()">${icon('plus')} Nueva lista</button></div>`;
@@ -46,6 +59,7 @@ function renderLists() {
     const opts = l.options || [];
     html += `<div class="glass stack">
       <div class="row"><h2>${esc(l.emoji)} ${esc(l.name)}</h2><button class="del" aria-label="Borrar lista" onclick="delList('${l.id}')">${icon('trash')}</button></div>
+      ${listNeedsMyVote(l) && mode !== 'match' ? `<button class="btn" onclick="setMode('match')">💞 ${esc(partnerName())} quiere decidir contigo: votar ahora</button>` : ''}
       <div class="chips">${opts.map((o, i) => `<span class="chip">${esc(o)}<span class="x" role="button" tabindex="0" aria-label="Quitar ${esc(o)}" onclick="delOption(${i})">${icon('x')}</span></span>`).join('') || '<span class="small muted">Sin opciones todavía</span>'}</div>
       ${suggestions(l).length ? `<button class="link" style="text-align:left;padding:0" onclick="addSuggestions()">${icon('plus')} Agregar ${suggestions(l).length} opciones sugeridas</button>` : ''}
       <div class="add-row"><input id="newOption" placeholder="Agregar opción…" maxlength="40" aria-label="Nueva opción" onkeydown="if(event.key==='Enter')addOption()">
@@ -98,13 +112,13 @@ function renderMode() {
     return paint(area, `<div class="glass" style="padding:24px 16px"><div class="label" style="justify-content:center">${esc(l.name)} · ${opts.length - pending.length + 1} de ${opts.length}</div>
       <div class="vote-opt">${esc(pending[0])}</div>
       <div class="vote"><button onclick="vote(false)" aria-label="No">${icon('x', 'ic lg')}</button><button class="yes" onclick="vote(true)" aria-label="Sí">${icon('heart-f', 'ic lg')}</button></div>
-      <p class="small muted center" style="margin:16px 0 0">${pn} no verá tus votos, solo en qué coinciden.</p></div>`);
+      <p class="small muted center" style="margin:16px 0 0">${pn} no verá tus votos, solo en qué coinciden.${Object.keys(theirs).length ? ` ${opts.every(o => o in theirs) ? `${pn} ya terminó ✓` : `${pn} va ${opts.filter(o => o in theirs).length} de ${opts.length}`}.` : ''}</p></div>`);
   }
   const partnerDone = p && opts.every(o => o in theirs);
   if (!partnerDone) {
     const n = opts.filter(o => o in theirs).length;
     return paint(area, `<div class="glass center stack"><div style="font-size:40px">⏳</div><h2>¡Ya votaste!</h2>
-      <p class="muted" style="margin:0">Esperando a ${pn}${n ? ` (va ${n} de ${opts.length})` : ''}. Le aparecerá un aviso en su app.</p></div>
+      <p class="muted" style="margin:0">Esperando a ${pn}: ${n ? `va ${n} de ${opts.length}` : 'todavía no empieza'}. Le avisamos al teléfono y le aparece en Inicio; cuando termine, te avisamos el resultado.</p></div>
       <button class="link" onclick="resetVotes()">Empezar de nuevo</button>`);
   }
   const matches = opts.filter(o => mine[o] && theirs[o]);
@@ -129,7 +143,7 @@ function renderMode() {
 
 const suggestions = l => { const tpl = LIST_TEMPLATES.find(x => x.name === l.name); return tpl ? tpl.options.filter(o => !(l.options || []).includes(o)) : []; };
 function addSuggestions() { const l = curList(); if (!l) return; write(updateDoc(ref('lists', l.id), { options: [...(l.options || []), ...suggestions(l)] })); turns = null; toast('Opciones agregadas'); }
-function selectList(id) { selList = id; mode = null; turns = null; randomResult = null; render(); }
+function selectList(id) { selList = id; const l = curList(); mode = l && listNeedsMyVote(l) ? 'match' : null; turns = null; randomResult = null; render(); }
 function setMode(m) { mode = m; turns = null; randomResult = null; render(); }
 export function createList(name, emoji, options) {
   const r = newRef('lists');
@@ -177,9 +191,19 @@ function vote(yes) {
   const l = curList(); if (!l) return;
   const o = (l.options || []).find(x => !(x in myVotes(l)));
   if (o === undefined) return;
-  write(updateDoc(ref('lists', l.id), { [`votes.${uid()}`]: { ...myVotes(l), [o]: yes } }));
+  const mine = { ...myVotes(l), [o]: yes }, theirs = theirVotes(l), opts = l.options || [];
+  const upd = { [`votes.${uid()}`]: mine };
+  // Al empezar a votar sin que la pareja haya votado, queda la invitación: a ella le aparece aunque yo no termine
+  if (!Object.keys(myVotes(l)).length && !Object.keys(theirs).length) upd.match = { by: uid(), at: Date.now() };
+  write(updateDoc(ref('lists', l.id), upd));
+  if (opts.some(x => !(x in mine))) return; // todavía me faltan
+  const p = partnerUid(), done = p && opts.every(x => x in theirs), name = `${l.emoji || '🎲'} ${l.name}`;
+  if (!done) return notify('decide', { title: `${name}: te toca votar`, body: `${meForPartner()} ya votó. Vota sí ❤️ o no ✕ y vean en qué coinciden.`, url: './?open=decide', tag: 'decide-' + l.id });
+  const matches = opts.filter(x => mine[x] && theirs[x]);
+  notify('decide', { title: matches.length ? `💞 ${name}: coinciden en ${matches.length === 1 ? matches[0] : matches.length + ' opciones'}` : `😅 ${name}: no coincidieron`,
+    body: matches.length > 1 ? matches.slice(0, 4).join(', ') + (matches.length > 4 ? '…' : '') : matches.length ? '¡Ya está decidido!' : 'Prueben «Por turnos» para desempatar.', url: './?open=decide', tag: 'decide-' + l.id });
 }
-async function resetVotes() { const l = curList(); if (l && await ask('¿Borrar los votos de los dos y empezar de nuevo?')) write(updateDoc(ref('lists', l.id), { votes: {} })); }
+async function resetVotes() { const l = curList(); if (l && await ask('¿Borrar los votos de los dos y empezar de nuevo?')) write(updateDoc(ref('lists', l.id), { votes: {}, match: null })); }
 function decideAmong() {
   const l = curList(), matches = l.options.filter(o => myVotes(l)[o] && theirVotes(l)[o]);
   $('mSpin').disabled = true;
@@ -228,5 +252,5 @@ function addIdea() {
 }
 
 on('lists ideas', render);
-expose({ decideTab, addSuggestions, selectList, setMode, fromTemplate, newList, createListFromSheet, delList, addOption, delOption,
+expose({ openVote, decideTab, addSuggestions, selectList, setMode, fromTemplate, newList, createListFromSheet, delList, addOption, delOption,
   decideRandom, eliminate, restartTurns, vote, resetVotes, decideAmong, setFilter, spin, ideaToBucket, addIdea });

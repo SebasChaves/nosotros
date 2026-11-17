@@ -10,7 +10,7 @@ import { PUSH } from './push-config.js';
 export const NOTIF_TYPES = [['snaps', '📸 Historias y respuestas'], ['reacts', '😍 Reacciones a tus historias'], ['notes', '💌 Notas nuevas'],
   ['thinks', '❤️ «Pensando en ti»'], ['songs', '🎵 Canciones dedicadas'], ['coupons', '🎟️ Cupones nuevos, canjeados y cumplidos'],
   // Programados: los manda el Worker solo (notificaciones/worker.js → scheduled)
-  ['cravings', '🍓 Antojos (nuevos, urgentes y cumplidos)'], ['arrows', '🏹 Flechas (reto del día)'], ['bus', '🚏 La parada (reto del día y duelos)'], ['fruta', '🍍 Pura fruta (reto del día y duelos)'], ['pet', '🐾 Su mascota (compras, récords, nacimiento)'], ['money', '💸 Gastos (salidas, presupuesto y resumen del domingo)'], ['grocery', '🛒 Cuando tu pareja va al súper'], ['vacations', '🏖️ Vacaciones y días libres que pone tu pareja'], ['trips', '✈️ Viajes (lugares por conocer y lo que falta antes de salir)'], ['shows', '🎬 Cuando tu pareja avanza en una serie que ven por separado'], ['guess', '🔮 ¿Qué respondería tu pareja?'],
+  ['cravings', '🍓 Antojos (nuevos, urgentes y cumplidos)'], ['arrows', '🏹 Flechas (reto del día)'], ['bus', '🚏 La parada (reto del día y duelos)'], ['fruta', '🍍 Pura fruta (reto del día y duelos)'], ['pet', '🐾 Su mascota (compras, récords, nacimiento)'], ['money', '💸 Gastos (salidas, presupuesto y resumen del domingo)'], ['grocery', '🛒 Cuando tu pareja va al súper'], ['vacations', '🏖️ Vacaciones y días libres que pone tu pareja'], ['trips', '✈️ Viajes (lugares por conocer y lo que falta antes de salir)'], ['shows', '🎬 Cuando tu pareja avanza en una serie que ven por separado'], ['guess', '🔮 ¿Qué respondería tu pareja?'], ['decide', '🎲 Decidir juntos (te toca votar y en qué coincidieron)'],
   ['streak', '🔥 Racha en peligro y mascota con hambre (en la noche)'], ['reminders', '🔔 Recordatorios del día'], ['events', '📅 Planes del calendario (nuevos, cambios y recordatorio antes)'], ['dates', '🎂 Fechas especiales (el día antes y el mismo día)'], ['week', '📊 Resumen de la semana (domingo en la noche)']];
 
 export const pushConfigured = () => !!(PUSH.url && PUSH.publicKey);
@@ -175,6 +175,7 @@ const OPEN = {
   shows: () => go('s-shows'),
   dreams: () => { go('s-trips'); window.tripsView?.('dreams'); },
   trips: () => go('s-trips'),
+  decide: () => window.openVote?.(),
   gift: () => { go('s-home'); setTimeout(() => window.unwrapGift?.(), 600); },
   'cravings-done': () => window.openCravings?.('done'),
 };

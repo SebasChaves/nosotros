@@ -1,7 +1,8 @@
 {
-  "version": "1.10.0",
-  "notes": ["⬇️ Bajen sus fotos al teléfono: en Momentos → Galería → «Bajar fotos», todas juntas o por año (un .zip con la fecha y el nombre de cada momento).", "Para guardar una sola: ábranla en grande y toquen «⬇️ Guardar»."],
+  "version": "1.11.0",
+  "notes": ["🎲 Decidir juntos mejorado: cuando uno empieza a votar, al otro le llega un aviso y le aparece en Inicio; al abrirlo va directo a votar.", "Cuando los dos terminan, les avisa en qué coincidieron.", "Se puede apagar en Ajustes → Notificaciones → 🎲 Decidir juntos."],
   "history": [
+    { "version": "1.11.0", "notes": ["🎲 Decidir juntos mejorado: cuando uno empieza a votar, al otro le llega un aviso y le aparece en Inicio; al abrirlo va directo a votar.", "Cuando los dos terminan, les avisa en qué coincidieron.", "Se puede apagar en Ajustes → Notificaciones → 🎲 Decidir juntos."] },
     { "version": "1.10.0", "notes": ["⬇️ Bajen sus fotos al teléfono: en Momentos → Galería → «Bajar fotos», todas juntas o por año (un .zip con la fecha y el nombre de cada momento).", "Para guardar una sola: ábranla en grande y toquen «⬇️ Guardar»."] },
     { "version": "1.9.0", "notes": ["📅 El calendario ya avisa: al anotar un plan elijan cuándo avisar (1 hora antes, 15 minutos, a la hora o 1 día antes). Le llega a quien es el plan.", "Cuando uno anota o cambia un plan de los dos, al otro le llega un aviso.", "Se puede apagar en Ajustes → Notificaciones → 📅 Planes del calendario."] },
     { "version": "1.8.5", "notes": ["Las novedades ya no se repiten."] },

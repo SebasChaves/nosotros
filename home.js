@@ -91,7 +91,7 @@ function todayCard() {
   const toDo = S.data.coupons.filter(c => c.fromUid === uid() && c.redeemedAt && !c.doneAt).length; if (toDo) row('🎟️', `${pn} canjeó ${plural(toDo, 'cupón', 'cupones')}: te toca cumplir`, `go('s-love');loveTab('coupons')`);
   for (const c of couponsExpiring().slice(0, 2)) row('⏳', `Tu cupón «${esc(c.text)}» vence ${c.expires === tk ? 'hoy' : 'pronto'}: ¡úsalo!`, `go('s-love');loveTab('coupons')`);
   const fresh = S.data.coupons.filter(c => c.fromUid !== uid() && !c.seenAt).length; if (fresh) row('🎁', `${pn} te regaló ${plural(fresh, 'cupón', 'cupones')}`, `go('s-love');loveTab('coupons')`);
-  const votes = S.data.lists.filter(listNeedsMyVote).length; if (votes) row('🎲', `${pn} ya votó en ${plural(votes, 'lista', 'listas')}: falta tu voto`, `go('s-decide');decideTab('lists')`);
+  const vl = S.data.lists.filter(listNeedsMyVote); if (vl.length) row('🎲', vl.length === 1 ? `${pn} quiere decidir contigo: «${esc(vl[0].name)}». Te toca votar` : `${pn} quiere decidir contigo en ${plural(vl.length, 'lista', 'listas')}: te toca votar`, `openVote('${vl.length === 1 ? vl[0].id : ''}')`);
   if (quizWaiting()) row('🧠', `${pn} ya jugó el quiz: te toca`, `go('s-quiz')`);
   const tripVotes = S.data.trips.filter(t => [...(t.stays || []), ...(t.flights || [])].some(o => o.votes?.[uid()] === undefined)); if (tripVotes.length) row('🏨', `Hay opciones nuevas para votar en ${esc(tripVotes[0].name)}`, `openTrip('${tripVotes[0].id}')`);
 

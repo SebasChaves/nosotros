@@ -29,7 +29,7 @@ Casi todos los docs llevan `by: uid` (quién lo creó) y `createdAt: ms`. Fechas
 | `answers` | id = día; respuestas a la pregunta del día por uid |
 | `moods`, `thinks` | ánimo del día / contador de "Pensando en ti" por uid y día |
 | `challenges` | reto de la semana cumplido (`doneAt`) |
-| `lists` | listas de Decidir: `name, emoji, options[], votes: { <uid>: { opción: true/false } }` |
+| `lists` | listas de Decidir: `name, emoji, options[], votes: { <uid>: { opción: true/false } }, match?{by, at}, history[]`. `match` = invitación a votar (al empezar a votar primero o con «Elegir juntos» de Pelis): a la pareja le aparece por 7 días aunque quien invitó no termine. Avisos tipo `decide` (te toca votar / en qué coincidieron) |
 | `ideas` | ideas de cita propias: `t, place: 'casa'|'afuera', cost: 0-3, e` |
 | `bucket`, `groceries` | `text, done, doneAt` |
 | `expenses` | gastos (`desc, amount, paidBy, split: half/full/none, cat, date, tripId?, outing?, outName?, quick?, items?[{t, a?}]` — lo que se compró; desde el Súper se llena con el carrito) y pagos de saldo (`type: 'settle'`) |

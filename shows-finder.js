@@ -6,6 +6,7 @@ import { setDoc, updateDoc } from 'https://www.gstatic.com/firebasejs/11.0.2/fir
 import { $, S, esc, icon, expose, toast, write, ref, uid, profile, nameOf, syncBack, on } from './core.js';
 import { tmdb, IMG, region, addFromTmdb, HAS_TMDB } from './shows.js';
 import { createList } from './decide.js';
+import { notify, meForPartner } from './push.js';
 
 // Estilos → géneros de TMDB [película, serie] (varios estilos = cualquiera de ellos)
 const STYLES = [
@@ -192,9 +193,11 @@ async function fdAdd(i) {
 function fdTogether() {
   const opts = [...new Set(results.slice(0, 15).map(r => `${r.media_type === 'tv' ? '📺' : '🎬'} ${r.title || r.name}`))];
   const name = '¿Qué vemos hoy?', ex = S.data.lists.find(l => l.name === name);
-  if (ex) write(updateDoc(ref('lists', ex.id), { options: opts, votes: {}, history: ex.history || [] })); else createList(name, '🍿', opts);
+  const match = { by: uid(), at: Date.now() }; // invitación: a la pareja le aparece para votar aunque yo no haya votado
+  let id; if (ex) { id = ex.id; write(updateDoc(ref('lists', ex.id), { options: opts, votes: {}, match, history: ex.history || [] })); } else { id = createList(name, '🍿', opts); write(updateDoc(ref('lists', id), { match })); }
   closeFinder();
-  setTimeout(() => { window.go('s-decide'); window.decideTab('lists'); const l = S.data.lists.find(x => x.name === name); if (l) { window.selectList(l.id); window.setMode('match'); } toast('Voten sí ❤️ o no ✕; quedan las que les gustan a los dos'); }, 300);
+  notify('decide', { title: '🍿 ¿Qué vemos hoy?', body: `${meForPartner()} armó ${opts.length} opciones para elegir juntos. Vota sí ❤️ o no ✕.`, url: './?open=decide', tag: 'decide-' + id });
+  setTimeout(() => { window.openVote(id); toast('Voten sí ❤️ o no ✕; quedan las que les gustan a los dos'); }, 300);
 }
 function closeFinder() { const el = view; view = null; if (!el) return; el.classList.add('out'); setTimeout(() => { el.remove(); syncBack(); }, 160); }
 // Si cambian las calificaciones, se recalculan sus gustos la próxima vez
