@@ -77,6 +77,9 @@ teléfono no lo ve hasta borrar esas claves.
   `loadPhotos()` usa `data-thumb` y crea la miniatura si falta.
 - Ids: momento = id del momento; foto del día = `d-<día>-<uid>`; avatar = `avatar-<uid>-<ms>`; fondo = `bg-<uid>`;
   portada de canción = `song-<id>-<ms>`; historia = `snap-<id>`; receta hecha = `cook-<id>`; lugar por conocer = `dream-<id>`; diario de viaje = `tj-<id>`. Al borrar el dueño, borra también su foto (y miniatura).
+- **Bajarlas al teléfono** (`photo-save.js`): el visor tiene «⬇️ Guardar» (una foto; iPhone = menú compartir, Android =
+  Descargas) y la Galería «⬇️ Bajar fotos» (las de Momentos en un .zip armado en el teléfono, todas o por año; lee cada
+  `photos/<id>` una vez, sin guardarlas en la caché). Son las fotos reducidas de Futari, no el original.
 - Espacio gratis: 1 GB. El panel de administración muestra una estimación del uso.
 
 ## Registro de uso (`visits`, `errors`)

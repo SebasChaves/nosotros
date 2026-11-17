@@ -9,6 +9,7 @@ import { todayAnswers } from './home.js';
 import './decide.js';
 import './love.js';
 import './moments.js';
+import './photo-save.js';
 import { snapShortcut } from './snaps.js';
 import { moneyShortcut } from './money.js';
 import { shareShortcut } from './location.js';
@@ -45,7 +46,7 @@ import { logVisit } from './tracking.js';
 import { maybeStartTour, resetTourCheck } from './tour.js';
 
 // Versión de esta copia de la app. Súbela junto con version.json y la caché de sw.js al publicar.
-export const APP_VERSION = '1.9.0';
+export const APP_VERSION = '1.10.0';
 window.FUTARI_VERSION = APP_VERSION; // lo guarda el registro de ingresos (panel de administración)
 
 // Si la app estuvo abierta hace poco (Android la cierra sola al salir), se vuelve rápido a la misma pantalla.

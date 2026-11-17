@@ -740,7 +740,7 @@ export async function compressImage(file, maxSide = 1280) {
 export const photoError = e => toast(e?.message === 'heic' ? 'Esa foto está en formato HEIF. Elige otra o cambia la cámara a JPG' : 'No se pudo abrir esa foto. Prueba con otra');
 // Abre la foto en grande: muestra la miniatura al instante y la cambia por la completa al cargar.
 export async function viewPhoto(img) {
-  $('viewerImg').src = img.src || ''; $('viewer').classList.add('show'); syncBack();
+  $('viewerImg').src = img.src || ''; $('viewer').dataset.name = img.alt || 'foto-futari'; $('viewer').classList.add('show'); syncBack();
   const id = img.dataset?.thumb;
   if (id) { const full = await getPhoto(id); if (full && $('viewer').classList.contains('show')) $('viewerImg').src = full; }
 }

@@ -22,6 +22,7 @@ manifest.json   PWA (nombre, íconos, colores)
 | `home.js` | Inicio: contador de días, tarjeta urgente, tarjeta **Hoy** (resumen de pendientes), ánimo, pregunta del día, reto semanal, próximas fechas, rachas, "Pensando en ti" |
 | `decide.js` (+ `data.js`) | ¿Qué hacemos?: listas con modos al azar / por turnos / match, y ruleta de ideas de citas |
 | `moments.js`, `daily.js` | Momentos (línea de tiempo con fotos, galería) y Foto del día (la de la pareja se revela al subir la tuya) |
+| `photo-save.js` | Guardar fotos en el teléfono: botón «Guardar» del visor y «Bajar fotos» de la Galería (.zip hecho a mano, sin librerías) |
 | `love.js` | Detalles: frasco de notas y cupones canjeables |
 | `snaps.js` | **Historias** (antes «instantáneas»; el código sigue diciendo `snaps`): fotos de 24 h con texto, reacciones, **chat** (`chat[]` en el doc), respuesta con foto y «Guardar en Momentos» (la conversación queda en la nota); tarjeta de Inicio y pestaña en Momentos |
 | `pet.js`, `pet-art.js`, `pet-games.js` | Mascota: huevo que nace a los 3 días comidos y crece por etapas con la racha; triste si ayer no comió (no pierde lo crecido). Pantalla `s-pet` con Vestir, Tienda (monedas de los dos) y Juegos. `pet-art.js` dibuja en SVG (estilo mochi, 10 animales, ropa, escenario por hora); `pet-games.js` tiene los 4 juegos (canvas) |

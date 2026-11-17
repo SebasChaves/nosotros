@@ -104,7 +104,8 @@ function delMoment(id) {
 function renderGallery() {
   const items = S.data.moments.filter(m => m.hasPhoto).sort((a, b) => b.date.localeCompare(a.date));
   let html = `<div class="topbar"><div class="row start"><button class="icon-btn" aria-label="Volver" onclick="go('s-moments')">${icon('back')}</button><h1>Galería</h1></div>
-    <span class="small muted">${items.length} fotos</span></div>`;
+    ${items.length ? `<button class="btn small ghost" onclick="downloadPhotos()" aria-label="Bajar fotos al teléfono">⬇️ Bajar fotos</button>` : ''}</div>
+    ${items.length ? `<p class="tiny muted" style="margin:-6px 0 0">${items.length} fotos</p>` : ''}`;
   if (!items.length) html += '<div class="glass center muted">Cuando agreguen momentos con foto, aparecen aquí.</div>';
   let year = null, grid = '';
   for (const m of items) {

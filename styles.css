@@ -334,6 +334,7 @@ body[data-theme="light"] { --c-plan: #E8336A; --c-date: #D98A00; --c-trip: #4F5F
 .viewer { touch-action: none; }
 .viewer-x { position: absolute; top: calc(env(safe-area-inset-top) + 12px); right: 14px; z-index: 1; width: 42px; height: 42px; border-radius: 50%; border: 0; background: rgba(255,255,255,.16); color: #fff; display: grid; place-items: center; cursor: pointer; backdrop-filter: blur(12px); -webkit-backdrop-filter: blur(12px); }
 .viewer-x .ic { width: 20px; height: 20px; }
+.viewer-save { position: absolute; bottom: calc(env(safe-area-inset-bottom) + 20px); left: 50%; transform: translateX(-50%); z-index: 1; border: 0; border-radius: 999px; padding: 11px 20px; background: rgba(255,255,255,.18); color: #fff; font: inherit; font-weight: 600; cursor: pointer; backdrop-filter: blur(12px); -webkit-backdrop-filter: blur(12px); }
 .offline { display: none; text-align: center; font-size: 12px; color: var(--muted); }
 body.is-offline .offline { display: block; }
 .beat { display: inline-block; animation: beat 1.4s infinite; }
