@@ -2,10 +2,11 @@
 //   Ingresos (por día, horas, teléfonos, datos, errores) · Estadísticas (uso, notificaciones, quién hace más) · Pruebas.
 import { query, where, orderBy, limit, getDocs, getCountFromServer, writeBatch } from 'https://www.gstatic.com/firebasejs/11.0.2/firebase-firestore.js';
 import { $, S, db, esc, icon, paint, on, onShow, expose, toast, ask, col, ref, avatar, loadPhotos, nameOf, openSheet, celebrate,
-         today, dayKey, todayKey, parseDate, fmtShort, fmtDay, plural, COLLECTIONS, uid, EMU, vnum, vlabel } from './core.js';
+         today, dayKey, todayKey, parseDate, fmtShort, fmtDay, plural, COLLECTIONS, uid, EMU, vnum, vlabel, auth } from './core.js';
 import { isTester, testerCard } from './testing.js';
 import { giftAdminCards } from './gifts.js';
-import { NOTIF_TYPES, pushHere } from './push.js';
+import { NOTIF_TYPES, pushHere, pushConfigured } from './push.js';
+import { PUSH } from './push-config.js';
 import { SPECIES, STAGES } from './pet.js';
 import { sceneSVG, petSVG, ITEMS, SLOTS } from './pet-art.js';
 import { GAMES, playGame } from './pet-games.js';
@@ -46,7 +47,7 @@ async function load() {
   try {
     const [vs, es, pc, us, st] = await Promise.all([
       getDocs(query(col('visits'), where('at', '>=', since), orderBy('at', 'desc'))),
-      getDocs(query(col('errors'), orderBy('at', 'desc'), limit(20))),
+      getDocs(query(col('errors'), orderBy('at', 'desc'), limit(100))),
       getCountFromServer(col('photos')).catch(() => null),
       getDocs(query(col('usage'), where('day', '>=', sinceKey))).catch(() => null),
       getDocs(query(col('stats'), where('day', '>=', sinceKey))).catch(() => null),
@@ -56,8 +57,34 @@ async function load() {
     stats = st ? st.docs.map(d => d.data()) : [];
     errors = es.docs.map(d => ({ id: d.id, ...d.data() }));
     photoCount = pc ? pc.data().count : null;
+    if (tab === 'bitacoras') await loadLogs(since, sinceKey);
   } catch (e) { console.error(e); toast('No se pudieron cargar los datos'); }
   loading = false; render();
+}
+
+/* ---------- Bitácoras: se leen solo al abrir esa pestaña (cada registro es una lectura de Firebase) ---------- */
+let logs = { actions: [], perf: [], notif: [], worker: null, workerMsg: '', key: '' }, sub = 'acciones';
+async function loadLogs(since, sinceKey) {
+  const [ac, pf, nl] = await Promise.all([
+    getDocs(query(col('actions'), where('day', '>=', sinceKey))).catch(() => null),
+    getDocs(query(col('perf'), where('at', '>=', since), orderBy('at', 'desc'), limit(300))).catch(() => null),
+    getDocs(query(col('notiflog'), where('day', '>=', sinceKey))).catch(() => null),
+  ]);
+  logs.actions = ac ? ac.docs.map(d => d.data()) : [];
+  logs.perf = pf ? pf.docs.map(d => d.data()) : [];
+  logs.notif = nl ? nl.docs.flatMap(d => d.data().list || []) : [];
+  logs.key = sinceKey;
+  // Lo que anota el Worker (avisos programados, respaldos y sus errores) vive en su KV: se le pide con la sesión
+  logs.worker = null; logs.workerMsg = '';
+  if (EMU) { logs.workerMsg = 'En el emulador no hay servicio de Cloudflare.'; return; }
+  if (!pushConfigured()) { logs.workerMsg = 'El servicio de avisos no está conectado.'; return; }
+  try {
+    const token = await auth.currentUser.getIdToken();
+    const r = await fetch(PUSH.url.replace(/\/$/, '') + '/bitacora', { method: 'POST', headers: { Authorization: 'Bearer ' + token, 'Content-Type': 'application/json' }, body: JSON.stringify({ from: sinceKey }) });
+    const j = await r.json().catch(() => ({}));
+    if (r.ok && j.ok) logs.worker = j;
+    else logs.workerMsg = j.error === 'not-found' ? 'El Worker de Cloudflare es de una versión anterior: falta pegar la v15.' : j.error === 'no-kv' ? 'El Worker no tiene el espacio KV «RESPALDOS» conectado.' : `El Worker respondió ${r.status}${j.error ? ' (' + j.error + ')' : ''}.`;
+  } catch (e) { logs.workerMsg = 'No se pudo hablar con el Worker: ' + (e.message || e); }
 }
 
 function render() {
@@ -118,16 +145,12 @@ function render() {
     <div class="progress"><i style="width:${Math.min(100, estMB / 1024 * 100).toFixed(1)}%"></i></div>
     <span class="tiny muted">${withPhoto} momentos con foto · ${photoCount ?? '?'} archivos de foto (incluye miniaturas y perfiles)</span></div>`;
 
-  // 7. Errores
-  const errs = errors.length ? `<ul class="list">${errors.map(e => `<li><div class="txt"><span class="small">${esc(e.message)}</span>
-    <span class="sub">${esc(nameOf(e.uid))} · ${ago(e.at)} · ${esc(e.screen || '')} · ${esc([e.os, e.browser, e.app && 'v' + e.app].filter(Boolean).join(' · '))}${e.where ? ' · ' + esc(e.where) : ''}</span></div></li>`).join('')}</ul>
-    <button class="btn ghost small" onclick="admClearErrors()">Borrar errores</button>` : '<p class="small muted" style="margin:0">Sin errores registrados 🎉</p>';
-
   const head = `<div class="topbar"><div class="row start"><button class="icon-btn" aria-label="Volver" onclick="go('s-more')">${icon('back')}</button><h1>Admin</h1></div>
       <button class="btn ghost small" onclick="admReload()">${loading ? 'Cargando…' : 'Actualizar'}</button></div>
-    <div class="seg">${[['ingresos', 'Ingresos'], ['stats', 'Estadísticas'], ['juegos', '🎮 Juegos'], ['pruebas', 'Pruebas']].map(([k, l]) => `<button class="${tab === k ? 'on' : ''}" onclick="admTab('${k}')">${l}</button>`).join('')}</div>
+    <div class="seg adm-seg">${[['ingresos', 'Ingresos'], ['stats', 'Estadísticas'], ['bitacoras', '📒 Bitácoras'], ['juegos', '🎮 Juegos'], ['pruebas', 'Pruebas']].map(([k, l]) => `<button class="${tab === k ? 'on' : ''}" onclick="admTab('${k}')">${l}</button>`).join('')}</div>
     ${!['pruebas', 'juegos'].includes(tab) ? `<div class="chips">${[7, 14, 30].map(n => `<button class="chip ${range === n ? 'on' : ''}" onclick="admRange(${n})">${n} días</button>`).join('')}</div>` : ''}`;
   if (tab === 'stats') { paint('s-admin', head + statsHTML(ids, days)); loadPhotos($('s-admin')); return; }
+  if (tab === 'bitacoras') { paint('s-admin', head + logsHTML(ids, days)); return; }
   if (tab === 'pruebas') { paint('s-admin', head + testsHTML()); showVersion(); return; }
   if (tab === 'juegos') { paint('s-admin', head + juegosHTML()); return; }
   paint('s-admin', `${head}
@@ -137,7 +160,8 @@ function render() {
     <div class="glass stack"><span class="label">Todos los días · horas de cada uno</span>${table}</div>
     <div class="glass stack"><span class="label">Horas más activas</span>${heat}</div>
     <div class="glass stack"><span class="label">Datos guardados</span>${data}</div>
-    <div class="glass stack"><span class="label">Errores recientes</span>${errs}</div>`);
+    <div class="glass row"><span class="small">${errors.length ? `⚠️ ${plural(errors.length, 'error registrado', 'errores registrados')}` : 'Sin errores registrados 🎉'}</span>
+      <button class="btn ghost small" onclick="admTab('bitacoras');admSub('errores')">Ver en Bitácoras</button></div>`);
   loadPhotos($('s-admin'));
 }
 
@@ -279,6 +303,124 @@ function statsHTML(ids, days) {
     <div class="glass stack"><span class="label">⚖️ Quién hace más · ${range} días</span>${who}</div>
     <div class="glass stack"><span class="label">🔔 Notificaciones · ${range} días</span>${notif}</div>`;
 }
+/* ---------- Pestaña Bitácoras ---------- */
+const COL_NAMES = { bucket: 'Bucket list', ideas: 'Ideas de citas', notes: 'Notas', coupons: 'Cupones', dates: 'Fechas', moments: 'Momentos', lists: 'Decidir',
+  answers: 'Pregunta del día', moods: 'Ánimo', challenges: 'Reto semanal', groceries: 'Súper', expenses: 'Gastos', places: 'Restaurantes', trips: 'Viajes',
+  quiz: 'Quiz', profiles: 'Perfil y ajustes', shows: 'Pelis y series', events: 'Planes', cards: 'Cartas del juego', games: 'Juego de retos', thinks: '«Pensando en ti»',
+  daily: 'Foto del día', pins: 'Mapa', recipes: 'Recetas', recipefav: 'Recetas favoritas', menu: 'Menú', songs: 'Playlist', reminders: 'Recordatorios', snaps: 'Historias',
+  pet: 'Mascota', guess: '¿Qué respondería?', cravings: 'Antojos', arrows: 'Flechas', bus: 'La parada', money: 'Presupuesto y alcancías', cooked: 'Las que hicimos',
+  dreams: 'Por conocer', vacations: 'Vacaciones', fruta: 'Pura fruta' };
+const OPS = { a: ['➕', 'agregó'], e: ['✏️', 'cambió'], d: ['🗑️', 'borró'] };
+const NOTIF_NAMES = Object.fromEntries(NOTIF_TYPES.map(([k, l]) => [k, l.split(' (')[0]]));
+const RES = { ok: 'entregado', apagado: 'lo tiene apagado', 'sin-telefono': 'sin teléfono con avisos', 'sin-configurar': 'servicio sin conectar', emulador: 'emulador (no se manda)', error: 'error de conexión' };
+const ERR_KINDS = { js: 'Código', promesa: 'Promesa', guardar: 'Guardar', escuchar: 'Sincronizar', foto: 'Foto' };
+const tm = ms => new Date(ms).toLocaleTimeString('es', { hour: '2-digit', minute: '2-digit' });
+const dayLbl = ms => capital(new Date(ms).toLocaleDateString('es', { weekday: 'short', day: 'numeric', month: 'short' }));
+const secs = ms => ms == null ? '—' : ms < 1000 ? `${Math.round(ms)} ms` : `${(ms / 1000).toFixed(1)} s`;
+const median = a => { const s = a.filter(x => x != null).sort((x, y) => x - y), h = s.length >> 1; return !s.length ? null : s.length % 2 ? s[h] : (s[h - 1] + s[h]) / 2; };
+// Lista agrupada por día (lo más nuevo arriba), con «Ver más» para no pintar cientos de filas
+let logMore = 60;
+function byDayList(items, row) {
+  const shown = items.slice(0, logMore); let last = '';
+  const html = shown.map(x => { const d = dayKey(new Date(x.at)), h = d !== last ? `<li class="adm-logday"><span class="label">${dayLbl(x.at)}</span></li>` : ''; last = d; return h + row(x); }).join('');
+  return `<ul class="list adm-log">${html}</ul>${items.length > logMore ? `<button class="btn ghost small" onclick="admMore()">Ver más (${items.length - logMore})</button>` : ''}`;
+}
+function logsHTML(ids, days) {
+  const tabs = [['acciones', 'Acciones'], ['errores', 'Errores'], ['avisos', 'Avisos'], ['respaldos', 'Respaldos'], ['rendimiento', 'Rendimiento']];
+  const nav = `<div class="chips scroll">${tabs.map(([k, l]) => `<button class="chip ${sub === k ? 'on' : ''}" onclick="admSub('${k}')">${l}</button>`).join('')}</div>`;
+  if (loading && !logs.key) return nav + '<p class="small muted">Cargando…</p>';
+  const body = { acciones: actionsHTML, errores: errorsHTML, avisos: notifsHTML, respaldos: backupsHTML, rendimiento: perfHTML }[sub](ids, days);
+  return nav + body;
+}
+function actionsHTML(ids) {
+  const per = ids.map((id, i) => {
+    const mine = logs.actions.filter(a => a.uid === id), tot = {}, ops = { a: 0, e: 0, d: 0 };
+    for (const a of mine) for (const [c, o] of Object.entries(a.n || {})) for (const [k, v] of Object.entries(o)) { tot[c] = (tot[c] || 0) + v; ops[k] = (ops[k] || 0) + v; }
+    const top = Object.entries(tot).sort((a, b) => b[1] - a[1]).slice(0, 8), mx = Math.max(1, ...top.map(t => t[1]));
+    return `<div class="glass stack" style="gap:8px"><div class="row start" style="gap:8px">${avatar(id, 28)}<b>${esc(nameOf(id))}</b></div>
+      <div class="grid2" style="gap:6px;grid-template-columns:repeat(3,1fr)">${Object.entries(OPS).map(([k, [e, l]]) => `<div class="adm-kpi"><b class="num">${ops[k] || 0}</b><span class="tiny muted">${e} ${l}</span></div>`).join('')}</div>
+      ${top.length ? `<span class="tiny muted">Dónde hizo más cosas</span>${top.map(([c, v]) => `<div class="adm-bar"><span class="small">${esc(COL_NAMES[c] || c)}</span><span class="adm-barline"><i style="width:${Math.round(v / mx * 100)}%;background:${COLORS[i % 2]}"></i></span><span class="tiny muted num">${v}</span></div>`).join('')}`
+        : '<p class="tiny muted" style="margin:0">Sin acciones registradas en el periodo.</p>'}</div>`;
+  }).join('');
+  const all = logs.actions.flatMap(a => (a.log || []).map(x => ({ ...x, uid: a.uid }))).sort((a, b) => b.at - a.at);
+  const list = all.length ? byDayList(all, x => `<li><div class="txt"><span class="small">${OPS[x.o]?.[0] || '•'} <b>${esc(nameOf(x.uid))}</b> ${OPS[x.o]?.[1] || x.o} en ${esc(COL_NAMES[x.c] || x.c)}</span></div><span class="tiny muted num">${tm(x.at)}</span></li>`)
+    : '<p class="small muted" style="margin:0">Todavía no hay acciones registradas.</p>';
+  return `<div class="stack" style="gap:14px">${per}</div>
+    <div class="glass stack"><span class="label">Qué hizo cada uno</span>
+      <p class="tiny muted" style="margin:0">Cada teléfono anota lo que hace su dueño: solo la sección y la acción, nunca el texto. La misma cosa cuenta una vez por minuto. Se sube cada 5 minutos o al salir de la app.</p>${list}</div>`;
+}
+function errorsHTML() {
+  if (!errors.length) return '<div class="glass"><p class="small muted" style="margin:0">Sin errores registrados 🎉</p></div>';
+  const kinds = {}; for (const e of errors) kinds[e.kind || 'js'] = (kinds[e.kind || 'js'] || 0) + (e.count || 1);
+  const list = byDayList(errors, e => `<li style="display:block"><div class="row start" style="gap:6px;flex-wrap:wrap"><span class="pill">${esc(ERR_KINDS[e.kind] || 'Código')}</span>${(e.count || 1) > 1 ? `<span class="pill">×${e.count}</span>` : ''}${e.code ? `<span class="pill">${esc(e.code)}</span>` : ''}${e.online === false ? '<span class="pill">sin internet</span>' : ''}<span class="tiny muted" style="margin-left:auto">${tm(e.at)}</span></div>
+    <div class="small" style="margin-top:4px;word-break:break-word">${esc(e.message)}</div>
+    <div class="tiny muted">${esc(nameOf(e.uid))} · ${esc((e.screen || '').replace(/^s-/, ''))}${e.where ? ' · ' + esc(e.where) : ''} · ${esc([e.model || e.os, e.browser, e.app && 'v' + vlabel(e.app)].filter(Boolean).join(' · '))}</div>
+    ${e.trail?.length ? `<div class="tiny muted">Venía de: ${esc(e.trail.join(' → '))}</div>` : ''}
+    ${e.stack ? `<details><summary class="tiny muted">Detalle técnico</summary><pre class="adm-pre">${esc(e.stack)}</pre></details>` : ''}</li>`);
+  return `<div class="glass stack"><span class="label">Errores · últimos ${errors.length}</span>
+      <div class="chips">${Object.entries(kinds).map(([k, n]) => `<span class="chip" style="cursor:default">${esc(ERR_KINDS[k] || k)} · ${n}</span>`).join('')}</div>
+      <p class="tiny muted" style="margin:0">Código = error del programa · Guardar = Firebase no guardó · Sincronizar = falló la conexión en vivo · Foto = no se pudo abrir una foto. Si se repite, se suma (×).</p>
+      ${list}<button class="btn ghost small" onclick="admClearErrors()">Borrar errores</button></div>`;
+}
+function notifsHTML(ids) {
+  const wk = logs.worker ? Object.values(logs.worker.days).flatMap(d => (d.notifs || []).map(x => ({ ...x, src: 'worker' }))) : [];
+  const all = [...logs.notif, ...wk].sort((a, b) => b.at - a.at);
+  const ok = all.filter(x => x.r === 'ok' || (x.src === 'worker' && x.ok > 0)).length, off = all.filter(x => x.r === 'apagado').length;
+  const failed = all.length - ok - off - all.filter(x => x.r === 'emulador').length;
+  const res = x => x.src === 'worker' ? (x.ok ? `entregado${x.n > 1 ? ` (${x.ok}/${x.n})` : ''}` : `no llegó (${x.r || 'sin teléfono'})`) : x.r === 'ok' ? `entregado${x.n > 1 ? ` (${x.ok}/${x.n})` : ''}` : RES[x.r] || (x.r?.startsWith('worker-') ? `el Worker respondió ${x.r.slice(7)}` : `no llegó (${x.r})`);
+  const good = x => x.r === 'ok' || (x.src === 'worker' && x.ok > 0);
+  const list = all.length ? byDayList(all, x => `<li><div class="txt"><span class="small">${good(x) ? '✅' : x.r === 'apagado' || x.r === 'emulador' ? '⚪' : '❌'} ${esc(NOTIF_NAMES[x.type] || x.type)}</span>
+      <span class="sub">${x.src === 'worker' ? '⏰ Programado' : esc(nameOf(x.by))} → ${esc(x.by === x.to ? 'sí mismo (prueba)' : nameOf(x.to))} · ${esc(res(x))}${x.gone ? ` · ${plural(x.gone, 'teléfono viejo borrado', 'teléfonos viejos borrados')}` : ''}${x.d ? ' · ' + esc(x.d) : ''}</span></div><span class="tiny muted num">${tm(x.at)}</span></li>`)
+    : '<p class="small muted" style="margin:0">Todavía no hay avisos registrados.</p>';
+  return `<div class="glass stack"><span class="label">🔔 Avisos · ${range} días</span>
+      <div class="grid2" style="gap:6px;grid-template-columns:repeat(3,1fr)"><div class="adm-kpi"><b class="num">${ok}</b><span class="tiny muted">✅ entregados</span></div>
+        <div class="adm-kpi"><b class="num">${Math.max(0, failed)}</b><span class="tiny muted">❌ no llegaron</span></div><div class="adm-kpi"><b class="num">${off}</b><span class="tiny muted">⚪ apagados</span></div></div>
+      ${logs.worker ? '' : `<p class="tiny muted" style="margin:0">⏰ Programados: ${esc(logs.workerMsg || 'sin datos del Worker.')}</p>`}
+      <p class="tiny muted" style="margin:0">«Entregado» quiere decir que el servicio del teléfono (Apple o Google) lo recibió; si el teléfono lo mostró depende de él. Se anota el tipo y para quién, no el texto.</p>
+      ${list}</div>`;
+}
+function backupsHTML() {
+  if (!logs.worker) return `<div class="glass stack"><span class="label">💾 Respaldos</span><p class="small muted" style="margin:0">${esc(logs.workerMsg || 'Sin datos del Worker.')}</p></div>`;
+  const b = logs.worker.backup || {}, days = Object.entries(logs.worker.days);
+  const runs = days.flatMap(([, d]) => d.backup || []).sort((a, x) => x.at - a.at);
+  const errs = days.flatMap(([, d]) => d.errors || []).sort((a, x) => x.at - a.at);
+  const st = b.state || {};
+  return `<div class="glass stack"><span class="label">💾 Respaldo de cada noche</span>
+      <div class="grid2" style="gap:6px"><div class="adm-kpi"><b class="num">${(b.days || []).length}</b><span class="tiny muted">días guardados</span></div>
+        <div class="adm-kpi"><b class="num">${b.photos ?? '—'}</b><span class="tiny muted">fotos copiadas</span></div></div>
+      <p class="small" style="margin:0">${st.dataDone ? `Último: ${esc(st.day || '')}, completo ✅` : st.day ? `Hoy (${esc(st.day)}) va por ${st.idx || 0} de ${st.total || '?'} colecciones` : 'Todavía no hay respaldos.'}${b.pendingPhotos ? ` · ${b.pendingPhotos} fotos en cola` : ''}</p>
+      ${(b.days || []).length ? `<ul class="list">${b.days.map(m => `<li><div class="txt"><span class="small">${esc(capital(parseDate(m.day).toLocaleDateString('es', { weekday: 'short', day: 'numeric', month: 'short' })))}</span><span class="sub">${Object.values(m.counts || {}).reduce((a, x) => a + x, 0)} documentos · ${Object.keys(m.counts || {}).length} colecciones</span></div><span class="tiny muted num">${m.at ? tm(m.at) : ''}</span></li>`).join('')}</ul>` : ''}</div>
+    <div class="glass stack"><span class="label">Bitácora del respaldo · ${range} días</span>
+      ${runs.length ? byDayList(runs, x => `<li><div class="txt"><span class="small">${x.kind === 'fotos' ? `📷 Fotos: ${x.copied} nuevas (${x.total} en total)` : `🗂️ Datos: ${x.docs} documentos de ${x.cols} colecciones`}</span><span class="sub">${x.manual ? '«Respaldar ahora»' : 'Automático'}</span></div><span class="tiny muted num">${tm(x.at)}</span></li>`)
+        : '<p class="small muted" style="margin:0">Sin registros todavía (se empezó a anotar con el Worker v15).</p>'}</div>
+    <div class="glass stack"><span class="label">Errores del Worker</span>
+      ${errs.length ? byDayList(errs, x => `<li><div class="txt"><span class="small">${esc(x.where === 'respaldo' ? '💾 Respaldo' : '⏰ Avisos programados')}</span><span class="sub" style="word-break:break-word">${esc(x.msg)}</span></div><span class="tiny muted num">${tm(x.at)}</span></li>`)
+        : '<p class="small muted" style="margin:0">Sin errores 🎉</p>'}
+      <p class="tiny muted" style="margin:0">Si el mismo error se repite, se anota como máximo una vez por hora.</p></div>`;
+}
+function perfHTML(ids) {
+  const P = logs.perf;
+  if (!P.length) return '<div class="glass"><p class="small muted" style="margin:0">Todavía no hay mediciones (se toman a los 30 s de abrir la app).</p></div>';
+  const per = ids.map(id => {
+    const mine = P.filter(p => p.uid === id);
+    if (!mine.length) return '';
+    const ph = mine.filter(p => p.photos?.n);
+    return `<div class="glass stack" style="gap:8px"><div class="row start" style="gap:8px">${avatar(id, 28)}<b>${esc(nameOf(id))}</b><span class="tiny muted" style="margin-left:auto">${plural(mine.length, 'apertura', 'aperturas')}</span></div>
+      <div class="grid2" style="gap:6px">
+        <div class="adm-kpi"><b class="num">${secs(median(mine.map(p => p.t?.cache)))}</b><span class="tiny muted">datos del teléfono</span></div>
+        <div class="adm-kpi"><b class="num">${secs(median(mine.map(p => p.t?.server)))}</b><span class="tiny muted">datos del servidor</span></div>
+        <div class="adm-kpi"><b class="num">${secs(median(mine.map(p => p.t?.ready)))}</b><span class="tiny muted">todo listo</span></div>
+        <div class="adm-kpi"><b class="num">${ph.length ? secs(median(ph.map(p => p.photos.avg))) : '—'}</b><span class="tiny muted">por foto</span></div></div>
+      <span class="tiny muted">Valores típicos (la mediana). ${mine.filter(p => !p.online).length ? `${mine.filter(p => !p.online).length} veces sin internet. ` : ''}${mine.some(p => p.conn) ? `Conexión: ${esc([...new Set(mine.map(p => p.conn).filter(Boolean))].join(', '))}.` : ''}</span></div>`;
+  }).join('');
+  const list = byDayList(P, p => `<li><div class="txt"><span class="small">${esc(nameOf(p.uid))} · todo listo en <b>${secs(p.t?.ready)}</b></span>
+      <span class="sub">teléfono ${secs(p.t?.cache)} · servidor ${secs(p.t?.server)}${p.photos?.n ? ` · ${p.photos.n} fotos, ${secs(p.photos.avg)} c/u (máx. ${secs(p.photos.max)})` : ''}${p.photos?.fail ? ` · ${p.photos.fail} sin cargar` : ''}</span>
+      <span class="sub">${esc([p.model || p.os, p.browser, p.installed ? 'instalada' : 'navegador', p.conn, p.online ? '' : 'sin internet', p.app && 'v' + vlabel(p.app)].filter(Boolean).join(' · '))}</span></div><span class="tiny muted num">${tm(p.at)}</span></li>`);
+  return `<div class="stack" style="gap:14px">${per}</div>
+    <div class="glass stack"><span class="label">⚡ Cada vez que se abrió</span>
+      <p class="tiny muted" style="margin:0">Tiempo desde que se toca el ícono: «teléfono» = primeros datos guardados en el teléfono; «servidor» = primeros datos de internet; «todo listo» = todas las secciones con datos (la animación de entrada dura ~2 s aparte). La conexión solo la da Android.</p>${list}</div>`;
+}
+
 async function showVersion() {
   try { const t = await (await fetch('sw.js', { cache: 'no-store' })).text(); const v = t.match(/CACHE = '([^']+)'/)?.[1]; const el = $('admVersion'); if (el && v) el.textContent += ` · versión ${v.replace('nosotros-v', '')}`; } catch {}
 }
@@ -286,7 +428,9 @@ async function showVersion() {
 function admRange(n) { range = n; load(); }
 window.admRender = () => { if ($('s-admin')?.classList.contains('active')) render(); };
 on('fruta arrows bus', () => { if (tab === 'juegos' && $('s-admin')?.classList.contains('active')) render(); });
-function admTab(t) { tab = t; render(); window.scrollTo?.(0, 0); }
+function admTab(t) { tab = t; render(); window.scrollTo?.(0, 0); if (t === 'bitacoras') load(); }
+function admSub(s) { sub = s; logMore = 60; render(); }
+function admMore() { logMore += 100; render(); }
 function admDay(d) { selDay = d; render(); }
 function admReload() { load(); }
 function admCsv() {
@@ -298,10 +442,11 @@ function admCsv() {
   setTimeout(() => URL.revokeObjectURL(a.href), 1000);
 }
 async function admPurge() {
-  if (!(await ask('¿Borrar los registros de ingresos, tiempo de uso y avisos de hace más de 90 días?', { ok: 'Borrar', danger: true }))) return;
+  if (!(await ask('¿Borrar los registros de ingresos, tiempo de uso, avisos y bitácoras de hace más de 90 días?', { ok: 'Borrar', danger: true }))) return;
   const cut = Date.now() - 90 * 864e5, cutDay = dayKey(new Date(cut));
-  const docs = [...(await getDocs(query(col('visits'), where('at', '<', cut)))).docs,
-    ...(await getDocs(query(col('usage'), where('day', '<', cutDay)))).docs, ...(await getDocs(query(col('stats'), where('day', '<', cutDay)))).docs];
+  const docs = [...(await getDocs(query(col('visits'), where('at', '<', cut)))).docs, ...(await getDocs(query(col('perf'), where('at', '<', cut)))).docs,
+    ...(await getDocs(query(col('usage'), where('day', '<', cutDay)))).docs, ...(await getDocs(query(col('stats'), where('day', '<', cutDay)))).docs,
+    ...(await getDocs(query(col('actions'), where('day', '<', cutDay)))).docs, ...(await getDocs(query(col('notiflog'), where('day', '<', cutDay)))).docs];
   for (let i = 0; i < docs.length; i += 400) { const b = writeBatch(db); docs.slice(i, i + 400).forEach(d => b.delete(d.ref)); await b.commit(); }
   toast(`${plural(docs.length, 'registro borrado', 'registros borrados')}`);
 }
@@ -318,4 +463,4 @@ async function admForceUpdate() {
 }
 
 onShow('s-admin', () => { render(); load(); });
-expose({ labSpecies, labStage, labMood, labTime, labFed, ...labWearFns, labAll, labNone, labRandom, labHatch, labGame, admTab, admRange, admDay, admReload, admCsv, admPurge, admClearErrors, admForceUpdate });
+expose({ labSpecies, labStage, labMood, labTime, labFed, ...labWearFns, labAll, labNone, labRandom, labHatch, labGame, admTab, admSub, admMore, admRange, admDay, admReload, admCsv, admPurge, admClearErrors, admForceUpdate });

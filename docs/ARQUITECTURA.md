@@ -53,7 +53,7 @@ manifest.json   PWA (nombre, íconos, colores)
 | `quiz.js`, `us.js`, `summary.js`, `badges.js` | Quiz de pareja, gustos + ideas de regalo privadas, resumen del año, logros |
 | `search.js`, `tour.js` | Buscador global y guía de bienvenida |
 | `lock.js` | PIN opcional por teléfono (hash SHA-256 en localStorage) |
-| `tracking.js`, `admin.js`, `testing.js` | Registro de ingresos, errores y tiempo por sección; Administración (solo `TESTERS`) con pestañas Ingresos, Estadísticas (uso, notificaciones, quién hace más) y Pruebas (mascota de pruebas con todo desbloqueado y sin guardar nada, avisos, herramientas, zona de pruebas) |
+| `tracking.js`, `admin.js`, `testing.js` | Registro de ingresos, errores, tiempo por sección y bitácoras (acciones, avisos, rendimiento; ver DATOS.md); Administración (solo `TESTERS`) con pestañas Ingresos, Estadísticas (uso, notificaciones, quién hace más), 📒 Bitácoras (Acciones, Errores, Avisos, Respaldos, Rendimiento) y Pruebas (mascota de pruebas con todo desbloqueado y sin guardar nada, avisos, herramientas, zona de pruebas) |
 
 | `fruta.js`, `fruta-engine.js` | Juego **Pura fruta** (combinar 3, `s-fruta`): ver docs/FRUTA.md |
 | `admin-juegos.js` | Administración → 🎮 Juegos (solo el dueño) para Pura fruta, Flechas y La parada: panel, editor de niveles (también niveles nuevos después del último), probar 200 veces, estadísticas, reto programado, mensajes sorpresa, economía y ayuda disimulada. También aplica «ocultar juego» (`gates`) para los dos |

@@ -5,6 +5,7 @@
 import { setDoc, updateDoc, deleteField } from 'https://www.gstatic.com/firebasejs/11.0.2/firebase-firestore.js';
 import { $, S, auth, EMU, ref, on, partnerUid, profile, uid, toast, go, esc, openSheet, countStat, ANDROID, IOS } from './core.js';
 import { PUSH } from './push-config.js';
+import { logNotif } from './tracking.js';
 
 // [tipo, nombre en Ajustes]. Cada uno elige cuáles recibe (prefs.notif[tipo] === false = apagado).
 export const NOTIF_TYPES = [['snaps', '📸 Historias y respuestas'], ['reacts', '😍 Reacciones a tus historias'], ['notes', '💌 Notas nuevas'],
@@ -81,25 +82,29 @@ async function syncSub() {
 export async function notify(type, { title, body = '', url = './', tag = '' }, to = 'partner') {
   const who = to === 'me' ? uid() : partnerUid();
   if (!who || !S.me) return;
-  if (to !== 'me' && profile(who).prefs?.notif?.[type] === false) return;
+  // Bitácora de avisos (Administración → Bitácoras): tipo, para quién y qué pasó; nunca el texto del aviso
+  const log = (r, extra = {}) => logNotif({ type, to: who, r, ...extra });
+  if (to !== 'me' && profile(who).prefs?.notif?.[type] === false) return log('apagado');
   const subs = subsOf(who);
-  if (!subs.length) return;
+  if (!subs.length) return log('sin-telefono');
   // El tipo va en el enlace (&n=) para contar cuántos se abren
   const msg = { title, body, url: to === 'me' ? url : url + (url.includes('?') ? '&' : '?') + 'n=' + type, tag };
   if (to !== 'me') countStat('sent', type);
-  if (EMU) { (window.__pushLog ||= []).push({ to: who, type, ...msg, devices: subs.length }); console.info('[aviso emulador]', who, msg); return; }
-  if (!pushConfigured()) return;
+  if (EMU) { (window.__pushLog ||= []).push({ to: who, type, ...msg, devices: subs.length }); console.info('[aviso emulador]', who, msg); log('emulador', { n: subs.length }); return; }
+  if (!pushConfigured()) return log('sin-configurar');
   try {
     const token = await auth.currentUser.getIdToken();
     const r = await fetch(PUSH.url.replace(/\/$/, '') + '/notify', { method: 'POST', headers: { Authorization: 'Bearer ' + token, 'Content-Type': 'application/json' },
       body: JSON.stringify({ ...msg, subs: subs.map(({ endpoint, keys }) => ({ endpoint, keys })) }) });
-    if (!r.ok) { console.warn('aviso', r.status, await r.text().catch(() => '')); return r.status; }
+    if (!r.ok) { console.warn('aviso', r.status, await r.text().catch(() => '')); log('worker-' + r.status, { n: subs.length }); return r.status; }
     const { results = [] } = await r.json();
     // Teléfonos que ya no existen (desinstalaron o quitaron el permiso): se borran
     const gone = results.filter(x => x.status === 404 || x.status === 410).map(x => subs.find(s => s.endpoint === x.endpoint)?.k).filter(Boolean);
     if (gone.length) updateDoc(ref('push', who), Object.fromEntries(gone.map(k => [`subs.${k}`, deleteField()]))).catch(() => {});
-    return results.some(x => x.status >= 200 && x.status < 300) ? 'ok' : results.map(x => x.status).join(',');
-  } catch (e) { console.warn('aviso', e); return 'error'; }
+    const ok = results.filter(x => x.status >= 200 && x.status < 300).length;
+    log(ok ? 'ok' : results.map(x => x.status).join(',') || 'sin-respuesta', { n: subs.length, ok, ...(gone.length ? { gone: gone.length } : {}) });
+    return ok ? 'ok' : results.map(x => x.status).join(',');
+  } catch (e) { console.warn('aviso', e); log('error', { d: String(e?.message || e).slice(0, 120) }); return 'error'; }
 }
 // Cómo me llama mi pareja en su teléfono (su apodo para mí, si puso uno)
 export const meFor = who => profile(who).prefs?.partnerNick || S.settings.members?.[uid()]?.name || 'Tu pareja';

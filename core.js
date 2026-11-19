@@ -72,10 +72,11 @@ export function softDelete(name, id, label, { private: priv = false, photos = []
   const item = list?.find(x => x.id === id);
   const r = priv ? privRef(name, id) : ref(name, id);
   write(deleteDoc(r)); after?.();
+  if (!priv) logHooks.deleted?.(name, id); // bitácora de acciones (los borrados no se ven en las fotos de Firestore)
   if (!item) return;
   const { id: _, ...data } = item;
   const nm = [item.title, item.name, item.t, item.text, item.note].find(v => typeof v === 'string' && v.trim());
-  undoBar(nm ? `Borraste «${nm.length > 28 ? nm.slice(0, 27) + '…' : nm}»` : `Borraste ${label}`, () => write(setDoc(r, data)), {
+  undoBar(nm ? `Borraste «${nm.length > 28 ? nm.slice(0, 27) + '…' : nm}»` : `Borraste ${label}`, () => { if (!priv) logHooks.deleted?.(name, id, true); write(setDoc(r, data)); }, {
     undoneMsg: 'Listo, volvió 👍',
     later: photos.length ? () => photos.filter(Boolean).forEach(p => write(deleteDoc(ref('photos', p)))) : null,
   });
@@ -413,6 +414,7 @@ const skeleton = () => `<div class="skel-top"><i class="skel" style="width:46%;h
 const skelOn = new Set();
 export function dataReady() {
   if (S.ready) return; S.ready = true;
+  logHooks.perf?.('ready');
   const act = document.querySelector('.screen.active')?.id;
   rerenderAll();
   if (act && skelOn.has(act)) showHooks[act]?.();
@@ -545,6 +547,7 @@ export function go(id) {
     document.querySelectorAll('.screen').forEach(x => x.classList.toggle('active', x === s));
   }
   window.scrollTo(0, 0);
+  logHooks.screen?.(id);
   showHooks[id]?.();
   markTab(); // después de pintar: la pestaña se deduce del botón Volver de la pantalla
   syncBack();
@@ -590,7 +593,8 @@ export const db = app && initializeFirestore(app, EMU
   : { localCache: persistentLocalCache({ tabManager: persistentMultipleTabManager() }) });
 if (EMU) {
   connectAuthEmulator(auth, 'http://127.0.0.1:9099', { disableWarnings: true });
-  connectFirestoreEmulator(db, '127.0.0.1', 8080);
+  // ?emu=8081 usa otro puerto para Firestore (si el 8080 está ocupado en la máquina; ver docs/PRUEBAS.md)
+  connectFirestoreEmulator(db, '127.0.0.1', Number(new URLSearchParams(location.search).get('emu')) || 8080);
 }
 export const COUPLE = 'nosotros';
 export const coupleRef = db && doc(db, 'couples', COUPLE);
@@ -604,8 +608,11 @@ export const newPrivRef = name => doc(privCol(name));
 
 // Las escrituras se aplican al instante en el teléfono y se sincronizan solas,
 // así que no se espera al servidor (funciona también sin internet).
+// Bitácoras de Administración: tracking.js pone aquí sus funciones (error, screen, perf, photo) para no importarse en círculo.
+export const logHooks = {};
 export const write = p => p.catch(err => {
   console.error(err);
+  logHooks.error?.(err?.message || String(err), 'guardar', { kind: 'guardar', code: err?.code, stack: err?.stack });
   toast(err.code === 'permission-denied' ? 'Esta cuenta no tiene permiso 🔒' : 'No se pudo guardar');
 });
 
@@ -681,6 +688,7 @@ export async function makeThumb(dataUrl, max = 480) {
   return c.toDataURL('image/jpeg', 0.72);
 }
 async function fillPhoto(img) {
+  const t0 = performance.now();
   let src;
   if (img.dataset.thumb) {
     const id = img.dataset.thumb;
@@ -690,6 +698,7 @@ async function fillPhoto(img) {
       if (full) { src = await makeThumb(full).catch(() => full); cachePhoto(thumbId(id), src); write(setDoc(ref('photos', thumbId(id)), { data: src })); }
     }
   } else src = await getPhoto(img.dataset.photo);
+  logHooks.photo?.(performance.now() - t0, !!src);
   if (src) img.src = src; else img.remove();
 }
 // Las fotos se cargan solo cuando están por aparecer en pantalla.
@@ -737,7 +746,7 @@ export async function compressImage(file, maxSide = 1280) {
   } finally { if (d.url) URL.revokeObjectURL(d.url); d.src.close?.(); }
 }
 // Mensaje claro cuando una foto no se puede abrir.
-export const photoError = e => toast(e?.message === 'heic' ? 'Esa foto está en formato HEIF. Elige otra o cambia la cámara a JPG' : 'No se pudo abrir esa foto. Prueba con otra');
+export const photoError = e => (logHooks.error?.(e?.message || 'foto', 'abrir foto', { kind: 'foto', stack: e?.stack }), toast(e?.message === 'heic' ? 'Esa foto está en formato HEIF. Elige otra o cambia la cámara a JPG' : 'No se pudo abrir esa foto. Prueba con otra'));
 // Abre la foto en grande: muestra la miniatura al instante y la cambia por la completa al cargar.
 export async function viewPhoto(img) {
   $('viewerImg').src = img.src || ''; $('viewer').dataset.name = img.alt || 'foto-futari'; $('viewer').classList.add('show'); syncBack();

@@ -114,6 +114,20 @@ lectura, permiso 403, recordatorios encontrados, teléfonos). Si todo sale bien 
 problema es el Cron en Cloudflare (*Settings → Triggers*, `* * * * *`) o sus *Logs*.
 `WORKER_VERSION` (al inicio del Worker) se muestra ahí: súbelo cada vez que cambies el Worker.
 
+### Bitácora del Worker (v15)
+
+La cuenta de servicio es de **solo lectura**, así que el Worker no escribe en Firestore: anota en su KV `RESPALDOS`, una
+clave por día que se borra sola a los 40 días (`expirationTtl`):
+- `nlog:<día>`: cada aviso programado `{ at, type, to, n (teléfonos), ok (entregados), r (códigos) }`, sin el texto. Una
+  escritura por minuto en que se mandan avisos.
+- `blog:<día>`: el respaldo de la noche `{ at, kind 'datos'|'fotos', manual, cols, docs | copied, total }`. Dos escrituras por noche.
+- `elog:<día>`: errores de `scheduled` (`programados` o `respaldo`); el mismo error se anota como máximo una vez por hora
+  para no gastar el límite de 1000 escrituras al día.
+
+`POST /bitacora { from: 'AAAA-MM-DD' }` (con la sesión) devuelve `{ days: { día: { notifs, backup, errors } }, backup }`
+(hasta 31 días, más lo mismo que la lista de respaldos). Lo usa Administración → 📒 Bitácoras (Avisos y Respaldos); los
+avisos que manda la app los anota la app misma en `notiflog` (DATOS.md). Sin la v15 pegada, la pestaña lo dice.
+
 ### Configurarlo (una sola vez)
 
 1. **Cuenta de servicio de solo lectura.** En https://console.cloud.google.com, elige el proyecto `nosotros-app-2e254` →

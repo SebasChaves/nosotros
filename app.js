@@ -3,7 +3,7 @@ import { onAuthStateChanged, signInWithEmailAndPassword, sendPasswordResetEmail,
   from 'https://www.gstatic.com/firebasejs/11.0.2/firebase-auth.js';
 import { onSnapshot, disableNetwork, enableNetwork, query, where, documentId, getDocs, waitForPendingWrites } from 'https://www.gstatic.com/firebasejs/11.0.2/firebase-firestore.js';
 import { $, S, auth, db, go, esc, openSheet, configured, placeTabPill, coupleRef, col, privCol, COLLECTIONS, PRIVATE, toast, expose, rerender, rerenderAll,
-         partnerUid, profile, uid, ask, inBar, setBar, barIds, dayKey, EMU, dataReady, vnum } from './core.js';
+         partnerUid, profile, uid, ask, inBar, setBar, barIds, dayKey, EMU, dataReady, vnum, logHooks } from './core.js';
 if (EMU) window.__S = S; // solo emulador: para las pruebas automáticas
 import { todayAnswers } from './home.js';
 import './decide.js';
@@ -42,11 +42,11 @@ import './music.js';
 import './reminders.js';
 import { startBadgeWatch } from './badges.js';
 import { lockNow } from './lock.js';
-import { logVisit } from './tracking.js';
+import { logVisit, logActions, logError } from './tracking.js';
 import { maybeStartTour, resetTourCheck } from './tour.js';
 
 // Versión de esta copia de la app. Súbela junto con version.json y la caché de sw.js al publicar.
-export const APP_VERSION = '1.11.0';
+export const APP_VERSION = '1.12.0';
 window.FUTARI_VERSION = APP_VERSION; // lo guarda el registro de ingresos (panel de administración)
 
 // Si la app estuvo abierta hace poco (Android la cierra sola al salir), se vuelve rápido a la misma pantalla.
@@ -81,6 +81,7 @@ else onAuthStateChanged(auth, user => {
   unsubs.forEach(u => u()); unsubs = [];
   S.me = user; resetTourCheck();
   if (!user) { setState('out'); return; }
+  logHooks.perf?.('auth');
   setState('in');
   listen();
   snapShortcut(); // acceso directo «Historia» del ícono
@@ -173,12 +174,17 @@ async function loadOld(name, cut) {
   rerender(name);
 }
 function listen() {
-  const fail = err => { console.error(err); if (err.code === 'permission-denied') toast('Esta cuenta no tiene acceso'); };
+  const fail = name => err => {
+    console.error(err);
+    logError(err?.message || String(err), 'escuchar ' + name, { kind: 'escuchar', code: err?.code, stack: err?.stack });
+    if (err.code === 'permission-denied') toast('Esta cuenta no tiene acceso');
+  };
   unsubs.push(onSnapshot(coupleRef, { includeMetadataChanges: true }, snap => {
+    logHooks.perf?.(snap.metadata.fromCache ? 'cache' : 'server');
     S.settings = Object.assign({ start: '', members: {}, currency: 'USD' }, snap.data());
     rerenderAll(); updateBadges();
     if (!snap.metadata.fromCache) maybeMigrate();
-  }, fail));
+  }, fail('pareja')));
   const pending = new Set(COLLECTIONS);
   setTimeout(dataReady, 4000); // sin internet y sin nada guardado: igual se muestra lo que haya
   for (const name of COLLECTIONS) {
@@ -186,19 +192,20 @@ function listen() {
     if (byDay) loadOld(name, cut);
     unsubs.push(onSnapshot(byDay ? query(col(name), where(documentId(), '>=', cut)) : col(name), s => {
       const docs = s.docs.map(d => ({ id: d.id, ...d.data() }));
+      logActions(name, s); // bitácora de acciones (solo lo hecho en este teléfono)
       S.data[name] = byDay ? [...(oldDays[name] || []), ...docs] : docs;
       if (byDay) recent[name] = docs;
       if (pending.delete(name) && !pending.size) setTimeout(dataReady, 0);
       if (name === 'profiles') { applyAccent(profile(uid()).prefs?.accent, profile(uid()).prefs?.customAccent); applyTheme(profile(uid()).prefs?.theme); applyTextSize(profile(uid()).prefs?.textSize); if (!s.metadata.fromCache || profile(uid()).prefs) maybeStartTour(); }
       if (name === 'profiles') rerenderAll(); else rerender(name); // los apodos cambian nombres en toda la app
       updateBadges();
-    }, fail));
+    }, fail(name)));
   }
   for (const name of PRIVATE) {
     unsubs.push(onSnapshot(privCol(name), s => {
       S.priv[name] = s.docs.map(d => ({ id: d.id, ...d.data() }));
       rerender(name);
-    }, fail));
+    }, fail(name)));
   }
   rerenderAll(); updateBadges();
   logVisit();

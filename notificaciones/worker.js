@@ -18,7 +18,8 @@
 //   Cada noche de 3:00 a 6:00 copia la base (una colección por minuto) y las fotos nuevas. Ver docs/NOTIFICACIONES.md.
 // Ver docs/NOTIFICACIONES.md. Sin dependencias: se pega tal cual en el editor de Cloudflare.
 
-const WORKER_VERSION = 14; // súbelo al cambiar este archivo (la app lo muestra en el diagnóstico)
+// v15: bitácora en KV (avisos programados «nlog:<día>», respaldo «blog:<día>», errores «elog:<día>») y POST /bitacora.
+const WORKER_VERSION = 15; // súbelo al cambiar este archivo (la app lo muestra en el diagnóstico)
 const enc = new TextEncoder();
 const b64u = buf => btoa(String.fromCharCode(...new Uint8Array(buf))).replace(/\+/g, '-').replace(/\//g, '_').replace(/=+$/, '');
 const unb64u = s => Uint8Array.from(atob(s.replace(/-/g, '+').replace(/_/g, '/') + '==='.slice((s.length + 3) % 4)), c => c.charCodeAt(0));
@@ -34,7 +35,7 @@ export default {
     if (req.method === 'OPTIONS') return new Response(null, { status: 204, headers: cors });
     const url = new URL(req.url);
     if (req.method === 'GET') return json({ ok: true, service: 'futari-push', version: WORKER_VERSION, ready: !!(env.VAPID_PUBLIC_KEY && env.VAPID_PRIVATE_KEY && env.FIREBASE_PROJECT_ID && env.ALLOWED_UIDS), scheduled: !!env.FIREBASE_SA });
-    if (req.method !== 'POST' || !['/notify', '/diagnostico', '/link', '/chef', '/respaldo'].includes(url.pathname)) return json({ error: 'not-found' }, 404);
+    if (req.method !== 'POST' || !['/notify', '/diagnostico', '/link', '/chef', '/respaldo', '/bitacora'].includes(url.pathname)) return json({ error: 'not-found' }, 404);
 
     // 1. ¿Quién pide? Sesión de Firebase válida y de la pareja
     let who;
@@ -43,6 +44,12 @@ export default {
     const allowed = (env.ALLOWED_UIDS || '').split(',').map(s => s.trim()).filter(Boolean);
     if (!allowed.includes(who)) return json({ error: 'forbidden' }, 403);
     if (url.pathname === '/diagnostico') return json(await diagnose(env, who));
+    if (url.pathname === '/bitacora') { // Administración → Bitácoras: avisos programados, respaldos y errores del Worker
+      if (!env.RESPALDOS) return json({ error: 'no-kv' }, 501);
+      let b5; try { b5 = await req.json(); } catch { return json({ error: 'bad-json' }, 400); }
+      try { return json(await logRead(env, String(b5.from || ''))); }
+      catch (e) { return json({ error: 'fail', detail: String(e.message || e).slice(0, 200) }, 500); }
+    }
     if (url.pathname === '/respaldo') { // respaldos automáticos (lista o descargar uno)
       if (!env.RESPALDOS) return json({ error: 'no-kv' }, 501);
       let b4; try { b4 = await req.json(); } catch { return json({ error: 'bad-json' }, 400); }
@@ -83,10 +90,45 @@ export default {
   },
   // Avisos programados: racha en peligro / mascota con hambre, recordatorios y fechas especiales
   async scheduled(event, env, ctx) {
-    ctx.waitUntil(runSchedule(env, event.scheduledTime).catch(e => console.error('programados', e)));
-    if (env.RESPALDOS && env.FIREBASE_SA) ctx.waitUntil(backupStep(env, event.scheduledTime).catch(e => console.error('respaldo', e)));
+    ctx.waitUntil(runSchedule(env, event.scheduledTime).catch(e => { console.error('programados', e); return logErr(env, 'programados', e); }));
+    if (env.RESPALDOS && env.FIREBASE_SA) ctx.waitUntil(backupStep(env, event.scheduledTime).catch(e => { console.error('respaldo', e); return logErr(env, 'respaldo', e); }));
   },
 };
+
+/* ---------- Bitácora (v15) ----------
+   En KV, una clave por día y por tipo (se borran solas a los 40 días). Son pocas escrituras: una por minuto en que se mandan
+   avisos, dos por noche del respaldo y como máximo una por hora por cada error distinto (el límite gratis es 1000 al día).
+   nlog:<día> = [{ at, type, to, n (teléfonos), ok (entregados), r (códigos) }] · blog:<día> = [{ at, kind datos|fotos, ... }]
+   elog:<día> = [{ at, where, msg, n }] */
+const LOG_TTL = 40 * 864e5 / 1000;
+const localDay = (env, when = Date.now()) => { const L = Object.fromEntries(new Intl.DateTimeFormat('en-CA', { timeZone: env.TIME_ZONE || 'America/Costa_Rica', year: 'numeric', month: '2-digit', day: '2-digit' }).formatToParts(new Date(when)).map(p => [p.type, p.value])); return `${L.year}-${L.month}-${L.day}`; };
+async function logPush(env, prefix, items, when = Date.now()) {
+  if (!env.RESPALDOS || !items.length) return;
+  const k = `${prefix}:${localDay(env, when)}`, list = await kvJSON(env, k, []);
+  list.push(...items);
+  await kvPut(env, k, JSON.stringify(list.slice(-500)), { expirationTtl: LOG_TTL });
+}
+// Errores: si es el mismo que el último y pasó menos de una hora, no se escribe (un error de cada minuto agotaría el límite)
+async function logErr(env, where, e) {
+  try {
+    if (!env.RESPALDOS) return;
+    const k = `elog:${localDay(env)}`, list = await kvJSON(env, k, []), msg = String(e?.message || e).slice(0, 300), last = list[list.length - 1];
+    if (last && last.where === where && last.msg === msg && Date.now() - last.at < 3600e3) return;
+    list.push({ at: Date.now(), where, msg });
+    await kvPut(env, k, JSON.stringify(list.slice(-200)), { expirationTtl: LOG_TTL });
+  } catch (x) { console.error('bitácora', x); }
+}
+async function logRead(env, from) {
+  const today = localDay(env), days = [];
+  let d = /^\d{4}-\d{2}-\d{2}$/.test(from) ? from : today;
+  for (let i = 0; d <= today && i < 31; i++) { days.push(d); const [y, m, dd] = d.split('-').map(Number); d = new Date(Date.UTC(y, m - 1, dd + 1)).toISOString().slice(0, 10); }
+  const out = {};
+  for (const day of days) {
+    const [n, b, e] = await Promise.all(['nlog', 'blog', 'elog'].map(p => kvJSON(env, `${p}:${day}`, [])));
+    if (n.length || b.length || e.length) out[day] = { notifs: n, backup: b, errors: e };
+  }
+  return { ok: true, version: WORKER_VERSION, days: out, backup: await backupList(env) };
+}
 
 /* ---------- Respaldo automático (KV «RESPALDOS») ----------
    Cada minuto entre las 3:00 y las 5:59 (hora local) se hace un paso chico (el plan gratis da 10 ms de CPU por vez):
@@ -136,6 +178,7 @@ export async function backupStep(env, when = Date.now(), { manual = false } = {}
       const keep = days.filter((d, i) => i >= days.length - 7 || (new Date(d + 'T12:00').getDay() === 0 && (Date.parse(day) - Date.parse(d)) < 31 * 864e5));
       for (const old of days.filter(d => !keep.includes(d))) for (const c of ['_couple', '_meta', ...BACKUP_COLS]) await env.RESPALDOS.delete(`d:${old}:${c}`);
       await kvPut(env, 'days', JSON.stringify(keep));
+      await logPush(env, 'blog', [{ at: st.lastAt, kind: 'datos', manual, cols: Object.keys(st.counts).length, docs: Object.values(st.counts).reduce((a, b) => a + b, 0) }]).catch(e => console.error('bitácora', e));
       st.counts = {};
     }
     await kvPut(env, 'state', JSON.stringify(st));
@@ -147,7 +190,13 @@ export async function backupStep(env, when = Date.now(), { manual = false } = {}
   const index = new Set(await kvJSON(env, 'photos-index', []));
   let ids = await kvJSON(env, 'photo-todo', null);
   if (!ids) ids = (await listAll(env, db, 'photos', true)).filter(id => !index.has(id));
-  if (!ids.length) { if (st.photosDoneDay !== day) { st.photosDoneDay = day; await kvPut(env, 'state', JSON.stringify(st)); } return null; }
+  if (!ids.length) {
+    if (st.photosDoneDay !== day) {
+      st.photosDoneDay = day; await kvPut(env, 'state', JSON.stringify(st));
+      await logPush(env, 'blog', [{ at: Date.now(), kind: 'fotos', manual, copied: st.nightPhotos || 0, total: index.size }]).catch(e => console.error('bitácora', e));
+    }
+    return null;
+  }
   const batch = ids.splice(0, 8);
   for (const id of batch) {
     const d = await db.get('photos/' + id); if (!d?.data) continue;
@@ -528,11 +577,14 @@ export async function runSchedule(env, when = Date.now(), { dryRun = false } = {
   }
 
   if (!dryRun) {
-    await Promise.all(out.map(async n => {
+    const log = await Promise.all(out.map(async n => {
       const payload = enc.encode(JSON.stringify({ title: n.title.slice(0, 120), body: n.body.slice(0, 300), url: n.url, tag: n.tag.slice(0, 60) }));
       // Prioridad alta: con 'normal' el iPhone y Android se guardan el aviso para ahorrar batería hasta que se usa el teléfono
-      await Promise.all(subsOf(n.to).map(s => sendPush(s, payload, env, 'high').catch(e => console.error('push', e))));
+      const st = await Promise.all(subsOf(n.to).map(s => sendPush(s, payload, env, 'high').then(r => r.status).catch(e => { console.error('push', e); return 0; })));
+      return { at: when, type: n.type, to: n.to, n: st.length, ok: st.filter(x => x >= 200 && x < 300).length, r: st.join(',') };
     }));
+    // Bitácora: tipo, para quién y resultado (sin el texto del aviso)
+    await logPush(env, 'nlog', log, when).catch(e => console.error('bitácora', e));
   }
   return out;
 }

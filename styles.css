@@ -635,6 +635,13 @@ body:not([data-theme="light"]) .map-box .leaflet-tile-pane { filter: invert(1) h
 .adm-barline { height: 8px; border-radius: 8px; background: var(--line); overflow: hidden; }
 .adm-barline i { display: block; height: 100%; border-radius: 8px; }
 .adm-bar .num { text-align: right; }
+/* Administración: 5 pestañas no caben en un teléfono → se deslizan de lado */
+.adm-seg { overflow-x: auto; scrollbar-width: none; }
+.adm-seg::-webkit-scrollbar { display: none; }
+.adm-seg button { flex: 0 0 auto; white-space: nowrap; padding: 10px 12px; }
+/* Administración → Bitácoras */
+.adm-log li.adm-logday { padding: 10px 0 2px; border: 0; background: none; }
+.adm-pre { margin: 6px 0 0; padding: 8px; border-radius: 10px; background: var(--line); font-size: 11px; line-height: 1.4; white-space: pre-wrap; word-break: break-word; max-height: 180px; overflow: auto; }
 .adm-who { display: flex; flex-direction: column; gap: 4px; padding: 6px 0; border-bottom: 1px solid var(--line); }
 .adm-duel { display: grid; grid-template-columns: 34px 1fr 34px; align-items: center; gap: 8px; }
 .adm-duel b:last-child { text-align: right; }

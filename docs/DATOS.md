@@ -14,7 +14,8 @@ private/<uid>/gifts/<id>             ideas de regalo: solo las ve su dueño
 ```
 
 `COLLECTIONS` en `core.js` es la lista de colecciones que se escuchan en vivo y se incluyen en el respaldo.
-Colecciones que **no** están en esa lista (se leen bajo demanda): `photos`, `visits`, `errors`, `usage`, `stats`.
+Colecciones que **no** están en esa lista (se leen bajo demanda y no se respaldan, salvo `photos`): `photos`, `visits`, `errors`,
+`usage`, `stats`, `actions`, `perf`, `notiflog`.
 
 ## Colecciones principales
 
@@ -82,11 +83,20 @@ teléfono no lo ve hasta borrar esas claves.
   `photos/<id>` una vez, sin guardarlas en la caché). Son las fotos reducidas de Futari, no el original.
 - Espacio gratis: 1 GB. El panel de administración muestra una estimación del uso.
 
-## Registro de uso (`visits`, `errors`)
+## Registro de uso y bitácoras (`visits`, `errors`, `actions`, `perf`, `notiflog`)
 
 `tracking.js` guarda un ingreso al abrir la app o al volver tras 20 min: `uid, at, day, hour, min, os, osVersion,
-model, browser, installed, app (versión)`. Los errores de JS (máx. 10 por sesión) van a `errors`. Hoy ambas cuentas
-pueden leerlos (ver PENDIENTES.md). Hay un aviso en Ajustes; si agregas campos, actualízalo.
+model, browser, installed, app (versión)`. Hoy ambas cuentas pueden leer todo esto (ver PENDIENTES.md). Hay un aviso en
+Ajustes («Futari guarda…»); si agregas campos, actualízalo. Bitácoras (1.12.0, Administración → 📒 Bitácoras):
+
+| Colección | Campos |
+|---|---|
+| `errors` | `uid, at, message, where, screen, os, browser, model, app, kind (js/promesa/guardar/escuchar/foto), code, stack, trail[] (últimas pantallas), online, count, lastAt?` — máx. 30 distintos por sesión; si el mismo se repite suma `count`. `write()`, `photoError()` y los listeners de `app.js` también los anotan (`logHooks.error` en core.js) |
+| `actions` | id = `<día>_<uid>`: `uid, day, n{colección:{a,e,d}}, log[{at, c (colección), o a/e/d}]` — lo que hizo cada uno, **sin textos**. Se detecta en `app.js` (`logActions`): los cambios con `hasPendingWrites` son del dueño del teléfono. Los borrados los anota `softDelete` (un doc borrado ya no trae esa marca; si deshacen, se quita); un `deleteDoc` directo no se anota. Mismo doc + misma acción cuenta una vez por minuto. Fuera: `push`, `activity` |
+| `perf` | `uid, at, day, os…app (como visits), online, conn (solo Android), sw, dom, t{auth, cache, server, ready} (ms desde que empezó a cargar), photos{n, avg, max, fail}` — uno por cada vez que se abre la app desde cero, a los 30 s |
+| `notiflog` | id = día: `day, list[{at, by, to, type, src 'app', r, n?, ok?, gone?, d?}]` — cada aviso que manda la app (`notify` en push.js), sin el texto. Los programados los anota el Worker en su KV (NOTIFICACIONES.md) |
+
+«🧹 Registros de +90 días» (Administración → Pruebas) borra `visits`, `perf`, `usage`, `stats`, `actions` y `notiflog` viejos.
 
 ## Reglas de seguridad
 

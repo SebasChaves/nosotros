@@ -22,7 +22,11 @@ npx -y firebase-tools@14 emulators:start --only auth,firestore --project demo-no
 - Usa `firebase-tools@14` (la 13 falla con Node 20).
 - **Windows:** si el emulador de Firestore no arranca por un error de "unix domain socket", define antes
   `JAVA_TOOL_OPTIONS=-Djdk.net.unixdomain.tmpdir=C:\ruta\corta\sin\espacios` (una carpeta que exista).
-- Si dice que el puerto 8080/9099 está ocupado, hay un Java del emulador anterior vivo: ciérralo.
+- Si dice que el puerto 8080/9099 está ocupado, hay un Java del emulador anterior vivo: ciérralo. Si el 8080 lo usa otro
+  programa de la máquina (en la PC del dueño lo tiene `AgentService`), levanta Firestore en otro puerto con una copia de
+  `dev/firebase.json` (`"firestore": { "port": 8081 }`) y abre la app con `?emu=8081`: `core.js` usa ese puerto.
+- Sin `npx http-server`, sirve un servidor estático cualquiera en el 5173 (el service worker puede no registrarse en el
+  navegador de Claude; no afecta lo demás).
 - Si editas `dev/firestore.rules` en Windows, guárdalo **sin BOM** (UTF-8 sin BOM) o el emulador lo rechaza.
 - El emulador guarda todo en memoria: al reiniciarlo hay que volver a crear las cuentas.
 
