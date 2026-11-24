@@ -109,6 +109,11 @@ Lo de antes se mueve con la tarjeta «🔒 Mover registros viejos» de Administr
 - `private/{owner}/{document=**}`: además, solo si `request.auth.uid == owner`.
 - `adminlogs/{couple}/{document=**}`: crear y actualizar la pareja; leer y borrar solo el uid del dueño (1.12.1).
 
+Authentication (consola → Configuración → Acciones del usuario, 24 nov 2026): **registro de cuentas nuevas apagado** desde
+la app (nadie puede crear una cuenta con la API pública) y protección de enumeración de correos encendida. Una cuenta nueva
+se crea a mano en Authentication → Usuarios → Agregar usuario. El emulador no se ve afectado (las cuentas de prueba siguen
+creándose con `accounts:signUp`).
+
 Cualquier colección nueva bajo `couples/nosotros/` queda cubierta sin tocar reglas. Un cambio de reglas lo hace el
 dueño en la consola: dale el texto, no lo publiques tú.
 
