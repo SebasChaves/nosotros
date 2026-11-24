@@ -24,6 +24,7 @@ manifest.json   PWA (nombre, íconos, colores)
 | `moments.js`, `daily.js` | Momentos (línea de tiempo con fotos, galería) y Foto del día (la de la pareja se revela al subir la tuya) |
 | `photo-save.js` | Guardar fotos en el teléfono: botón «Guardar» del visor y «Bajar fotos» de la Galería (.zip hecho a mano, sin librerías) |
 | `love.js` | Detalles: frasco de notas y cupones canjeables |
+| `advent.js` | Calendario de adviento (`s-advent`, 15 nov – 31 dic): casillas del 1 al 24 de diciembre, llenarle casillas a la pareja, tarjeta de Inicio. Ver docs/ADVIENTO.md |
 | `snaps.js` | **Historias** (antes «instantáneas»; el código sigue diciendo `snaps`): fotos de 24 h con texto, reacciones, **chat** (`chat[]` en el doc), respuesta con foto y «Guardar en Momentos» (la conversación queda en la nota); tarjeta de Inicio y pestaña en Momentos |
 | `pet.js`, `pet-art.js`, `pet-games.js` | Mascota: huevo que nace a los 3 días comidos y crece por etapas con la racha; triste si ayer no comió (no pierde lo crecido). Pantalla `s-pet` con Vestir, Tienda (monedas de los dos) y Juegos. `pet-art.js` dibuja en SVG (estilo mochi, 10 animales, ropa, escenario por hora); `pet-games.js` tiene los 4 juegos (canvas) |
 | `cravings.js` | Antojos (`s-cravings`): pedir (😌 normal / 🔥 urgente con aviso llamativo y diálogo al abrir la app), «Algún día» → calendario, Cumplidos (foto, ❤️ gracias, Momentos) y Ruleta con favoritos; tarjeta de urgentes y filas en Hoy |

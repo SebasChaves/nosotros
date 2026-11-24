@@ -114,6 +114,11 @@ lectura, permiso 403, recordatorios encontrados, teléfonos). Si todo sale bien 
 problema es el Cron en Cloudflare (*Settings → Triggers*, `* * * * *`) o sus *Logs*.
 `WORKER_VERSION` (al inicio del Worker) se muestra ahí: súbelo cada vez que cambies el Worker.
 
+### Calendario de adviento (v16)
+
+Del 1 al 24 de diciembre a las 8:00, a cada uno: «🎄 Tu casilla N está lista» (tipo `advent`, `?open=advent`). Si la pareja
+llenó esa casilla, dice que hay algo de ella sin decir qué. Ver docs/ADVIENTO.md.
+
 ### Bitácora del Worker (v15)
 
 La cuenta de servicio es de **solo lectura**, así que el Worker no escribe en Firestore: anota en su KV `RESPALDOS`, una

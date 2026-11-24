@@ -635,6 +635,29 @@ body:not([data-theme="light"]) .map-box .leaflet-tile-pane { filter: invert(1) h
 .adm-barline { height: 8px; border-radius: 8px; background: var(--line); overflow: hidden; }
 .adm-barline i { display: block; height: 100%; border-radius: 8px; }
 .adm-bar .num { text-align: right; }
+/* Calendario de adviento (advent.js) */
+.adv-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 10px; }
+.adv-box { position: relative; aspect-ratio: 1; border-radius: 16px; border: 1px solid var(--line); background: var(--glass); color: var(--text);
+  display: flex; align-items: center; justify-content: center; font-size: 26px; cursor: pointer; padding: 0; }
+.adv-box b { position: absolute; top: 5px; left: 8px; font-size: 12px; font-weight: 800; color: var(--muted); }
+.adv-box .mk { position: absolute; bottom: 3px; right: 5px; font-size: 13px; font-style: normal; }
+.adv-box.locked { opacity: .5; font-size: 18px; }
+.adv-box.ready { background: var(--grad); border-color: transparent; animation: advGlow 2.4s ease-in-out infinite; }
+.adv-box.ready b { color: var(--on-grad); }
+.adv-box.today { outline: 2px solid var(--g1); outline-offset: 2px; }
+.adv-box.give:not(.filled) span { color: var(--muted); font-size: 22px; }
+.adv-box.filled { border-color: color-mix(in srgb, var(--g1) 55%, transparent); }
+.adv-today { position: relative; flex: 0 0 56px; height: 56px; border-radius: 16px; display: flex; align-items: center; justify-content: center; font-size: 28px; background: var(--glass-2); }
+.adv-today.ready { background: var(--grad); animation: advGlow 2.4s ease-in-out infinite; }
+.adv-today b { position: absolute; top: 3px; left: 6px; font-size: 11px; color: var(--muted); }
+.adv-today.ready b { color: var(--on-grad); }
+.adv-emoji { font-size: 64px; line-height: 1.1; }
+.adv-emoji.pop { animation: advPop .7s cubic-bezier(.2, 1.6, .4, 1) both; }
+.adv-text { margin: 0; font-size: 17px; line-height: 1.45; white-space: pre-wrap; word-break: break-word; }
+.adv-photo { max-width: 100%; max-height: 46vh; border-radius: 16px; align-self: center; object-fit: cover; }
+@keyframes advGlow { 0%, 100% { box-shadow: 0 0 0 0 color-mix(in srgb, var(--g1) 45%, transparent); } 50% { box-shadow: 0 0 18px 2px color-mix(in srgb, var(--g1) 45%, transparent); } }
+@keyframes advPop { from { transform: scale(.2) rotate(-25deg); opacity: 0; } to { transform: none; opacity: 1; } }
+@media (prefers-reduced-motion: reduce) { .adv-box.ready, .adv-today.ready, .adv-emoji.pop { animation: none; } }
 /* Administración: 5 pestañas no caben en un teléfono → se deslizan de lado */
 .adm-seg { overflow-x: auto; scrollbar-width: none; }
 .adm-seg::-webkit-scrollbar { display: none; }

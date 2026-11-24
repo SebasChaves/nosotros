@@ -19,7 +19,8 @@
 // Ver docs/NOTIFICACIONES.md. Sin dependencias: se pega tal cual en el editor de Cloudflare.
 
 // v15: bitácora en KV (avisos programados «nlog:<día>», respaldo «blog:<día>», errores «elog:<día>») y POST /bitacora.
-const WORKER_VERSION = 15; // súbelo al cambiar este archivo (la app lo muestra en el diagnóstico)
+// v16: calendario de adviento (aviso de la casilla del día a las 8:00, del 1 al 24 de diciembre) y «advent» en el respaldo.
+const WORKER_VERSION = 16; // súbelo al cambiar este archivo (la app lo muestra en el diagnóstico)
 const enc = new TextEncoder();
 const b64u = buf => btoa(String.fromCharCode(...new Uint8Array(buf))).replace(/\+/g, '-').replace(/\//g, '_').replace(/=+$/, '');
 const unb64u = s => Uint8Array.from(atob(s.replace(/-/g, '+').replace(/_/g, '/') + '==='.slice((s.length + 3) % 4)), c => c.charCodeAt(0));
@@ -139,7 +140,7 @@ async function logRead(env, from) {
    No se respaldan: «push» (direcciones de los teléfonos), lo privado de cada uno ni las cartas «Solo nosotros». */
 const BACKUP_COLS = ['bucket', 'ideas', 'notes', 'coupons', 'dates', 'moments', 'lists', 'answers', 'moods', 'challenges', 'groceries', 'expenses', 'places',
   'trips', 'quiz', 'profiles', 'shows', 'events', 'cards', 'games', 'thinks', 'daily', 'pins', 'recipes', 'recipefav', 'menu', 'songs', 'reminders', 'snaps',
-  'activity', 'pet', 'guess', 'cravings', 'arrows', 'bus', 'money', 'cooked', 'dreams', 'vacations', 'fruta'];
+  'activity', 'pet', 'guess', 'cravings', 'arrows', 'bus', 'money', 'cooked', 'dreams', 'vacations', 'fruta', 'advent'];
 const kvJSON = async (env, k, d = null) => { const v = await env.RESPALDOS.get(k); return v ? JSON.parse(v) : d; };
 // KV deja escribir la misma clave como máximo una vez por segundo: si choca (429), espera y reintenta
 const kvPut = async (env, k, v, o) => { for (let i = 0; ; i++) { try { return await env.RESPALDOS.put(k, v, o); } catch (e) { if (i >= 3 || !/429|too many/i.test(String(e.message || e))) throw e; await new Promise(r => setTimeout(r, 1100)); } } };
@@ -540,6 +541,16 @@ export async function runSchedule(env, when = Date.now(), { dryRun = false } = {
       if (months > 0 && Math.min(sd, lastDay) === d) items.push(months % 12 === 0 ? `💍 su aniversario #${months / 12}` : `🗓️ su mesiversario #${months}`);
     }
     for (const it of items) for (const u of members) add(u, 'dates', { title: `${word} es ${it}`, body: word === 'Mañana' ? '¿Ya tienen algo preparado? 💝' : '¡Que sea un gran día! 🎉', url: './?open=cal', tag: `date-${day}-${it}`.slice(0, 60) });
+  }
+
+  // 3b. Calendario de adviento (advent.js): del 1 al 24 de diciembre a las 8:00, la casilla del día. Si la pareja la llenó
+  // (advent/f-<año>-<uid de la pareja>-<dd>) se dice que hay algo de ella, sin decir qué.
+  if (onTheHour && hour === TODAY_HOUR && L.month === '12' && Number(L.day) <= 24 && members.length === 2) {
+    const dd = L.day, fills = await db.getMany(members.map(u => `advent/f-${L.year}-${u}-${dd}`));
+    for (const u of members) {
+      const other = members.find(x => x !== u), mine = fills[`advent/f-${L.year}-${other}-${dd}`];
+      add(u, 'advent', { title: `🎄 Tu casilla ${Number(dd)} está lista`, body: mine ? `${nameFor(u, other)} te dejó algo adentro 💝` : 'Ábrela en Futari 🎁', url: './?open=advent', tag: `advent-${today}` });
+    }
   }
 
   // 4. Resumen de la semana (domingo 19:00)

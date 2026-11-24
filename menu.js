@@ -11,6 +11,7 @@ import { quizWaiting } from './quiz.js';
 import { cravingAlerts } from './cravings.js';
 import { arrowsAlerts } from './arrows.js';
 import { busAlerts } from './bus.js';
+import { adventReady } from './advent.js';
 
 const prefs = () => profile(uid()).prefs?.menu || {};
 const known = id => SECTIONS.some(([k]) => k === id) && gateOn(id);
@@ -33,6 +34,7 @@ export const sectionIcon = id => SECTIONS.find(([k]) => k === id)?.[1] || 'grid'
 export const sectionAlerts = () => ({
   's-decide': S.data.lists.filter(listNeedsMyVote).length, 's-love': unreadNotes() + couponAlerts(),
   's-moments': unseenSnaps().length + newChats().length, 's-quiz': quizWaiting() ? 1 : 0, 's-cravings': cravingAlerts(), 's-arrows': arrowsAlerts(), 's-bus': busAlerts(), 's-fruta': frutaAlerts(),
+  's-advent': adventReady(),
 });
 
 const saveMenu = patch => write(setDoc(ref('profiles', uid()), { prefs: { menu: { order: menuOrder(), bar: barChoice(), hidden: prefs().hidden || [], ...patch } } }, { merge: true }));

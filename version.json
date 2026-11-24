@@ -1,7 +1,8 @@
 {
-  "version": "1.12.1",
-  "notes": ["🔒 Los registros de uso y de errores ahora están más protegidos: solo los puede ver la cuenta de administración (lo dice el aviso de Ajustes → Sesión)."],
+  "version": "1.13.0",
+  "notes": ["🎄 Calendario de adviento: del 1 al 24 de diciembre, una casilla por día hasta Nochebuena (en Inicio y en Más).", "Desde ya, llénenle casillas al otro con una nota, un cupón, una foto o un plan: no se ve hasta ese día.", "Las casillas que nadie llene traen un reto, una pregunta o un plan navideño, y cada una abierta le da monedas a su mascota."],
   "history": [
+    { "version": "1.13.0", "notes": ["🎄 Calendario de adviento: del 1 al 24 de diciembre, una casilla por día hasta Nochebuena (en Inicio y en Más).", "Desde ya, llénenle casillas al otro con una nota, un cupón, una foto o un plan: no se ve hasta ese día.", "Las casillas que nadie llene traen un reto, una pregunta o un plan navideño, y cada una abierta le da monedas a su mascota."] },
     { "version": "1.12.1", "notes": ["🔒 Los registros de uso y de errores ahora están más protegidos: solo los puede ver la cuenta de administración (lo dice el aviso de Ajustes → Sesión)."] },
     { "version": "1.12.0", "notes": ["🔒 En Ajustes → Sesión se actualizó el aviso de lo que Futari guarda: ahora también anota qué se hace en cada sección (sin textos), los avisos que se mandan, los errores y cuánto tarda en abrir, para encontrar y arreglar problemas más rápido."] },
     { "version": "1.11.0", "notes": ["🎲 Decidir juntos mejorado: cuando uno empieza a votar, al otro le llega un aviso y le aparece en Inicio; al abrirlo va directo a votar.", "Cuando los dos terminan, les avisa en qué coincidieron.", "Se puede apagar en Ajustes → Notificaciones → 🎲 Decidir juntos."] },

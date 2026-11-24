@@ -458,7 +458,7 @@ export const onShow = (id, fn) => { showHooks[id] = fn; };
    para pintarla antes de que cargue la base). Una pantalla "pertenece" a la pestaña de la barra a la que vuelve su
    botón Volver (tabOf); si no está en la barra, a Más. */
 // [pantalla, ícono del sprite, nombre]: todas las secciones que pueden ir en la barra o en Más
-export const SECTIONS = [['s-decide', 'dice', '¿Qué hacemos?'], ['s-moments', 'photo', 'Momentos'], ['s-love', 'gift', 'Detalles'],
+export const SECTIONS = [['s-decide', 'dice', '¿Qué hacemos?'], ['s-moments', 'photo', 'Momentos'], ['s-love', 'gift', 'Detalles'], ['s-advent', 'tree', 'Calendario de adviento'],
   ['s-cravings', 'crave', 'Antojos'], ['s-grocery', 'cart', 'Súper'], ['s-money', 'wallet', 'Gastos'], ['s-trips', 'plane', 'Viajes'],
   ['s-places', 'fork', 'Restaurantes'], ['s-shows', 'film', 'Pelis y series'], ['s-cal', 'cal', 'Calendario'],
   ['s-reminders', 'bell', 'Recordatorios'], ['s-recipes', 'pot', 'Recetas'], ['s-map', 'map', 'Nuestro mapa'],
@@ -623,7 +623,7 @@ export const write = p => p.catch(err => {
 
 /* ================= Estado ================= */
 export const COLLECTIONS = ['bucket', 'ideas', 'notes', 'coupons', 'dates', 'moments', 'lists', 'answers',
-  'moods', 'challenges', 'groceries', 'expenses', 'places', 'trips', 'quiz', 'profiles', 'shows', 'events', 'cards', 'games', 'thinks', 'daily', 'pins', 'recipes', 'recipefav', 'menu', 'songs', 'reminders', 'snaps', 'push', 'activity', 'pet', 'guess', 'cravings', 'arrows', 'bus', 'money', 'cooked', 'dreams', 'vacations', 'fruta'];
+  'moods', 'challenges', 'groceries', 'expenses', 'places', 'trips', 'quiz', 'profiles', 'shows', 'events', 'cards', 'games', 'thinks', 'daily', 'pins', 'recipes', 'recipefav', 'menu', 'songs', 'reminders', 'snaps', 'push', 'activity', 'pet', 'guess', 'cravings', 'arrows', 'bus', 'money', 'cooked', 'dreams', 'vacations', 'fruta', 'advent'];
 export const PRIVATE = ['gifts'];
 export const S = {
   me: null,

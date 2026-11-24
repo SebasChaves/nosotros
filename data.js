@@ -221,6 +221,35 @@ export const QUESTIONS = [
 
 export const MOODS = ['🥰', '😄', '🙂', '😐', '😴', '😔', '😢', '😤'];
 
+// Calendario de adviento (advent.js): lo que trae cada casilla del 1 al 24 de diciembre si la pareja no la llenó.
+// [emoji, tipo (reto | pregunta | plan), texto]. Es igual para los dos: invita a hacerlo juntos.
+export const ADVENT_DEFAULTS = [
+  ['🎄', 'plan', 'Armen juntos el árbol (o algo navideño en la casa), con música de fondo'],
+  ['💬', 'pregunta', '¿Cuál es tu recuerdo favorito de una Navidad de cuando eras pequeño?'],
+  ['☕', 'plan', 'Tómense un chocolate o un café caliente juntos esta noche, sin celulares'],
+  ['💌', 'reto', 'Escríbele a tu pareja tres cosas que te encantaron de este año con ella'],
+  ['🎬', 'plan', 'Noche de película navideña: elijan una que ninguno de los dos haya visto'],
+  ['🎶', 'reto', 'Dedícale una canción que te recuerde a los dos (pónganla en Su playlist)'],
+  ['🍪', 'plan', 'Hagan galletas, un queque o un postre navideño juntos'],
+  ['💬', 'pregunta', '¿Qué tradición de Navidad les gustaría empezar como pareja?'],
+  ['📸', 'reto', 'Tómense una foto juntos con algo navideño y guárdenla en Momentos'],
+  ['🎁', 'reto', 'Regálale a tu pareja un cupón para algo que sepas que le encanta'],
+  ['🚶', 'plan', 'Salgan a caminar a ver las luces de Navidad de algún barrio o del centro'],
+  ['💬', 'pregunta', '¿Cuál fue el momento de este año en que más te reíste con tu pareja?'],
+  ['🫶', 'reto', 'Hoy encárgate de algo que normalmente hace tu pareja, sin que te lo pida'],
+  ['🎄', 'plan', 'Hagan juntos una lista de deseos para el próximo año (pónganla en la Bucket list)'],
+  ['💬', 'pregunta', 'Si pudieran pasar una Navidad en cualquier lugar del mundo, ¿dónde sería?'],
+  ['🍲', 'plan', 'Cocinen juntos una comida típica de estas fechas (tamales, pierna, rompope…)'],
+  ['📝', 'reto', 'Escríbele una nota para el frasco que pueda abrir el día que esté triste'],
+  ['💬', 'pregunta', '¿Qué aprendiste de tu pareja este año?'],
+  ['🎮', 'plan', 'Noche de juegos: jueguen algo juntos en Futari o un juego de mesa'],
+  ['🕯️', 'plan', 'Cena con velas en la casa, aunque sea algo sencillo'],
+  ['💬', 'pregunta', '¿Cuál es el mejor regalo que te han dado y por qué?'],
+  ['🌟', 'reto', 'Díganse una cosa que admiran del otro, mirándose a los ojos'],
+  ['📞', 'reto', 'Llamen o escríbanle juntos a alguien que quieran mucho para desearle feliz Navidad'],
+  ['✨', 'plan', 'Nochebuena: brinden por todo lo que vivieron este año y por lo que viene'],
+];
+
 export const CHALLENGES = [
   'Cocinar juntos una receta que nunca han probado',
   'Una cena sin celulares',

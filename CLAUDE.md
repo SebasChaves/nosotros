@@ -22,6 +22,7 @@ Lee estos documentos antes de cambiar algo:
 | [docs/FLECHAS.md](docs/FLECHAS.md) | Juego Flechas (sorpresa del dueño): modos, regalo, generador, figuras 3D |
 | [docs/FRUTA.md](docs/FRUTA.md) | Juego Pura fruta (combinar 3): motor, niveles, especiales, datos y calibración |
 | [docs/PARADA.md](docs/PARADA.md) | Juego La parada (sorpresa del dueño, todavía sin regalar) |
+| [docs/ADVIENTO.md](docs/ADVIENTO.md) | Calendario de adviento (15 nov – 31 dic): casillas, llenarle casillas a la pareja, datos y avisos |
 | [docs/PENDIENTES.md](docs/PENDIENTES.md) | Cosas pospuestas, ideas, servicios externos y trampas conocidas (iPhone/Android) |
 
 ## Flechas

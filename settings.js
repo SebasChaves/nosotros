@@ -32,6 +32,7 @@ function renderMore() {
   // Subtítulo de cada sección en su mosaico
   const SUB = {
     's-decide': () => 'Listas e ideas de citas', 's-moments': () => 'Fotos, foto del día e historias', 's-love': () => 'Notas y cupones',
+    's-advent': () => window.adventSub?.() || 'Una casilla por día hasta Nochebuena',
     's-cravings': () => crav ? `${pn} tiene ${plural(crav, 'antojo', 'antojos')}` : 'Pide lo que se te antoje',
     's-grocery': () => groceryPending() ? plural(groceryPending(), 'cosa por comprar', 'cosas por comprar') : 'Nada pendiente',
     's-money': () => bal > 0 ? `${pn} te debe ${fmtMoney(bal)}` : bal < 0 ? `Debes ${fmtMoney(-bal)}` : 'Están a mano',

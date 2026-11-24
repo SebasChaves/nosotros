@@ -6,7 +6,7 @@ const standalone = () => matchMedia('(display-mode: standalone)').matches || nav
 const isIOS = () => /iphone|ipad|ipod/i.test(navigator.userAgent);
 
 // Versión de la guía: si alguien ya vio una anterior, le sale una vez «Lo nuevo» (NEW_STEPS) en vez de la completa.
-const TOUR_VERSION = 8;
+const TOUR_VERSION = 9;
 const PET = { screen: 's-home', tab: 'home', emoji: '🐣', title: 'Su mascota',
   text: 'Adopten un huevo en Inicio. Come cada día que <b>los dos</b> hacen algo en Futari:', list: ['Nace a los 3 días y crece hasta leyenda 👑', 'Si un día no come se pone triste, pero no pierde lo que creció', 'Ganan monedas 🪙 para comprarle ropa y detalles', '4 juegos para competir por el récord'] };
 const SNAPS = { screen: 's-home', tab: 'home', emoji: '📸', title: 'Historias',
@@ -46,6 +46,9 @@ const CALNOTIF = { screen: 's-cal', emoji: '🔔', title: 'El calendario ya avis
 const PHOTOSAVE = { screen: 's-gallery', emoji: '⬇️', title: 'Bajar sus fotos al teléfono',
   text: 'En Momentos → <b>Galería</b> → «⬇️ Bajar fotos»: todas juntas o por año, en un archivo .zip con la fecha y el nombre de cada momento.', list: ['Para una sola: ábranla en grande y toquen «⬇️ Guardar»', 'En el iPhone sale el menú de compartir: «Guardar imagen» la manda a Fotos', 'En Android queda en Descargas'] };
 
+const ADVENT = { screen: 's-advent', emoji: '🎄', title: 'Calendario de adviento',
+  text: 'Del 1 al 24 de diciembre, cada uno abre una casilla por día hasta Nochebuena. Está en Inicio y en Más:', list: ['Desde ya, llénale casillas a tu pareja con una nota, un cupón, una foto o un plan', 'No lo verá hasta que abra ese día; solo sabrá que hay algo tuyo 💝', 'Las que nadie llene traen un reto, una pregunta o un plan navideño', 'Cada casilla abierta le da monedas a su mascota'] };
+
 const STEPS = () => [
   { emoji: '💞', title: `¡Bienvenido${myName() ? ', ' + myName() : ''}!`,
     text: 'Esta es Futari (二人, «los dos» en japonés), su app de pareja. Todo lo que hagan aquí lo ven los dos al instante. Te muestro lo principal en un minuto.' },
@@ -70,7 +73,7 @@ const STEPS = () => [
 ];
 // Solo lo nuevo, para quien ya conocía la app
 // Lo nuevo de cada versión de la guía; a quien se saltó varias le salen todas las que no vio
-const NEW_BY_VERSION = { 2: [PET, SNAPS, GUESS, WEEK, NOTIFS, GESTURES], 3: [CRAVINGS, MENU], 4: [GASTOS], 5: [CHAT, COOKED, TRAVEL, VACATIONS, EASIER], 6: [FRUTA], 7: [CALNOTIF], 8: [PHOTOSAVE] };
+const NEW_BY_VERSION = { 2: [PET, SNAPS, GUESS, WEEK, NOTIFS, GESTURES], 3: [CRAVINGS, MENU], 4: [GASTOS], 5: [CHAT, COOKED, TRAVEL, VACATIONS, EASIER], 6: [FRUTA], 7: [CALNOTIF], 8: [PHOTOSAVE], 9: [ADVENT] };
 const NEW_STEPS = seenV => [
   { emoji: '✨', title: 'Lo nuevo en Futari', text: `${myName() ? esc(myName()) + ', a' : 'A'}gregamos ${seenV >= TOUR_VERSION - 1 ? 'algo' : 'varias cosas'}. Te ${seenV >= TOUR_VERSION - 1 ? 'lo' : 'las'} muestro en un minuto.` },
   ...Object.entries(NEW_BY_VERSION).filter(([v]) => Number(v) > seenV).flatMap(([, s]) => s),
