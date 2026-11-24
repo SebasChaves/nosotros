@@ -2,8 +2,7 @@
 
 ## Pospuesto por el dueño (no lo hagas sin que lo pida)
 
-- **Blindar los registros de administración.** Hoy `visits`, `errors` y las bitácoras (`actions`, `perf`, `notiflog`, 1.12.0) están en `couples/nosotros/` y ambas cuentas
-  podrían leerlos. La idea: moverlos fuera de `couples/` y limitar la lectura al uid del dueño con reglas.
+- (Nada por ahora. Blindar los registros de administración se hizo en 1.12.1: `adminlogs/`, ver DATOS.md.)
 
 ## En curso
 

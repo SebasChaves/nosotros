@@ -12,5 +12,10 @@ service cloud.firestore {
     match /private/{owner}/{document=**} {
       allow read, write: if isCouple() && request.auth.uid == owner;
     }
+    // Registros de Administración: los dos escriben; solo Ana (hace de dueña) lee y borra
+    match /adminlogs/{couple}/{document=**} {
+      allow create, update: if isCouple();
+      allow read, delete: if isCouple() && request.auth.token.email == 'ana@prueba.test';
+    }
   }
 }

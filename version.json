@@ -1,7 +1,8 @@
 {
-  "version": "1.12.0",
-  "notes": ["🔒 En Ajustes → Sesión se actualizó el aviso de lo que Futari guarda: ahora también anota qué se hace en cada sección (sin textos), los avisos que se mandan, los errores y cuánto tarda en abrir, para encontrar y arreglar problemas más rápido."],
+  "version": "1.12.1",
+  "notes": ["🔒 Los registros de uso y de errores ahora están más protegidos: solo los puede ver la cuenta de administración (lo dice el aviso de Ajustes → Sesión)."],
   "history": [
+    { "version": "1.12.1", "notes": ["🔒 Los registros de uso y de errores ahora están más protegidos: solo los puede ver la cuenta de administración (lo dice el aviso de Ajustes → Sesión)."] },
     { "version": "1.12.0", "notes": ["🔒 En Ajustes → Sesión se actualizó el aviso de lo que Futari guarda: ahora también anota qué se hace en cada sección (sin textos), los avisos que se mandan, los errores y cuánto tarda en abrir, para encontrar y arreglar problemas más rápido."] },
     { "version": "1.11.0", "notes": ["🎲 Decidir juntos mejorado: cuando uno empieza a votar, al otro le llega un aviso y le aparece en Inicio; al abrirlo va directo a votar.", "Cuando los dos terminan, les avisa en qué coincidieron.", "Se puede apagar en Ajustes → Notificaciones → 🎲 Decidir juntos."] },
     { "version": "1.10.0", "notes": ["⬇️ Bajen sus fotos al teléfono: en Momentos → Galería → «Bajar fotos», todas juntas o por año (un .zip con la fecha y el nombre de cada momento).", "Para guardar una sola: ábranla en grande y toquen «⬇️ Guardar»."] },

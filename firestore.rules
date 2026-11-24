@@ -15,5 +15,11 @@ service cloud.firestore {
     match /private/{owner}/{document=**} {
       allow read, write: if isCouple() && request.auth.uid == owner;
     }
+    // Registros de Administración (ingresos, errores, tiempo de uso, bitácoras; desde 1.12.1): los dos teléfonos
+    // escriben, pero solo el dueño lee y borra. Cambia UID_DEL_DUENO por el uid de TESTERS (testing.js).
+    match /adminlogs/{couple}/{document=**} {
+      allow create, update: if isCouple();
+      allow read, delete: if isCouple() && request.auth.uid == 'UID_DEL_DUENO';
+    }
   }
 }

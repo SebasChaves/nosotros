@@ -1,8 +1,8 @@
 // Panel de administración (solo visible para TESTERS), en tres pestañas:
 //   Ingresos (por día, horas, teléfonos, datos, errores) · Estadísticas (uso, notificaciones, quién hace más) · Pruebas.
-import { query, where, orderBy, limit, getDocs, getCountFromServer, writeBatch } from 'https://www.gstatic.com/firebasejs/11.0.2/firebase-firestore.js';
+import { query, where, orderBy, limit, getDocs, getCountFromServer, writeBatch, increment, arrayUnion } from 'https://www.gstatic.com/firebasejs/11.0.2/firebase-firestore.js';
 import { $, S, db, esc, icon, paint, on, onShow, expose, toast, ask, col, ref, avatar, loadPhotos, nameOf, openSheet, celebrate,
-         today, dayKey, todayKey, parseDate, fmtShort, fmtDay, plural, COLLECTIONS, uid, EMU, vnum, vlabel, auth } from './core.js';
+         today, dayKey, todayKey, parseDate, fmtShort, fmtDay, plural, COLLECTIONS, uid, EMU, vnum, vlabel, auth, logCol, logRef } from './core.js';
 import { isTester, testerCard } from './testing.js';
 import { giftAdminCards } from './gifts.js';
 import { NOTIF_TYPES, pushHere, pushConfigured } from './push.js';
@@ -46,10 +46,10 @@ async function load() {
   const sinceDate = new Date(today().getFullYear(), today().getMonth(), today().getDate() - (range - 1)), since = sinceDate.getTime(), sinceKey = dayKey(sinceDate);
   try {
     const [vs, es, pc, us, st] = await Promise.all([
-      getDocs(query(col('visits'), where('at', '>=', since), orderBy('at', 'desc'))),
-      getDocs(query(col('errors'), orderBy('at', 'desc'), limit(100))),
+      getDocs(query(logCol('visits'), where('at', '>=', since), orderBy('at', 'desc'))),
+      getDocs(query(logCol('errors'), orderBy('at', 'desc'), limit(100))),
       getCountFromServer(col('photos')).catch(() => null),
-      getDocs(query(col('usage'), where('day', '>=', sinceKey))).catch(() => null),
+      getDocs(query(logCol('usage'), where('day', '>=', sinceKey))).catch(() => null),
       getDocs(query(col('stats'), where('day', '>=', sinceKey))).catch(() => null),
     ]);
     visits = vs.docs.map(d => ({ id: d.id, ...d.data() }));
@@ -57,18 +57,54 @@ async function load() {
     stats = st ? st.docs.map(d => d.data()) : [];
     errors = es.docs.map(d => ({ id: d.id, ...d.data() }));
     photoCount = pc ? pc.data().count : null;
+    // Registros que quedaron en la ruta vieja (couples/, antes de 1.12.1): se ofrece moverlos una vez
+    oldLogs = (await Promise.all(LOG_COLS.map(c => getCountFromServer(col(c)).then(s => s.data().count).catch(() => 0)))).reduce((a, b) => a + b, 0);
     if (tab === 'bitacoras') await loadLogs(since, sinceKey);
   } catch (e) { console.error(e); toast('No se pudieron cargar los datos'); }
   loading = false; render();
 }
 
+/* ---------- Registros viejos ----------
+   Hasta 1.12.0 los registros vivían en couples/nosotros/<col>, donde los dos pueden leer. Desde 1.12.1 viven en
+   adminlogs/nosotros/<col> (solo el dueño lee). Esto copia lo viejo a la ruta nueva y después lo borra de la vieja. */
+const LOG_COLS = ['visits', 'errors', 'usage', 'actions', 'perf', 'notiflog'];
+let oldLogs = 0, migrating = false;
+// usage, actions y notiflog tienen un doc por día: el día que se publicó 1.12.1 puede haber uno viejo y uno nuevo con el
+// mismo id. En vez de pisar el nuevo, se suman los contadores y se juntan las listas.
+const incMap = o => Object.fromEntries(Object.entries(o || {}).map(([k, v]) => [k, typeof v === 'object' ? incMap(v) : increment(Number(v) || 0)]));
+function mergeOld(c, d) {
+  if (c === 'usage') return [{ uid: d.uid, day: d.day, total: increment(Number(d.total) || 0), secs: incMap(d.secs) }, { merge: true }];
+  if (c === 'actions') return [{ uid: d.uid, day: d.day, n: incMap(d.n), ...(d.log?.length ? { log: arrayUnion(...d.log) } : {}) }, { merge: true }];
+  if (c === 'notiflog') return [{ day: d.day, ...(d.list?.length ? { list: arrayUnion(...d.list) } : {}) }, { merge: true }];
+  return [d];
+}
+async function admMigrate() {
+  if (migrating) return;
+  if (!(await ask(`¿Mover ${plural(oldLogs, 'registro viejo', 'registros viejos')} a la parte privada de administración? Se copian primero y después se borran de donde estaban.`, { ok: 'Mover' }))) return;
+  migrating = true; render();
+  let moved = 0;
+  try {
+    for (const c of LOG_COLS) {
+      const docs = (await getDocs(col(c))).docs;
+      for (let i = 0; i < docs.length; i += 400) { const b = writeBatch(db); docs.slice(i, i + 400).forEach(d => b.set(logRef(c, d.id), ...mergeOld(c, d.data()))); await b.commit(); }
+      for (let i = 0; i < docs.length; i += 400) { const b = writeBatch(db); docs.slice(i, i + 400).forEach(d => b.delete(d.ref)); await b.commit(); }
+      moved += docs.length;
+    }
+    toast(`Listo: ${plural(moved, 'registro movido', 'registros movidos')} 🔒`);
+  } catch (e) { console.error(e); toast(`Se movieron ${moved}; falló el resto (${e.code || e.message}). Toca de nuevo para seguir.`); }
+  migrating = false; load();
+}
+const migrateCard = () => !oldLogs ? '' : `<div class="glass stack" style="border-color:rgba(255,181,71,.45)"><span class="label">🔒 Mover registros viejos</span>
+  <p class="small" style="margin:0">Hay ${plural(oldLogs, 'registro', 'registros')} de antes de la versión 1.12.1 donde los dos pueden leerlos. Muévelos a la parte que solo ves tú.</p>
+  <button class="btn small" onclick="admMigrate()" ${migrating ? 'disabled' : ''}>${migrating ? 'Moviendo…' : `Mover ${oldLogs}`}</button></div>`;
+
 /* ---------- Bitácoras: se leen solo al abrir esa pestaña (cada registro es una lectura de Firebase) ---------- */
 let logs = { actions: [], perf: [], notif: [], worker: null, workerMsg: '', key: '' }, sub = 'acciones';
 async function loadLogs(since, sinceKey) {
   const [ac, pf, nl] = await Promise.all([
-    getDocs(query(col('actions'), where('day', '>=', sinceKey))).catch(() => null),
-    getDocs(query(col('perf'), where('at', '>=', since), orderBy('at', 'desc'), limit(300))).catch(() => null),
-    getDocs(query(col('notiflog'), where('day', '>=', sinceKey))).catch(() => null),
+    getDocs(query(logCol('actions'), where('day', '>=', sinceKey))).catch(() => null),
+    getDocs(query(logCol('perf'), where('at', '>=', since), orderBy('at', 'desc'), limit(300))).catch(() => null),
+    getDocs(query(logCol('notiflog'), where('day', '>=', sinceKey))).catch(() => null),
   ]);
   logs.actions = ac ? ac.docs.map(d => d.data()) : [];
   logs.perf = pf ? pf.docs.map(d => d.data()) : [];
@@ -153,7 +189,7 @@ function render() {
   if (tab === 'bitacoras') { paint('s-admin', head + logsHTML(ids, days)); return; }
   if (tab === 'pruebas') { paint('s-admin', head + testsHTML()); showVersion(); return; }
   if (tab === 'juegos') { paint('s-admin', head + juegosHTML()); return; }
-  paint('s-admin', `${head}
+  paint('s-admin', `${head}${migrateCard()}
     <div class="stack" style="gap:14px">${summary}</div>
     <div class="glass stack"><div class="row"><span class="label">Ingresos por día</span><span class="small muted">${visits.length} en ${range} días</span></div>${chart}${legend}</div>
     <div class="glass"><div class="row"><span class="label">${capital(fmtDay(parseDate(selDay)))}</span></div>${detail}</div>
@@ -444,14 +480,14 @@ function admCsv() {
 async function admPurge() {
   if (!(await ask('¿Borrar los registros de ingresos, tiempo de uso, avisos y bitácoras de hace más de 90 días?', { ok: 'Borrar', danger: true }))) return;
   const cut = Date.now() - 90 * 864e5, cutDay = dayKey(new Date(cut));
-  const docs = [...(await getDocs(query(col('visits'), where('at', '<', cut)))).docs, ...(await getDocs(query(col('perf'), where('at', '<', cut)))).docs,
-    ...(await getDocs(query(col('usage'), where('day', '<', cutDay)))).docs, ...(await getDocs(query(col('stats'), where('day', '<', cutDay)))).docs,
-    ...(await getDocs(query(col('actions'), where('day', '<', cutDay)))).docs, ...(await getDocs(query(col('notiflog'), where('day', '<', cutDay)))).docs];
+  const docs = [...(await getDocs(query(logCol('visits'), where('at', '<', cut)))).docs, ...(await getDocs(query(logCol('perf'), where('at', '<', cut)))).docs,
+    ...(await getDocs(query(logCol('usage'), where('day', '<', cutDay)))).docs, ...(await getDocs(query(col('stats'), where('day', '<', cutDay)))).docs,
+    ...(await getDocs(query(logCol('actions'), where('day', '<', cutDay)))).docs, ...(await getDocs(query(logCol('notiflog'), where('day', '<', cutDay)))).docs];
   for (let i = 0; i < docs.length; i += 400) { const b = writeBatch(db); docs.slice(i, i + 400).forEach(d => b.delete(d.ref)); await b.commit(); }
   toast(`${plural(docs.length, 'registro borrado', 'registros borrados')}`);
 }
 async function admClearErrors() {
-  const all = await getDocs(col('errors'));
+  const all = await getDocs(logCol('errors'));
   for (let i = 0; i < all.docs.length; i += 400) { const b = writeBatch(db); all.docs.slice(i, i + 400).forEach(d => b.delete(d.ref)); await b.commit(); }
   errors = []; render(); toast('Errores borrados');
 }
@@ -463,4 +499,4 @@ async function admForceUpdate() {
 }
 
 onShow('s-admin', () => { render(); load(); });
-expose({ labSpecies, labStage, labMood, labTime, labFed, ...labWearFns, labAll, labNone, labRandom, labHatch, labGame, admTab, admSub, admMore, admRange, admDay, admReload, admCsv, admPurge, admClearErrors, admForceUpdate });
+expose({ labSpecies, labStage, labMood, labTime, labFed, ...labWearFns, labAll, labNone, labRandom, labHatch, labGame, admTab, admSub, admMore, admMigrate, admRange, admDay, admReload, admCsv, admPurge, admClearErrors, admForceUpdate });

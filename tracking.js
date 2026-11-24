@@ -2,7 +2,7 @@
 // Ingreso = abrir la app (o volver a ella después de 20 minutos sin usarla). Se avisa a los dos en Ajustes.
 // Bitácoras (1.12.0): acciones de cada uno (sin textos), errores con más detalle, avisos mandados y rendimiento al abrir.
 import { setDoc, updateDoc, increment, arrayUnion } from 'https://www.gstatic.com/firebasejs/11.0.2/firebase-firestore.js';
-import { S, newRef, ref, dayKey, todayKey, logHooks } from './core.js';
+import { S, newLogRef, logRef, dayKey, todayKey, logHooks } from './core.js';
 
 const GAP = 20 * 60 * 1000;
 // Navegador: el orden importa (Samsung Internet, Edge y otros también dicen "Chrome" en su identificación).
@@ -41,7 +41,7 @@ export function logVisit(force = false) {
   try { localStorage.setItem('futari-last-visit-' + S.me.uid, String(now)); } catch {}
   const d = new Date(now);
   // Se espera un momento para tener el modelo del teléfono (llega aparte).
-  setTimeout(() => setDoc(newRef('visits'), { uid: S.me.uid, at: now, day: dayKey(d), hour: d.getHours(), min: d.getMinutes(), ...device() }).catch(() => {}), 600);
+  setTimeout(() => setDoc(newLogRef('visits'), { uid: S.me.uid, at: now, day: dayKey(d), hour: d.getHours(), min: d.getMinutes(), ...device() }).catch(() => {}), 600);
 }
 
 /* ---------- Errores ---------- */
@@ -57,7 +57,7 @@ export function logError(message, where, extra = {}) {
   if (errRefs[key]) { updateDoc(errRefs[key], { count: increment(1), lastAt: Date.now() }).catch(() => {}); return; }
   if (sent >= 30) return;
   sent++;
-  const r = errRefs[key] = newRef('errors'), dv = device();
+  const r = errRefs[key] = newLogRef('errors'), dv = device();
   setDoc(r, { uid: S.me.uid, at: Date.now(), message: String(message).slice(0, 300), where: String(where || '').slice(0, 200),
     screen: document.querySelector('.screen.active')?.id || '', os: dv.os, browser: dv.browser, model: dv.model, app: dv.app,
     kind: extra.kind || 'js', code: String(extra.code || ''), stack: String(extra.stack || '').slice(0, 800), trail: [...trail],
@@ -83,7 +83,7 @@ setInterval(() => {
 function flushUsage() {
   if (!S.me || !accTotal) return;
   const day = todayKey(), secs = Object.fromEntries(Object.entries(acc).map(([k, v]) => [k, increment(v)]));
-  setDoc(ref('usage', `${day}_${S.me.uid}`), { uid: S.me.uid, day, total: increment(accTotal), secs }, { merge: true }).catch(() => {});
+  setDoc(logRef('usage', `${day}_${S.me.uid}`), { uid: S.me.uid, day, total: increment(accTotal), secs }, { merge: true }).catch(() => {});
   acc = {}; accTotal = 0;
 }
 
@@ -125,7 +125,7 @@ function flushActions() {
     const cnt = {};
     for (const a of list) (cnt[a.c] ||= {})[a.o] = ((cnt[a.c] ||= {})[a.o] || 0) + 1;
     const n = Object.fromEntries(Object.entries(cnt).map(([c, ops]) => [c, Object.fromEntries(Object.entries(ops).map(([o, v]) => [o, increment(v)]))]));
-    setDoc(ref('actions', `${day}_${S.me.uid}`), { uid: S.me.uid, day, n, log: arrayUnion(...list) }, { merge: true }).catch(() => {});
+    setDoc(logRef('actions', `${day}_${S.me.uid}`), { uid: S.me.uid, day, n, log: arrayUnion(...list) }, { merge: true }).catch(() => {});
   }
   acts = [];
 }
@@ -137,7 +137,7 @@ export function logNotif(e) {
   if (!S.me) return;
   const day = todayKey(), item = { at: Date.now(), by: S.me.uid, src: 'app' };
   for (const [k, v] of Object.entries(e)) if (v !== undefined && v !== null) item[k] = typeof v === 'string' ? v.slice(0, 120) : v;
-  setDoc(ref('notiflog', day), { day, list: arrayUnion(item) }, { merge: true }).catch(() => {});
+  setDoc(logRef('notiflog', day), { day, list: arrayUnion(item) }, { merge: true }).catch(() => {});
 }
 
 /* ---------- Rendimiento al abrir la app ---------- */
@@ -157,7 +157,7 @@ function sendPerf() {
   if (perfSent || !S.me) return;
   perfSent = true;
   const nav = performance.getEntriesByType?.('navigation')?.[0], p = perf.ph, start = Date.now() - Math.round(performance.now());
-  setDoc(newRef('perf'), { uid: S.me.uid, at: start, day: dayKey(new Date(start)), ...device(), online: navigator.onLine,
+  setDoc(newLogRef('perf'), { uid: S.me.uid, at: start, day: dayKey(new Date(start)), ...device(), online: navigator.onLine,
     conn: navigator.connection?.effectiveType || '', sw: !!navigator.serviceWorker?.controller,
     dom: nav ? Math.round(nav.domContentLoadedEventEnd) : null, t: perf.t,
     photos: { n: p.n, avg: p.n ? Math.round(p.sum / p.n) : 0, max: Math.round(p.max), fail: p.fail } }).catch(() => {});

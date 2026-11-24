@@ -11,11 +11,12 @@ couples/nosotros                     doc de la pareja (S.settings)
   { start: 'AAAA-MM-DD', currency: 'CRC'|'USD'|…, members: { <uid>: { name, joined } }, lastBackup }
 couples/nosotros/<colección>/<id>    todo lo compartido (una colección por sección, ver tabla)
 private/<uid>/gifts/<id>             ideas de regalo: solo las ve su dueño
+adminlogs/nosotros/<colección>/<id>  registros de Administración (1.12.1): los dos escriben, solo el dueño lee y borra
 ```
 
 `COLLECTIONS` en `core.js` es la lista de colecciones que se escuchan en vivo y se incluyen en el respaldo.
-Colecciones que **no** están en esa lista (se leen bajo demanda y no se respaldan, salvo `photos`): `photos`, `visits`, `errors`,
-`usage`, `stats`, `actions`, `perf`, `notiflog`.
+Colecciones que **no** están en esa lista (se leen bajo demanda y no se respaldan, salvo `photos`): `photos`, `stats` y los
+registros de `adminlogs/` (`visits`, `errors`, `usage`, `actions`, `perf`, `notiflog`).
 
 ## Colecciones principales
 
@@ -86,8 +87,11 @@ teléfono no lo ve hasta borrar esas claves.
 ## Registro de uso y bitácoras (`visits`, `errors`, `actions`, `perf`, `notiflog`)
 
 `tracking.js` guarda un ingreso al abrir la app o al volver tras 20 min: `uid, at, day, hour, min, os, osVersion,
-model, browser, installed, app (versión)`. Hoy ambas cuentas pueden leer todo esto (ver PENDIENTES.md). Hay un aviso en
-Ajustes («Futari guarda…»); si agregas campos, actualízalo. Bitácoras (1.12.0, Administración → 📒 Bitácoras):
+model, browser, installed, app (versión)`. Desde 1.12.1 todos estos registros (y `usage`) viven en
+`adminlogs/nosotros/<colección>` (`logCol` / `logRef` / `newLogRef` en core.js): las reglas dejan escribir a los dos y
+leer o borrar solo al uid del dueño. `stats` se quedó en `couples/` porque el Worker lo lee para el resumen del domingo.
+Lo de antes se mueve con la tarjeta «🔒 Mover registros viejos» de Administración → Ingresos. Hay un aviso en Ajustes
+(«Futari guarda…»); si agregas campos, actualízalo. Bitácoras (1.12.0, Administración → 📒 Bitácoras):
 
 | Colección | Campos |
 |---|---|
@@ -100,9 +104,10 @@ Ajustes («Futari guarda…»); si agregas campos, actualízalo. Bitácoras (1.1
 
 ## Reglas de seguridad
 
-`firestore.rules` (el del repo tiene correos de ejemplo; **las reales están solo en la consola de Firebase**):
+`firestore.rules` (el del repo tiene correos y uid de ejemplo; **las reales están solo en la consola de Firebase**):
 - `couples/{couple}/{document=**}`: leer/escribir si el correo de la sesión está en la lista de la pareja.
 - `private/{owner}/{document=**}`: además, solo si `request.auth.uid == owner`.
+- `adminlogs/{couple}/{document=**}`: crear y actualizar la pareja; leer y borrar solo el uid del dueño (1.12.1).
 
 Cualquier colección nueva bajo `couples/nosotros/` queda cubierta sin tocar reglas. Un cambio de reglas lo hace el
 dueño en la consola: dale el texto, no lo publiques tú.

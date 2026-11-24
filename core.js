@@ -601,6 +601,11 @@ export const coupleRef = db && doc(db, 'couples', COUPLE);
 export const col = name => collection(db, 'couples', COUPLE, name);
 export const ref = (name, id) => doc(col(name), id);
 export const newRef = name => doc(col(name));
+// Registros de Administración (ingresos, errores, tiempo de uso, bitácoras): fuera de couples/ para que las reglas dejen
+// escribir a los dos pero leer y borrar solo al dueño (match /adminlogs en firestore.rules). Ver docs/DATOS.md.
+export const logCol = name => collection(db, 'adminlogs', COUPLE, name);
+export const logRef = (name, id) => doc(logCol(name), id);
+export const newLogRef = name => doc(logCol(name));
 // Datos que solo ve quien los escribe (p. ej. ideas de regalo)
 export const privCol = name => collection(db, 'private', S.me.uid, name);
 export const privRef = (name, id) => doc(privCol(name), id);
