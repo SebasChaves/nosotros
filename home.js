@@ -21,6 +21,10 @@ import { giftCard } from './gifts.js';
 import { moneyCard, moneyTodayRows } from './money.js';
 import { notify, meForPartner } from './push.js';
 import { adventCard } from './advent.js';
+import { xmasGreeting } from './season.js';
+
+// Gorrito navideño sobre el logo (solo se ve con body.xmas, ver season.js)
+const XMAS_HAT = `<svg class="xmas-hat" viewBox="0 0 30 26" aria-hidden="true"><path d="M3 20 C6 9 13 3 22 4 C26 5 27 9 26 13 L24 11 C22 8 18 9 16 12 L13 20 Z" fill="#E63946"/><rect x="1" y="18" width="16" height="6" rx="3" fill="#fff"/><circle cx="26" cy="14" r="3.4" fill="#fff"/></svg>`;
 
 /* ---------- Racha y "Pensando en ti" ---------- */
 // Un día cuenta para la racha si los dos hicieron algo: marcar ánimo, responder la pregunta, mandar un "pensando en ti",
@@ -266,8 +270,10 @@ function renderHome() {
   const all = homeLayout().filter(c => c.on || (c.id === 'counter' && !ready));
   const hidden = staleCards(all.map(c => c.id));
   const layout = all.filter(c => !hidden.includes(c.id));
+  const special = xmasGreeting(greetName() ? esc(greetName()) : ''); // Navidad y Año Nuevo (season.js)
   paint('s-home', `
-    <div class="topbar"><div class="title"><span class="hi">${(h => h < 5 ? 'Buenas noches 🌙' : h < 12 ? 'Buenos días ☀️' : h < 19 ? 'Buenas tardes 🌤️' : 'Buenas noches 🌙')(new Date().getHours())}${greetName() ? ', ' + esc(greetName()) : ''}</span><h1 class="brand grad-text" style="font-size:30px">Futari</h1></div>
+    <div class="xmas-lights" aria-hidden="true">${'<i></i>'.repeat(14)}</div>
+    <div class="topbar"><div class="title"><span class="hi">${special || (h => h < 5 ? 'Buenas noches 🌙' : h < 12 ? 'Buenos días ☀️' : h < 19 ? 'Buenas tardes 🌤️' : 'Buenas noches 🌙')(new Date().getHours()) + (greetName() ? ', ' + esc(greetName()) : '')}</span><span class="brand-wrap">${XMAS_HAT}<h1 class="brand grad-text" style="font-size:30px">Futari</h1></span></div>
       <div class="row" style="gap:10px"><div class="avatars">${names.map(([id]) => avatar(id, 36)).join('')}</div>
       <button class="icon-btn" onclick="openSearch()" aria-label="Buscar">${icon('search')}</button>
       <button class="icon-btn" onclick="go('s-settings')" aria-label="Ajustes">${icon('gear')}</button></div></div>

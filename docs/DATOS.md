@@ -120,7 +120,7 @@ dueño en la consola: dale el texto, no lo publiques tú.
 
 ## Datos locales del teléfono (localStorage)
 
-`nosotros-accent`, `nosotros-theme` (tema antes de cargar), `futari-pin-<uid>` (huella del PIN), `futari-badges-<uid>`
+`nosotros-accent`, `nosotros-theme` (tema antes de cargar), `futari-xmas` (estilo navideño encendido, season.js), `futari-pin-<uid>` (huella del PIN), `futari-badges-<uid>`
 (logros ya avisados), `futari-version` (última versión vista, para las novedades), `futari-resume` (pantalla para
 volver rápido), `futari-last-visit-<uid>`. Firestore además usa su caché persistente (IndexedDB) para funcionar sin internet.
 

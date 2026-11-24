@@ -12,6 +12,7 @@ import { badgeCount } from './badges.js';
 import { pinEnabled } from './lock.js';
 import { quizWaiting } from './quiz.js';
 import { homeLayout, HOME_CARDS, COUNTER_UNITS } from './home.js';
+import { xmasSeason } from './season.js';
 import { isTester } from './testing.js';
 import { menuOrder, hiddenInMore, sectionName, sectionIcon, sectionAlerts, menuPrefsCard } from './menu.js';
 import { partnerCravings } from './cravings.js';
@@ -78,6 +79,7 @@ function renderSettings() {
       <p class="tiny muted" style="margin:0">${esc((ACCENTS.find(x => x[0] === accent) || [, 'Tu color'])[1])} · toca el último cuadro para elegir tu propio color.</p>
       <span class="label" style="margin-top:6px">Apariencia</span>
       <div class="seg">${[['dark', 'Oscuro'], ['light', 'Claro'], ['auto', 'Automático']].map(([k, l]) => `<button class="${(prefs.theme || 'dark') === k ? 'on' : ''}" onclick="setTheme('${k}')">${l}</button>`).join('')}</div>
+      ${xmasSeason() ? `<label class="row" style="cursor:pointer"><span class="small">🎄 Estilo navideño <span class="tiny muted">(hasta el 6 de enero, solo en tu teléfono)</span></span><input type="checkbox" ${prefs.season !== false ? 'checked' : ''} onchange="setSeason(this.checked)" aria-label="Estilo navideño"></label>` : ''}
       <span class="label" style="margin-top:6px">Tamaño de letra y botones</span>
       <div class="seg">${TEXT_SIZES.map(([k, l]) => `<button class="${(prefs.textSize || 'n') === k ? 'on' : ''}" onclick="setTextSize('${k}')">${l}</button>`).join('')}</div>
       <p class="tiny muted" style="margin:0">Agranda todo en este teléfono (menos los juegos y el mapa).</p>
@@ -220,6 +222,8 @@ export function applyTheme(th) {
 }
 darkMQ.addEventListener?.('change', () => { if ((localStorage.getItem('nosotros-theme') || 'dark') === 'auto') applyTheme('auto'); });
 function setTheme(th) { applyTheme(th); write(setDoc(ref('profiles', uid()), { prefs: { theme: th } }, { merge: true })); }
+// Estilo navideño (season.js): se guarda en el perfil y se aplica al llegar el cambio (on('profiles'))
+function setSeason(onNow) { write(setDoc(ref('profiles', uid()), { prefs: { season: onNow } }, { merge: true })); toast(onNow ? 'Estilo navideño encendido 🎄' : 'Estilo navideño apagado'); }
 function setAccent(a) { applyAccent(a); write(setDoc(ref('profiles', uid()), { prefs: { accent: a } }, { merge: true })); }
 // Mientras se mueve el selector se ve en vivo; al soltarlo se guarda.
 function previewCustomAccent(hex) { applyAccent('custom', hex); }
@@ -458,4 +462,4 @@ on('ideas profiles push', () => { if ($('s-settings').classList.contains('active
 onShow('s-settings', renderSettings);
 window.rerenderSettings = () => { if ($('s-settings').classList.contains('active')) renderSettings(); };
 onShow('s-more', renderMore);
-expose({ backupHelp, autoBackupNow, autoBackups, autoBackupGet, autoBackupRestore, setTextSize, openMenuPrefs, enablePush, disablePush, testPush, setNotif, previewCustomAccent, setCustomAccent, saveNicks, setCounterUnit, saveCounter, toggleHomeCard, moveHomeCard, resetHome, saveSettings, setTheme, setAccent, pickAvatar, removeAvatar, pickBg, removeBg, delIdea, logout, exportData, importData });
+expose({ backupHelp, autoBackupNow, autoBackups, autoBackupGet, autoBackupRestore, setTextSize, openMenuPrefs, enablePush, disablePush, testPush, setNotif, previewCustomAccent, setCustomAccent, saveNicks, setCounterUnit, saveCounter, toggleHomeCard, moveHomeCard, resetHome, saveSettings, setTheme, setSeason, setAccent, pickAvatar, removeAvatar, pickBg, removeBg, delIdea, logout, exportData, importData });

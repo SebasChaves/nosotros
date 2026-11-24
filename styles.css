@@ -635,6 +635,40 @@ body:not([data-theme="light"]) .map-box .leaflet-tile-pane { filter: invert(1) h
 .adm-barline { height: 8px; border-radius: 8px; background: var(--line); overflow: hidden; }
 .adm-barline i { display: block; height: 100%; border-radius: 8px; }
 .adm-bar .num { text-align: right; }
+/* ===== Estilo navideño (season.js, del 15 de noviembre al 6 de enero) =====
+   Pisa por la temporada el acento que eligió cada uno (con !important porque applyAccent pone variables en línea). */
+body.xmas { --g1: #E63946 !important; --g2: #F4C542 !important; --g3: #1F8A4C !important; --on-grad: #2A0A0E !important; }
+body.xmas #bgfx {
+  background:
+    radial-gradient(60vmax 60vmax at -10% -5%, color-mix(in srgb, #E63946 42%, transparent), transparent 60%),
+    radial-gradient(55vmax 55vmax at 110% 35%, color-mix(in srgb, #F4C542 22%, transparent), transparent 60%),
+    radial-gradient(65vmax 65vmax at 10% 110%, color-mix(in srgb, #1F8A4C 48%, transparent), transparent 60%),
+    var(--bg);
+}
+body.xmas[data-theme="light"] #bgfx {
+  background:
+    radial-gradient(60vmax 60vmax at -10% -5%, color-mix(in srgb, #E63946 18%, transparent), transparent 60%),
+    radial-gradient(55vmax 55vmax at 110% 35%, color-mix(in srgb, #F4C542 18%, transparent), transparent 60%),
+    radial-gradient(65vmax 65vmax at 10% 110%, color-mix(in srgb, #1F8A4C 20%, transparent), transparent 60%),
+    var(--bg);
+}
+#snowfx { position: fixed; inset: 0; width: 100vw; height: 100vh; z-index: -1; pointer-events: none; }
+/* Guirnalda de luces arriba de Inicio */
+.xmas-lights { display: none; }
+body.xmas .xmas-lights { display: flex; justify-content: space-between; height: 18px; margin: -6px 4px -8px; position: relative; }
+body.xmas .xmas-lights::before { content: ""; position: absolute; left: 0; right: 0; top: 3px; height: 8px; border-bottom: 1.5px solid color-mix(in srgb, var(--text) 30%, transparent); border-radius: 0 0 50% 50% / 0 0 100% 100%; }
+body.xmas .xmas-lights i { width: 8px; height: 11px; border-radius: 50% 50% 45% 45%; margin-top: 7px; position: relative; animation: xmasBlink 2.4s ease-in-out infinite; }
+body.xmas .xmas-lights i:nth-child(4n+1) { background: #E63946; box-shadow: 0 0 8px #E63946; }
+body.xmas .xmas-lights i:nth-child(4n+2) { background: #F4C542; box-shadow: 0 0 8px #F4C542; animation-delay: .6s; }
+body.xmas .xmas-lights i:nth-child(4n+3) { background: #2EC46B; box-shadow: 0 0 8px #2EC46B; animation-delay: 1.2s; }
+body.xmas .xmas-lights i:nth-child(4n) { background: #5DADE2; box-shadow: 0 0 8px #5DADE2; animation-delay: 1.8s; }
+@keyframes xmasBlink { 0%, 100% { opacity: 1; } 50% { opacity: .35; } }
+/* Gorrito sobre la «F» de Futari */
+.brand-wrap { position: relative; display: inline-block; }
+.xmas-hat { display: none; }
+body.xmas .xmas-hat { display: block; position: absolute; left: -11px; top: -2px; width: 25px; height: 22px; transform: rotate(-24deg); pointer-events: none; z-index: 1; }
+@media (prefers-reduced-motion: reduce) { body.xmas .xmas-lights i { animation: none; } }
+
 /* Calendario de adviento (advent.js) */
 .adv-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 10px; }
 .adv-box { position: relative; aspect-ratio: 1; border-radius: 16px; border: 1px solid var(--line); background: var(--glass); color: var(--text);
