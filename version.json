@@ -1,7 +1,8 @@
 {
-  "version": "1.14.0",
-  "notes": ["❄️ Futari se vistió de Navidad: colores rojo y dorado, nieve, luces y un gorrito en Inicio, hasta el 6 de enero.", "Si prefieren verla como siempre, se apaga en Ajustes → Apariencia → 🎄 Estilo navideño (solo en tu teléfono)."],
+  "version": "1.15.0",
+  "notes": ["🔔 Nueva campana de avisos en Inicio: junta todo lo que te espera (notas, cupones, votos, historias, antojos, juegos…) y dice de dónde viene. Toca uno y te lleva directo.", "En Más, las secciones con algo pendiente suben al principio y dicen qué es.", "El calendario de adviento ya solo marca la casilla de hoy, no todas las que quedaron sin abrir."],
   "history": [
+    { "version": "1.15.0", "notes": ["🔔 Nueva campana de avisos en Inicio: junta todo lo que te espera (notas, cupones, votos, historias, antojos, juegos…) y dice de dónde viene. Toca uno y te lleva directo.", "En Más, las secciones con algo pendiente suben al principio y dicen qué es.", "El calendario de adviento ya solo marca la casilla de hoy, no todas las que quedaron sin abrir."] },
     { "version": "1.14.0", "notes": ["❄️ Futari se vistió de Navidad: colores rojo y dorado, nieve, luces y un gorrito en Inicio, hasta el 6 de enero.", "Si prefieren verla como siempre, se apaga en Ajustes → Apariencia → 🎄 Estilo navideño (solo en tu teléfono)."] },
     { "version": "1.13.0", "notes": ["🎄 Calendario de adviento: del 1 al 24 de diciembre, una casilla por día hasta Nochebuena (en Inicio y en Más).", "Desde ya, llénenle casillas al otro con una nota, un cupón, una foto o un plan: no se ve hasta ese día.", "Las casillas que nadie llene traen un reto, una pregunta o un plan navideño, y cada una abierta le da monedas a su mascota."] },
     { "version": "1.12.1", "notes": ["🔒 Los registros de uso y de errores ahora están más protegidos: solo los puede ver la cuenta de administración (lo dice el aviso de Ajustes → Sesión)."] },

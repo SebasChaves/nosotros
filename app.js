@@ -5,7 +5,7 @@ import { onSnapshot, disableNetwork, enableNetwork, query, where, documentId, ge
 import { $, S, auth, db, go, esc, openSheet, configured, placeTabPill, coupleRef, col, privCol, COLLECTIONS, PRIVATE, toast, expose, rerender, rerenderAll,
          partnerUid, profile, uid, ask, inBar, setBar, barIds, dayKey, EMU, dataReady, vnum, logHooks } from './core.js';
 if (EMU) window.__S = S; // solo emulador: para las pruebas automáticas
-import { todayAnswers } from './home.js';
+import './home.js';
 import './decide.js';
 import './love.js';
 import './moments.js';
@@ -17,7 +17,7 @@ import './money-tour.js';
 import './money-charts.js';
 import './shows-finder.js';
 import { handleOpenParam } from './push.js';
-import { guessWaiting } from './guess.js';
+import './guess.js';
 import './lists.js';
 import './money.js';
 import './places.js';
@@ -29,8 +29,7 @@ import './season.js';
 import './arrows.js';
 import './bus.js';
 import './fruta.js';
-import { sectionAlerts } from './menu.js';
-import { urgentReminders } from './reminders.js';
+import { alertItems, alertTotal, homeAlerts, sectionAlerts } from './alerts.js';
 import './summary.js';
 import './calendar.js';
 import './shows.js';
@@ -48,7 +47,7 @@ import { logVisit, logActions, logError } from './tracking.js';
 import { maybeStartTour, resetTourCheck } from './tour.js';
 
 // Versión de esta copia de la app. Súbela junto con version.json y la caché de sw.js al publicar.
-export const APP_VERSION = '1.14.0';
+export const APP_VERSION = '1.15.0';
 window.FUTARI_VERSION = APP_VERSION; // lo guarda el registro de ingresos (panel de administración)
 
 // Si la app estuvo abierta hace poco (Android la cierra sola al salir), se vuelve rápido a la misma pantalla.
@@ -217,11 +216,13 @@ function listen() {
 function updateBadges() {
   if (!S.me) return;
   const setDot = (id, n) => { const el = $(id); if (!el) return; el.hidden = !n; el.textContent = n > 9 ? '9+' : n; };
-  const p = partnerUid(), ans = todayAnswers();
-  setDot('dot-home', (p && ans?.answers?.[p] && !ans?.answers?.[uid()] ? 1 : 0) + (guessWaiting() ? 1 : 0) + urgentReminders().length);
-  // Cada sección con avisos: su puntito en la barra si está ahí; si no, se suma al de Más (menu.js)
+  // Todo sale de la lista única de avisos (alerts.js): campana de Inicio, Inicio, cada sección de la barra y Más
+  const items = alertItems();
+  setDot('dot-bell', alertTotal(items));
+  setDot('dot-home', homeAlerts(items));
   let more = 0;
-  for (const [id, n] of Object.entries(sectionAlerts())) { if (inBar(id)) setDot('dot-' + id.slice(2), n); else more += n; }
+  for (const id of barIds()) if (id !== 's-home' && id !== 's-more') setDot('dot-' + id.slice(2), 0);
+  for (const [id, n] of Object.entries(sectionAlerts(items))) { if (inBar(id)) setDot('dot-' + id.slice(2), n); else more += n; }
   setDot('dot-more', more);
 }
 

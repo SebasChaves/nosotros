@@ -14,7 +14,8 @@ import { quizWaiting } from './quiz.js';
 import { homeLayout, HOME_CARDS, COUNTER_UNITS } from './home.js';
 import { xmasSeason } from './season.js';
 import { isTester } from './testing.js';
-import { menuOrder, hiddenInMore, sectionName, sectionIcon, sectionAlerts, menuPrefsCard } from './menu.js';
+import { menuOrder, hiddenInMore, sectionName, sectionIcon, menuPrefsCard } from './menu.js';
+import { alertItems, sectionAlerts, sectionAlertText } from './alerts.js';
 import { partnerCravings } from './cravings.js';
 import { giftTile, isOwner } from './gifts.js';
 import { NOTIF_TYPES, pushConfigured, pushSupported, iosNeedsInstall, pushPermission, pushHere, subsOf, enablePush, disablePush, testPush } from './push.js';
@@ -26,9 +27,10 @@ function renderMore() {
   const bucketDone = S.data.bucket.filter(b => b.done).length;
   const tk = dayKey(today());
   const nextPlan = S.data.events.filter(e => e.date >= tk).sort((a, b) => (a.date + (a.time || '')).localeCompare(b.date + (b.time || '')))[0];
+  // Con avisos: el mosaico dice qué es en rojo (de la lista única de alerts.js) en lugar de su subtítulo
   const tile = (id, ic, title, sub, dot = 0) => `<button class="tile" onclick="go('${id}')"><span class="badge-ic">${icon(ic)}</span>
-    <div><b>${title}</b></div><span class="sub">${sub}</span>${dot ? `<b class="dot">${dot}</b>` : ''}</button>`;
-  const alerts = sectionAlerts(), pending = n => n ? plural(n, 'pendiente', 'pendientes') : 'Nada pendiente';
+    <div><b>${title}</b></div><span class="sub ${dot ? 'alert-sub' : ''}">${dot ? esc(sectionAlertText(id, items)) : sub}</span>${dot ? `<b class="dot">${dot > 9 ? '9+' : dot}</b>` : ''}</button>`;
+  const items = alertItems(), alerts = sectionAlerts(items), pending = n => n ? plural(n, 'pendiente', 'pendientes') : 'Nada pendiente';
   const [bDone, bTotal] = badgeCount(), crav = partnerCravings().length;
   // Subtítulo de cada sección en su mosaico
   const SUB = {
@@ -45,7 +47,9 @@ function renderMore() {
     's-game': () => 'Verdad o reto y más', 's-us': () => 'Tallas, gustos, ideas', 's-quiz': () => quizWaiting() ? `${esc(pn)} ya jugó` : 'Quiz de pareja',
     's-bucket': () => `${bucketDone} de ${S.data.bucket.length} cumplidas`, 's-admin': () => 'Solo tú la ves', 's-fruta': () => { const L = S.data.fruta?.find(d => d.id === 'p-' + uid())?.lv || 1; return L > 100 ? '🏆 Los 100 niveles' : L > 1 ? `Vas en el nivel ${L} de 100` : 'Junta frutas tropicales'; }, 's-bus': () => { const L = S.data.bus.find(d => d.id === 'p-' + uid())?.lv || 1; return L > 100 ? '🏆 Los 100 niveles' : L > 1 ? `Vas en el nivel ${L} de 100` : 'Lleva a todos a la parada'; }, 's-arrows': () => { const L = S.data.arrows.find(d => d.id === 'p-' + uid())?.lv || 1; return L > 90 ? '🏆 Los 90 niveles' : L > 1 ? `Vas en el nivel ${L} de 90` : 'Saca las flechas del tablero'; }, 's-summary': () => `Su ${today().getFullYear()} en números`,
   };
-  const shown = menuOrder().filter(id => !inBar(id) && !hiddenInMore(id)), hidden = menuOrder().filter(id => !inBar(id) && hiddenInMore(id)).length;
+  // Los que tienen avisos suben al principio (los ocultos con aviso también salen, mientras tengan algo pendiente)
+  const withAlert = id => !inBar(id) && alerts[id] > 0;
+  const shown = [...menuOrder().filter(withAlert), ...menuOrder().filter(id => !withAlert(id) && !inBar(id) && !hiddenInMore(id))], hidden = menuOrder().filter(id => !inBar(id) && hiddenInMore(id)).length;
   paint('s-more', `<div class="topbar"><h1>Más</h1><div class="row" style="gap:8px"><button class="icon-btn" aria-label="Buscar" onclick="openSearch()">${icon('search')}</button><button class="icon-btn" aria-label="Ajustes" onclick="go('s-settings')">${icon('gear')}</button></div></div>
     <div class="tiles">
       ${giftTile()}
@@ -457,7 +461,7 @@ function importData(input) {
   input.value = '';
 }
 
-on('groceries expenses trips places bucket quiz shows events pins songs menu notes moments thinks answers daily cravings lists coupons snaps profiles reminders arrows bus fruta', renderMore);
+on('groceries expenses trips places bucket quiz shows events pins songs menu notes moments thinks answers daily cravings lists coupons snaps profiles reminders arrows bus fruta advent guess', renderMore);
 on('ideas profiles push', () => { if ($('s-settings').classList.contains('active')) renderSettings(); });
 onShow('s-settings', renderSettings);
 window.rerenderSettings = () => { if ($('s-settings').classList.contains('active')) renderSettings(); };

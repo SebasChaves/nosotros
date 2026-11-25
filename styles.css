@@ -321,6 +321,12 @@ body[data-theme="light"] { --c-plan: #E8336A; --c-date: #D98A00; --c-trip: #4F5F
   transition: transform .35s cubic-bezier(.3,1.3,.5,1), opacity .2s; pointer-events: none; }
 .dot { position: absolute; top: -3px; right: -3px; min-width: 18px; height: 18px; padding: 0 5px; border-radius: 99px; background: #FF3B6B; color: #fff; font-size: 10.5px; font-weight: 700; display: grid; place-items: center; border: 2px solid var(--bg); }
 .seg .dot, .tile .dot, .mode .dot { top: 4px; right: 6px; border: 0; }
+/* Avisos (alerts.js): campana de Inicio, de dónde viene cada aviso y el aviso en los mosaicos de Más */
+.bell-btn { position: relative; }
+#s-home > .topbar > .row { gap: 6px !important; }
+#s-home > .topbar .icon-btn { width: 38px; height: 38px; border-radius: 13px; }
+.alert-where { display: block; margin-top: 2px; }
+.tile .sub.alert-sub { color: #FF3B6B; font-weight: 600; }
 
 .toast {
   position: fixed; left: 50%; bottom: calc(env(safe-area-inset-bottom) + 92px); transform: translateX(-50%);

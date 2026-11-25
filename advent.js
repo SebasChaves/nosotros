@@ -44,6 +44,9 @@ function content(d) {
 }
 // Casillas que ya se pueden abrir y no he abierto (puntito en la barra / Más)
 export const adventReady = () => (!uid() || !partnerUid()) ? 0 : DAYS.filter(d => canOpen(d) && !openedAt(uid(), d)).length;
+// Aviso (puntito y campana): solo la casilla de HOY sin abrir. Las de días anteriores siguen en la tarjeta y en Más,
+// pero no dejan un punto rojo pegado todo diciembre.
+export const adventToday = () => { if (!uid() || !partnerUid()) return 0; const d = now().getDate(); return canOpen(d) && !openedAt(uid(), d) ? 1 : 0; };
 
 /* ---------- Tarjeta de Inicio ---------- */
 export function adventCard() {

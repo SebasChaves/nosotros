@@ -17,7 +17,7 @@ que se publicó (no es sorpresa del dueño).
 - **Llenar:** pestaña «Para <pareja>», del 15 de noviembre al 24 de diciembre (`canFill`). Se puede cambiar o vaciar
   hasta que la pareja la abra; después queda en modo lectura con «👀 la abrió el…». Al llenar una casilla nueva le llega
   a la pareja un aviso sin el contenido (como mucho uno cada 15 minutos).
-- **Puntito:** `adventReady()` (casillas que ya se pueden abrir y no has abierto) en `sectionAlerts` (menu.js).
+- **Puntito:** solo la casilla de **hoy** sin abrir (`adventToday()`, en la lista de avisos de `alerts.js`). `adventReady()` (todas las que ya se pueden abrir y no has abierto) se usa en la tarjeta de Inicio y en el subtítulo de Más.
 
 ## Datos (colección `advent`, en `COLLECTIONS` y en `BACKUP_COLS` del Worker)
 

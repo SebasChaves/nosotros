@@ -33,7 +33,8 @@ manifest.json   PWA (nombre, íconos, colores)
 | `arrows.js` (detalle) | Ver docs/FLECHAS.md |
 | `bus.js` | La parada (`s-bus`): ver docs/PARADA.md |
 | `gifts.js` | Juegos sorpresa: quién los ve (`isOwner`, `gates`), regalo envuelto en Inicio/Más/mascota y tarjeta de Administración para cada juego de `GIFTS` |
-| `menu.js` | Tu menú: secciones en la barra de abajo (1 a 4), orden y ocultas de Más (`prefs.menu`), editor de Ajustes y puntitos por sección (`sectionAlerts`) |
+| `menu.js` | Tu menú: secciones en la barra de abajo (1 a 4), orden y ocultas de Más (`prefs.menu`), editor de Ajustes (los puntitos por sección vienen de `alerts.js`) |
+| `alerts.js` | **Avisos**: lista única `alertItems()` de lo que espera a cada uno (`{ key, sec, e, text, short, n, run }`). De ahí salen la campana 🔔 de Inicio (hoja «Avisos»), los puntitos de la barra/Inicio/Más (`updateBadges` en app.js), los mosaicos de Más (suben al principio y dicen qué es) y las filas de avisos de la tarjeta «Hoy» |
 | `guess.js` | «¿Qué respondería tu pareja?»: pregunta diaria de 4 opciones, tarjeta en Inicio, historial de aciertos |
 | `week.js` | Resumen de la semana (lunes a domingo): tarjeta en Inicio domingo y lunes, hoja con números, comparación y mosaico de fotos |
 | `tour.js` | Guía de bienvenida. `TOUR_VERSION`: si alguien ya vio una versión anterior le sale una vez «Lo nuevo» (`NEW_STEPS`). Al agregar algo grande, súmalo a los pasos y sube la versión |
@@ -137,7 +138,7 @@ evento `change`, así que no hace falta hacer nada extra.
 3. Importarlo en `app.js` (`import './nueva.js';`).
 4. Si guarda datos nuevos: agregar la colección a `COLLECTIONS` en `core.js` (las reglas ya cubren `couples/nosotros/*`).
 5. Agregarla a `SECTIONS` en `core.js` ([pantalla, ícono, nombre]) y su subtítulo a `SUB` en `renderMore` (`settings.js`):
-   así sale en Más, en el buscador y se puede poner en la barra. Si tiene puntito, súmala a `sectionAlerts()` (`menu.js`).
+   así sale en Más, en el buscador y se puede poner en la barra. Si tiene avisos, agrégalos con una línea `add(...)` en `alertItems()` (`alerts.js`): así salen en la campana, en «Hoy» y en su puntito.
 6. Agregar el archivo a `FILES` en `sw.js`.
 7. Opcional: avisos en la tarjeta Hoy (`todayCard()` en `home.js`, y sumar la colección a su `on(...)`), buscador
    (`search.js`), logros (`badges.js`), guía (`tour.js`), respaldo (lo hace solo por `COLLECTIONS`).

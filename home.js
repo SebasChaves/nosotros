@@ -6,15 +6,14 @@ import {
   nameOf, partnerUid, partnerName, myName, plural, uid, avatar, ask, celebrate } from './core.js';
 import { QUESTIONS, MOODS, CHALLENGES } from './data.js';
 import { itemsFor, nextEventDate, nextOccurrence, myVacationRow } from './calendar.js';
-import { unreadNotes, couponsExpiring } from './love.js';
-import { listNeedsMyVote } from './decide.js';
-import { quizWaiting } from './quiz.js';
+import { couponsExpiring } from './love.js';
+import { alertItems, alertRow, bellButton } from './alerts.js';
 import { myDailyDone, partnerDailyDone } from './daily.js';
 import { dueReminders, urgentReminders, whenTxt } from './reminders.js';
 import { songDedication } from './music.js';
 import { snapsCard } from './snaps.js';
 import { petCard } from './pet.js';
-import { guessCard, guessWaiting } from './guess.js';
+import { guessCard } from './guess.js';
 import { weekCard } from './week.js';
 import { cravingsCard, partnerCravings } from './cravings.js';
 import { giftCard } from './gifts.js';
@@ -72,14 +71,15 @@ function urgentCard() {
 function todayCard() {
   const p = partnerUid(), pn = esc(partnerName()), tk = todayKey();
   const tomorrow = dayKey(new Date(today().getFullYear(), today().getMonth(), today().getDate() + 1));
-  const rows = [];
+  // Primero los avisos (lo que hizo tu pareja o te toca hacer), de la misma lista que la campana; los urgentes ya
+  // tienen su propia tarjeta arriba. Después, lo informativo del día.
+  const rows = alertItems().filter(a => !a.key.startsWith('urg-')).map(a => alertRow(a));
   const row = (e, text, action) => rows.push(`<button class="result-row" onclick="${action}"><span class="e">${e}</span><span class="grow">${text}</span>${icon('send')}</button>`);
   const vac = myVacationRow(); if (vac) row(...vac);
   for (const it of itemsFor(tk)) row(it.kind === 'plan' ? '📌' : it.kind === 'trip' ? '✈️' : '🎉', `<b>Hoy:</b> ${esc(it.label)}${it.time ? ' · ' + esc(it.time) : ''}`, `go('s-cal');calPick('${tk}')`);
   for (const it of itemsFor(tomorrow).filter(i => i.kind !== 'trip')) row('⏰', `<b>Mañana:</b> ${esc(it.label)}`, `go('s-cal');calPick('${tomorrow}')`);
   for (const r of dueReminders().slice(0, 4)) row('🔔', `<b>${r.date < tk ? 'Pendiente' : 'Recordar'}:</b> ${esc(r.text)}${r.time ? ' · ' + esc(r.time) : ''}`, "go('s-reminders')");
-  const crav = partnerCravings().filter(c => !c.urgent); if (crav.length) row(crav[0].emoji || '🍓', crav.length === 1 ? `${pn} tiene un antojo: ${esc(crav[0].text)}` : `${pn} tiene ${crav.length} antojos pendientes`, "openCravings('now')");
-  const thanked = S.data.cravings.filter(c => !c.fav && c.done && c.by === uid() && c.doneBy !== uid() && !c.doneSeen); if (thanked.length) row('🎉', `${pn} cumplió ${thanked.length === 1 ? 'tu antojo: ' + esc(thanked[0].text) : plural(thanked.length, 'antojo tuyo', 'antojos tuyos')}`, "openCravings('done')");
+  const crav = partnerCravings().filter(c => !c.urgent && c.seen?.[uid()]); if (crav.length) row(crav[0].emoji || '🍓', crav.length === 1 ? `${pn} tiene un antojo: ${esc(crav[0].text)}` : `${pn} tiene ${crav.length} antojos pendientes`, "openCravings('now')");
   const ded = songDedication(); if (ded) row('💌', `<b>${esc(nameOf(ded.dedication.by))}</b> te dedicó una canción: ${esc(ded.title)}`, 'openDedication()');
   if (!S.data.moods.find(m => m.id === tk)?.[uid()]) row('🙂', '¿Cómo te sientes hoy? Marca tu ánimo', `document.querySelector('.moods')?.scrollIntoView({behavior:'smooth',block:'center'})`);
   const sup = p && profile(p).superAt; if (sup && Date.now() - sup < 3 * 3600e3) row('🛒', `<b>${pn} está en el súper</b>: ¿falta algo?`, "go('s-grocery')");
@@ -87,17 +87,11 @@ function todayCard() {
   const nextTrip = S.data.trips.filter(t => t.start && t.start > tk).sort((a, b) => a.start.localeCompare(b.start))[0];
   if (nextTrip) { const n = daysBetween(today(), parseDate(nextTrip.start)); if (n <= 14) { const pk = nextTrip.packing || [], pend = pk.filter(x => !x.done).length; row('✈️', `${n === 1 ? '¡Mañana' : `Faltan ${n} días para`} ${esc(nextTrip.name)}${n === 1 ? '!' : ''}${pk.length ? ` · maleta: ${pk.length - pend} de ${pk.length}` : ''}`, `openTrip('${nextTrip.id}')`); } }
   const ans = todayAnswers();
-  if (!ans?.answers?.[uid()]) row('💬', p && ans?.answers?.[p] ? `Responde la pregunta del día (${pn} ya respondió)` : 'Responde la pregunta del día', `document.getElementById('answerText')?.scrollIntoView({block:'center'});document.getElementById('answerText')?.focus()`);
-  if (guessWaiting()) row('🔮', `${pn} ya respondió «¿Qué respondería ${pn}?»: adivina qué dijo`, `document.querySelector('.guess-card')?.scrollIntoView({behavior:'smooth',block:'center'})`);
-  if (!myDailyDone()) row('📷', partnerDailyDone() ? `${pn} ya subió su foto del día: sube la tuya para verla` : 'Sube tu foto del día', `go('s-moments');momTab('daily')`);
+  if (!ans?.answers?.[uid()] && !(p && ans?.answers?.[p])) row('💬', 'Responde la pregunta del día', `document.getElementById('answerText')?.scrollIntoView({block:'center'});document.getElementById('answerText')?.focus()`);
+  if (!myDailyDone() && !partnerDailyDone()) row('📷', 'Sube tu foto del día', `go('s-moments');momTab('daily')`);
   const lb = S.settings.lastBackup, dataCount = S.data.notes.length + S.data.moments.length + S.data.bucket.length;
   if (dataCount > 10 && (!lb || Date.now() - lb > 30 * 864e5)) row('💾', lb ? `Hace ${Math.round((Date.now() - lb) / 864e5)} días que no descargan un respaldo` : 'Descarguen su primer respaldo', 'exportData()');
-  const notes = unreadNotes(); if (notes) row('💌', `Tienes ${plural(notes, 'nota nueva', 'notas nuevas')} en el frasco`, `go('s-love');loveTab('notes')`);
-  const toDo = S.data.coupons.filter(c => c.fromUid === uid() && c.redeemedAt && !c.doneAt).length; if (toDo) row('🎟️', `${pn} canjeó ${plural(toDo, 'cupón', 'cupones')}: te toca cumplir`, `go('s-love');loveTab('coupons')`);
   for (const c of couponsExpiring().slice(0, 2)) row('⏳', `Tu cupón «${esc(c.text)}» vence ${c.expires === tk ? 'hoy' : 'pronto'}: ¡úsalo!`, `go('s-love');loveTab('coupons')`);
-  const fresh = S.data.coupons.filter(c => c.fromUid !== uid() && !c.seenAt).length; if (fresh) row('🎁', `${pn} te regaló ${plural(fresh, 'cupón', 'cupones')}`, `go('s-love');loveTab('coupons')`);
-  const vl = S.data.lists.filter(listNeedsMyVote); if (vl.length) row('🎲', vl.length === 1 ? `${pn} quiere decidir contigo: «${esc(vl[0].name)}». Te toca votar` : `${pn} quiere decidir contigo en ${plural(vl.length, 'lista', 'listas')}: te toca votar`, `openVote('${vl.length === 1 ? vl[0].id : ''}')`);
-  if (quizWaiting()) row('🧠', `${pn} ya jugó el quiz: te toca`, `go('s-quiz')`);
   const tripVotes = S.data.trips.filter(t => [...(t.stays || []), ...(t.flights || [])].some(o => o.votes?.[uid()] === undefined)); if (tripVotes.length) row('🏨', `Hay opciones nuevas para votar en ${esc(tripVotes[0].name)}`, `openTrip('${tripVotes[0].id}')`);
 
   const s = streak(), best = bestStreak(), meDone = didSomething(tk, uid()), themDone = p && didSomething(tk, p);
@@ -275,6 +269,7 @@ function renderHome() {
     <div class="xmas-lights" aria-hidden="true">${'<i></i>'.repeat(14)}</div>
     <div class="topbar"><div class="title"><span class="hi">${special || (h => h < 5 ? 'Buenas noches 🌙' : h < 12 ? 'Buenos días ☀️' : h < 19 ? 'Buenas tardes 🌤️' : 'Buenas noches 🌙')(new Date().getHours()) + (greetName() ? ', ' + esc(greetName()) : '')}</span><span class="brand-wrap">${XMAS_HAT}<h1 class="brand grad-text" style="font-size:30px">Futari</h1></span></div>
       <div class="row" style="gap:10px"><div class="avatars">${names.map(([id]) => avatar(id, 36)).join('')}</div>
+      ${bellButton()}
       <button class="icon-btn" onclick="openSearch()" aria-label="Buscar">${icon('search')}</button>
       <button class="icon-btn" onclick="go('s-settings')" aria-label="Ajustes">${icon('gear')}</button></div></div>
     ${giftCard()}
@@ -355,7 +350,7 @@ setInterval(() => {
   const m = $('heroMin'); if (m) m.innerHTML = `<b>${mins % 60}</b>minutos`;
 }, 20000);
 
-on('vacations dates moments moods answers challenges trips profiles events thinks notes coupons lists quiz daily reminders songs snaps activity pet guess cravings expenses money advent', renderHome);
+on('vacations dates moments moods answers challenges trips profiles events thinks notes coupons lists quiz daily reminders songs snaps activity pet guess cravings expenses money advent arrows bus fruta', renderHome);
 window.rerenderHome = () => { if ($('s-home').classList.contains('active')) renderHome(); };
 on('thinks', checkIncomingThink);
 expose({ homeUnhide, sendThink, openFechas, answerQuestion, openAnswers, setMood, skipChallenge, doneChallenge });

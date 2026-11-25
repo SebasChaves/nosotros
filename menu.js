@@ -3,15 +3,6 @@
 // y solo cambia lo que ve esa persona. core.js (setBar) dibuja la barra; settings.js pinta Más y el editor.
 import { setDoc } from 'https://www.gstatic.com/firebasejs/11.0.2/firebase-firestore.js';
 import { S, esc, icon, on, expose, toast, write, ref, profile, uid, SECTIONS, BAR_DEFAULT, BAR_MAX, setBar, inBar, rerenderAll, gateOn } from './core.js';
-import { listNeedsMyVote } from './decide.js';
-import { unreadNotes, couponAlerts } from './love.js';
-import { unseenSnaps, newChats } from './snaps.js';
-import { frutaAlerts } from './fruta.js';
-import { quizWaiting } from './quiz.js';
-import { cravingAlerts } from './cravings.js';
-import { arrowsAlerts } from './arrows.js';
-import { busAlerts } from './bus.js';
-import { adventReady } from './advent.js';
 
 const prefs = () => profile(uid()).prefs?.menu || {};
 const known = id => SECTIONS.some(([k]) => k === id) && gateOn(id);
@@ -30,12 +21,9 @@ export const hiddenInMore = id => (prefs().hidden || []).includes(id);
 export const sectionName = id => SECTIONS.find(([k]) => k === id)?.[2] || id;
 export const sectionIcon = id => SECTIONS.find(([k]) => k === id)?.[1] || 'grid';
 
-// Avisos (puntitos) por sección: van en su botón de la barra o, si no está en la barra, se suman en Más
-export const sectionAlerts = () => ({
-  's-decide': S.data.lists.filter(listNeedsMyVote).length, 's-love': unreadNotes() + couponAlerts(),
-  's-moments': unseenSnaps().length + newChats().length, 's-quiz': quizWaiting() ? 1 : 0, 's-cravings': cravingAlerts(), 's-arrows': arrowsAlerts(), 's-bus': busAlerts(), 's-fruta': frutaAlerts(),
-  's-advent': adventReady(),
-});
+// Avisos (puntitos) por sección: salen de la lista única de alerts.js. Van en su botón de la barra o, si no está en
+// la barra, se suman en Más.
+export { sectionAlerts } from './alerts.js';
 
 const saveMenu = patch => write(setDoc(ref('profiles', uid()), { prefs: { menu: { order: menuOrder(), bar: barChoice(), hidden: prefs().hidden || [], ...patch } } }, { merge: true }));
 function menuBar(id, on) {
