@@ -11,6 +11,7 @@ couples/nosotros                     doc de la pareja (S.settings)
   { start: 'AAAA-MM-DD', currency: 'CRC'|'USD'|…, members: { <uid>: { name, joined } }, lastBackup }
 couples/nosotros/<colección>/<id>    todo lo compartido (una colección por sección, ver tabla)
 private/<uid>/gifts/<id>             ideas de regalo: solo las ve su dueño
+private/<uid>/regalitos/r-<año>-<dd> regalitos del adviento que planea cada uno (1.17.0, ver docs/ADVIENTO.md)
 adminlogs/nosotros/<colección>/<id>  registros de Administración (1.12.1): los dos escriben, solo el dueño lee y borra
 ```
 

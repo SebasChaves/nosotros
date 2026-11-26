@@ -22,6 +22,7 @@ import { urgentReminders } from './reminders.js';
 import { myDailyDone, partnerDailyDone } from './daily.js';
 import { sectionName } from './menu.js';
 import { vacAlerts } from './vacations.js';
+import { regalitoAlerts } from './advent-gifts.js';
 
 const later = f => setTimeout(f, 320); // después de cambiar de pantalla
 const focusHome = sel => () => { go('s-home'); later(() => { const el = document.querySelector(sel); el?.scrollIntoView({ behavior: 'smooth', block: 'center' }); if (el?.tagName === 'TEXTAREA') el.focus(); }); };
@@ -69,6 +70,7 @@ export function alertItems() {
   // Quiz, calendario de adviento y juegos
   if (quizWaiting()) add('quiz', 's-quiz', '🧠', `${pn} ya jugó el quiz: te toca`, 'Te toca el quiz', () => go('s-quiz'));
   if (adventToday()) add('advent', 's-advent', '🎄', 'Ya puedes abrir la casilla de hoy del calendario de adviento', 'Casilla de hoy', () => window.openAdvent?.('mine'));
+  for (const a of regalitoAlerts()) add(a.key, 's-advent', a.e, a.text, a.short, a.run);
   if (frutaAlerts()) add('fruta', 's-fruta', '🍍', `${pn} te espera en un duelo de Pura fruta`, 'Duelo pendiente', () => go('s-fruta'));
   if (arrowsAlerts()) add('arrows', 's-arrows', '🏹', `${pn} te retó a un duelo de Flechas`, 'Te retaron', () => go('s-arrows'));
   if (busAlerts()) add('bus', 's-bus', '🚌', `${pn} te retó a un duelo en La parada`, 'Te retaron', () => go('s-bus'));

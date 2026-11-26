@@ -681,6 +681,21 @@ body.xmas .xmas-hat { display: block; position: absolute; left: -11px; top: -2px
   display: flex; align-items: center; justify-content: center; font-size: 26px; cursor: pointer; padding: 0; }
 .adv-box b { position: absolute; top: 5px; left: 8px; font-size: 12px; font-weight: 800; color: var(--muted); }
 .adv-box .mk { position: absolute; bottom: 3px; right: 5px; font-size: 13px; font-style: normal; }
+.adv-box small.wd { position: absolute; top: 6px; right: 7px; font-size: 10px; font-weight: 700; color: var(--muted); text-transform: capitalize; }
+.adv-box.ready small.wd { color: var(--on-grad); opacity: .85; }
+.adv-seg button { padding-left: 6px; padding-right: 6px; }
+/* Regalitos del adviento (advent-gifts.js) */
+.rg-day { flex: 0 0 40px; height: 40px; border-radius: 12px; background: var(--glass-2); display: flex; flex-direction: column; align-items: center; justify-content: center; line-height: 1.05; }
+.rg-day b { font-size: 15px; } .rg-day small { font-size: 10px; color: var(--muted); text-transform: capitalize; }
+.rg-st { font-size: 11px; font-weight: 700; padding: 3px 8px; border-radius: 99px; white-space: nowrap; background: var(--glass-2); color: var(--muted); }
+.rg-st.comprado { background: rgba(56,189,248,.16); color: #0EA5E9; }
+.rg-st.envuelto { background: rgba(244,114,182,.18); color: #EC4899; }
+.rg-st.abierto { background: rgba(62,207,142,.18); color: #22B573; }
+.rg-reacts { display: flex; gap: 8px; justify-content: space-between; }
+.rg-reacts button { flex: 1; font-size: 24px; padding: 6px 0; border-radius: 12px; border: 1px solid var(--line); background: var(--glass); cursor: pointer; }
+.rg-reacts button.on { background: var(--grad); border-color: transparent; }
+.rg-thumb { width: 40px; height: 40px; border-radius: 10px; object-fit: cover; cursor: pointer; }
+.rg-thumb.big { width: 100%; height: 120px; }
 .adv-box.locked { opacity: .5; font-size: 18px; }
 .adv-box.ready { background: var(--grad); border-color: transparent; animation: advGlow 2.4s ease-in-out infinite; }
 .adv-box.ready b { color: var(--on-grad); }

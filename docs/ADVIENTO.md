@@ -29,6 +29,32 @@ que se publicó (no es sorpresa del dueño).
 El año va en el id: el próximo diciembre empieza limpio y lo de este año queda guardado. Lo que deja uno lo podría leer
 el otro desde la consola de Firebase (como las notas programadas); en la app no se ve antes de tiempo.
 
+## Regalitos (1.17.0, `advent-gifts.js`)
+
+Tercera pestaña «🎁 Regalitos» (`view = 'gifts'`). Los dos se dan un regalito físico por día, del 1 al 24 de diciembre.
+
+- **Mi lista** (privada, la pareja no la puede leer ni con las reglas):
+  `private/<uid>/regalitos/r-<año>-<dd> = { year, day, text, emoji, price, store, status: idea|comprado|envuelto, at }`.
+  «✅ Lo abrió» no se guarda: sale de `o-<año>` (que la pareja abrió esa casilla).
+- **Lo compartido**: `advent/g-<año>-<uid de quien regala>-<dd> = { year, day, by, to, hint, at, react?, thanks?, reactAt?, reactSeen?, fav?, moment? }`.
+  - Se crea al guardar el regalito, así que la pareja ve 🎀 en esa casilla.
+  - La pista (`hint`) solo se muestra al abrir la casilla (`regalitoBlock`, cuando `canOpen(d)`).
+  - Quien recibe escribe `react`, `thanks`, `fav` (solo uno por año), y `moment` (la foto se guarda en Momentos).
+  - `reactSeen: false` = aviso en la campana de quien regaló; pasa a `true` al ver la pestaña.
+- **Rango de precio** de los dos: `couples/nosotros.adv.range = { min, max }` (por defecto ₡1.000 – ₡2.000). Un precio fuera del rango
+  avisa, pero no se bloquea.
+- **Ideas** (`IDEAS`, ~50 con precio aproximado): se filtran por el rango y salen tenues las que ya usaste.
+  «Sorpréndeme» elige una que no hayas usado.
+- **Por comprar**: lo que está en «Idea», agrupado por tienda.
+- **Recibidos** (en diciembre) y, desde el 24, **Resumen**: los que regalaste, lo gastado, lo recibido y el favorito de cada uno.
+- **Avisos** en la campana (`regalitoAlerts`, sección `s-advent`):
+  - el regalito de hoy o de mañana sin comprar;
+  - después de las 6 p. m., «envuelve el de mañana» (si está comprado);
+  - las reacciones de la pareja.
+  - Al teléfono solo llegan las reacciones, los agradecimientos y los cambios del rango (tipo `advent`). El Worker no manda nada programado de regalitos.
+- **Tarjeta de Inicio**: una línea «🎁 X de 24 regalitos listos» (en noviembre), o con el de mañana (en diciembre).
+- Cada casilla muestra el **día de la semana** (`wdShort`); las hojas dicen «martes, 1 de diciembre» (`dayLong`).
+
 ## Avisos (tipo `advent`, se apaga en Ajustes → Notificaciones)
 
 - **8:00, del 1 al 24 de diciembre** (Worker v16, `runSchedule` → 3b): «🎄 Tu casilla N está lista», y si la pareja la

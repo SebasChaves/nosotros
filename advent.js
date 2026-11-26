@@ -15,23 +15,28 @@ import { ADVENT_DEFAULTS } from './data.js';
 import { notify, meForPartner } from './push.js';
 import { pet } from './pet.js';
 
+import { giftsHTML, regalitoBlock, regalitoFrom, regalitosHomeLine, markReactsSeen } from './advent-gifts.js';
+
 const ADV_COINS = 5; // monedas para la mascota por cada casilla abierta
-const DAYS = Array.from({ length: 24 }, (_, i) => i + 1);
+export const DAYS = Array.from({ length: 24 }, (_, i) => i + 1);
 // Solo en el emulador: ?advHoy=AAAA-MM-DD simula otro día (para probar diciembre antes de tiempo)
 const fakeDay = EMU ? new URLSearchParams(location.search).get('advHoy') : null;
-const now = () => (fakeDay && /^\d{4}-\d{2}-\d{2}$/.test(fakeDay) ? parseDate(fakeDay) : today());
-const YEAR = () => now().getFullYear();
-const inDec = () => now().getMonth() === 11;
+export const now = () => (fakeDay && /^\d{4}-\d{2}-\d{2}$/.test(fakeDay) ? parseDate(fakeDay) : today());
+export const YEAR = () => now().getFullYear();
+export const inDec = () => now().getMonth() === 11;
 export const adventSeason = () => { const d = now(); return (d.getMonth() === 10 && d.getDate() >= 15) || d.getMonth() === 11; };
 const canFill = () => adventSeason() && !(inDec() && now().getDate() > 24);
-const canOpen = d => inDec() && d <= Math.min(24, now().getDate());
+export const canOpen = d => inDec() && d <= Math.min(24, now().getDate());
 gates['s-advent'] = adventSeason;
 
-const pad = n => String(n).padStart(2, '0');
+export const pad = n => String(n).padStart(2, '0');
+// Día de la semana de la casilla d (1 al 24 de diciembre): «mar» o «martes 1 de diciembre»
+export const wdShort = d => new Date(YEAR(), 11, d).toLocaleDateString('es', { weekday: 'short' }).replace('.', '');
+export const dayLong = d => new Date(YEAR(), 11, d).toLocaleDateString('es', { weekday: 'long', day: 'numeric', month: 'long' });
 const fillId = (by, d) => `f-${YEAR()}-${by}-${pad(d)}`;
 const photoId = (by, d) => `adv-${YEAR()}-${by}-${pad(d)}`;
 const fillOf = (by, d) => by ? S.data.advent.find(x => x.id === fillId(by, d)) : null;
-const openedAt = (who, d) => S.data.advent.find(x => x.id === `o-${YEAR()}`)?.[who]?.[pad(d)];
+export const openedAt = (who, d) => S.data.advent.find(x => x.id === `o-${YEAR()}`)?.[who]?.[pad(d)];
 const TYPES = [['nota', '💌', 'Nota'], ['cupon', '🎟️', 'Cupón'], ['foto', '📷', 'Foto'], ['plan', '📍', 'Plan']];
 const TYPE_NAME = { nota: 'Nota', cupon: 'Cupón', foto: 'Foto', plan: 'Plan', reto: 'Reto del día', pregunta: 'Para conversar' };
 const typeEmoji = k => TYPES.find(t => t[0] === k)?.[1] || '🎁';
@@ -57,7 +62,7 @@ export function adventCard() {
     const filled = DAYS.filter(d => fillOf(me, d)).length;
     return `<div class="glass stack adv-card">${head}
       <p class="small" style="margin:0">El <b>1 de diciembre</b> empieza: una casilla por día hasta Nochebuena. Llénale casillas a ${pn} con notas, cupones, fotos o planes; no las verá hasta ese día.</p>
-      <div class="row"><span class="pill">🎁 Le llenaste ${filled} de 24</span><button class="btn small" onclick="openAdvent('give')">Llenar casillas</button></div></div>`;
+      <div class="row"><span class="pill">🎁 Le llenaste ${filled} de 24</span><button class="btn small" onclick="openAdvent('give')">Llenar casillas</button></div>${regalitosHomeLine()}</div>`;
   }
   const n = now().getDate(), left = adventReady();
   if (n > 24) return !left ? '' : `<div class="glass stack adv-card">${head}
@@ -66,19 +71,20 @@ export function adventCard() {
   return `<div class="glass stack adv-card">${head}
     <div class="row start" style="gap:12px"><div class="adv-today ${opened ? '' : 'ready'}">${opened ? esc(content(n).emoji || '🎁') : '🎁'}<b>${n}</b></div>
       <div class="grow"><b>${opened ? 'Ya abriste la de hoy ✨' : 'Tu casilla de hoy está lista'}</b>
-        <div class="small muted">${fromP ? `💝 ${pn} te dejó algo${opened ? '' : ' adentro'}` : 'Casilla ' + n + ' de 24'}${more > 0 ? ` · ${more === 1 ? 'otra' : more} sin abrir` : ''}</div></div></div>
-    <button class="btn" onclick="${opened ? 'openAdvent()' : `adventOpen(${n})`}">${opened ? 'Ver mi calendario' : `🎁 Abrir la casilla ${n}`}</button></div>`;
+        <div class="small muted">${fromP ? `💝 ${pn} te dejó algo${opened ? '' : ' adentro'}` : regalitoFrom(n) && !opened ? `🎁 Hoy hay regalito de ${pn}` : 'Casilla ' + n + ' de 24'}${more > 0 ? ` · ${more === 1 ? 'otra' : more} sin abrir` : ''}</div></div></div>
+    <button class="btn" onclick="${opened ? 'openAdvent()' : `adventOpen(${n})`}">${opened ? 'Ver mi calendario' : `🎁 Abrir la casilla ${n}`}</button>${regalitosHomeLine()}</div>`;
 }
 
 /* ---------- Pantalla ---------- */
 let view = 'mine';
 function openAdvent(v) { if (v) view = v; window.go('s-advent'); }
-function advView(v) { view = v; render(); }
+function advView(v) { view = v; render(); window.scrollTo?.(0, 0); }
 function render() {
   const p = partnerUid(), me = uid(), pn = esc(partnerName());
-  const head = backBar('🎄 Adviento', 's-more') + (p ? `<div class="seg"><button class="${view === 'mine' ? 'on' : ''}" onclick="advView('mine')">Mi calendario</button><button class="${view === 'give' ? 'on' : ''}" onclick="advView('give')">Para ${pn}</button></div>` : '');
+  const head = backBar('🎄 Adviento', 's-more') + (p ? `<div class="seg adv-seg">${[['mine', 'Mío'], ['give', 'Para ' + pn], ['gifts', '🎁 Regalitos']].map(([k, l]) => `<button class="${view === k ? 'on' : ''}" onclick="advView('${k}')">${l}</button>`).join('')}</div>` : '');
   if (!p) return paint('s-advent', head + '<p class="empty">Hace falta que estén los dos en Futari (Ajustes → nombre y fecha).</p>');
   if (!adventSeason()) return paint('s-advent', head + '<p class="empty">El calendario de adviento vuelve a mediados de noviembre 🎄</p>');
+  if (view === 'gifts') { paint('s-advent', head + giftsHTML()); loadPhotos($('s-advent')); markReactsSeen(); return; }
   const n = inDec() ? now().getDate() : 0;
   let intro, grid;
   if (view === 'mine') {
@@ -86,11 +92,12 @@ function render() {
       : n > 24 ? '¡Feliz Navidad! 🎄 Aquí quedan todas las casillas para volver a verlas.'
       : `Hoy toca la casilla <b>${n}</b>. Las de días que ya pasaron también se pueden abrir.`;
     grid = DAYS.map(d => {
-      const op = openedAt(me, d), ready = !op && canOpen(d), gift = !!fillOf(p, d);
+      const op = openedAt(me, d), ready = !op && canOpen(d), gift = !!fillOf(p, d), rg = !!regalitoFrom(d);
       const cls = op ? 'open' : ready ? 'ready' : 'locked';
       const face = op ? esc(content(d).emoji || '🎁') : ready ? '🎁' : '🔒';
-      return `<button class="adv-box ${cls} ${d === n ? 'today' : ''}" onclick="${op ? `adventShow(${d})` : ready ? `adventOpen(${d})` : `adventLocked(${d})`}" aria-label="Casilla ${d}${op ? ', abierta' : ready ? ', lista para abrir' : ', cerrada'}${gift ? `, ${pn} te dejó algo` : ''}">
-        <b>${d}</b><span>${face}</span>${gift && !op ? '<i class="mk" aria-hidden="true">💝</i>' : ''}</button>`;
+      const mk = (gift && !op ? '💝' : '') + (rg ? '🎀' : '');
+      return `<button class="adv-box ${cls} ${d === n ? 'today' : ''}" onclick="${op ? `adventShow(${d})` : ready ? `adventOpen(${d})` : `adventLocked(${d})`}" aria-label="Casilla ${d}, ${dayLong(d)}${op ? ', abierta' : ready ? ', lista para abrir' : ', cerrada'}${gift ? `, ${pn} te dejó algo` : ''}${rg ? ', con regalito' : ''}">
+        <b>${d}</b><small class="wd">${wdShort(d)}</small><span>${face}</span>${mk ? `<i class="mk" aria-hidden="true">${mk}</i>` : ''}</button>`;
     }).join('');
   } else {
     const filled = DAYS.filter(d => fillOf(me, d)).length;
@@ -99,17 +106,17 @@ function render() {
     grid = DAYS.map(d => {
       const f = fillOf(me, d), seen = openedAt(p, d);
       return `<button class="adv-box give ${f ? 'filled' : ''}" onclick="adventFill(${d})" aria-label="Casilla ${d} para ${pn}${f ? ', llena' : ', vacía'}${seen ? ', ya la abrió' : ''}">
-        <b>${d}</b><span>${f ? (f.type === 'cupon' ? esc(f.emoji || '🎟️') : typeEmoji(f.type)) : '＋'}</span>${seen ? '<i class="mk" aria-hidden="true">👀</i>' : ''}</button>`;
+        <b>${d}</b><small class="wd">${wdShort(d)}</small><span>${f ? (f.type === 'cupon' ? esc(f.emoji || '🎟️') : typeEmoji(f.type)) : '＋'}</span>${seen ? '<i class="mk" aria-hidden="true">👀</i>' : ''}</button>`;
     }).join('');
   }
   paint('s-advent', `${head}<div class="glass stack"><p class="small" style="margin:0">${intro}</p><div class="adv-grid">${grid}</div>
-    ${view === 'mine' ? `<p class="tiny muted" style="margin:0">💝 = ${pn} te dejó algo · cada casilla abierta le da ${ADV_COINS} 🪙 a su mascota</p>` : `<p class="tiny muted" style="margin:0">👀 = ${pn} ya la abrió</p>`}</div>`);
+    ${view === 'mine' ? `<p class="tiny muted" style="margin:0">💝 = ${pn} te dejó algo · 🎀 = hay regalito · cada casilla abierta le da ${ADV_COINS} 🪙 a su mascota</p>` : `<p class="tiny muted" style="margin:0">👀 = ${pn} ya la abrió · los regalitos se planean en 🎁 Regalitos</p>`}</div>`);
 }
 onShow('s-advent', render);
-on('advent pet profiles', () => { if ($('s-advent')?.classList.contains('active')) render(); });
+on('advent pet profiles regalitos', () => { if ($('s-advent')?.classList.contains('active')) render(); });
 
 /* ---------- Abrir una casilla ---------- */
-function adventLocked(d) { toast(inDec() ? `La casilla ${d} se abre el ${d} de diciembre 🔒` : 'Las casillas se abren a partir del 1 de diciembre 🔒'); }
+function adventLocked(d) { toast(inDec() ? `La casilla ${d} se abre el ${dayLong(d)} 🔒` : 'Las casillas se abren a partir del 1 de diciembre 🔒'); }
 function adventOpen(d) {
   const me = uid(), p = partnerUid();
   if (!p) return toast('Hace falta que estén los dos');
@@ -129,7 +136,7 @@ function adventOpen(d) {
 function adventShow(d, fresh = false) {
   const c = content(d);
   openSheet(`<div class="stack center adv-open">
-    <span class="tiny muted">Casilla ${d} · ${d} de diciembre</span>
+    <span class="tiny muted">Casilla ${d} · ${dayLong(d)}</span>
     <div class="adv-emoji ${fresh ? 'pop' : ''}" aria-hidden="true">${esc(c.emoji || '🎁')}</div>
     <span class="pill" style="align-self:center">${c.from ? `💝 De ${esc(nameOf(c.from))} · ${TYPE_NAME[c.type] || ''}` : TYPE_NAME[c.type] || ''}</span>
     ${c.photo ? `<img class="adv-photo" data-photo="${photoId(c.from, d)}" alt="Foto de ${esc(nameOf(c.from))}" onclick="viewPhoto(this)">` : ''}
@@ -137,6 +144,7 @@ function adventShow(d, fresh = false) {
     ${c.type === 'cupon' && c.from ? '<p class="small muted" style="margin:0">Quedó guardado en Detalles → Cupones para que lo canjees.</p>' : ''}
     ${c.type === 'pregunta' ? '<p class="small muted" style="margin:0">Respóndanla juntos hoy 💬</p>' : ''}
     ${c.photo && c.from && !c.savedMoment ? `<button class="btn ghost small" onclick="adventToMoments(${d})">📸 Guardar en Momentos</button>` : ''}
+    ${regalitoBlock(d)}
     <button class="btn" onclick="closeSheet()">${fresh ? '¡Gracias! 💖' : 'Cerrar'}</button></div>`);
   loadPhotos($('sheet'));
 }
@@ -163,7 +171,7 @@ function adventFill(d) {
   if (!canFill()) return f ? adventGiven(d) : toast('Ya pasó el tiempo de llenar casillas');
   fillType = f?.type || 'nota'; fillPhoto = null;
   openSheet(`<div class="stack"><h2>🎄 Casilla ${d} para ${pn}</h2>
-    <p class="small muted" style="margin:0">La verá cuando abra la casilla del ${d} de diciembre.</p>
+    <p class="small muted" style="margin:0">La verá cuando abra la casilla del ${dayLong(d)}.</p>
     <div class="seg" id="advTypes">${TYPES.map(([k, e, l]) => `<button data-k="${k}" class="${fillType === k ? 'on' : ''}" onclick="advType(${d},'${k}')">${e} ${l}</button>`).join('')}</div>
     <div id="advFields" class="stack" style="gap:8px"></div>
     <div class="row">${f ? `<button class="btn ghost danger" onclick="adventClear(${d})">Vaciar</button>` : ''}<button class="btn" style="flex:1" onclick="adventSave(${d})">Guardar</button></div></div>`);
@@ -227,7 +235,7 @@ async function adventClear(d) {
 // Lo que le dejé (cuando ya no se puede cambiar)
 function adventGiven(d) {
   const f = fillOf(uid(), d), seen = openedAt(partnerUid(), d);
-  openSheet(`<div class="stack center adv-open"><span class="tiny muted">Casilla ${d} para ${esc(partnerName())}</span>
+  openSheet(`<div class="stack center adv-open"><span class="tiny muted">Casilla ${d} para ${esc(partnerName())} · ${dayLong(d)}</span>
     <div class="adv-emoji" aria-hidden="true">${esc(f.emoji || typeEmoji(f.type))}</div>
     ${f.photo ? `<img class="adv-photo" data-photo="${photoId(uid(), d)}" alt="" onclick="viewPhoto(this)">` : ''}
     ${f.text ? `<p class="adv-text">${esc(f.text)}</p>` : ''}

@@ -6,7 +6,7 @@ const standalone = () => matchMedia('(display-mode: standalone)').matches || nav
 const isIOS = () => /iphone|ipad|ipod/i.test(navigator.userAgent);
 
 // Versión de la guía: si alguien ya vio una anterior, le sale una vez «Lo nuevo» (NEW_STEPS) en vez de la completa.
-const TOUR_VERSION = 11;
+const TOUR_VERSION = 12;
 const PET = { screen: 's-home', tab: 'home', emoji: '🐣', title: 'Su mascota',
   text: 'Adopten un huevo en Inicio. Come cada día que <b>los dos</b> hacen algo en Futari:', list: ['Nace a los 3 días y crece hasta leyenda 👑', 'Si un día no come se pone triste, pero no pierde lo que creció', 'Ganan monedas 🪙 para comprarle ropa y detalles', '4 juegos para competir por el récord'] };
 const SNAPS = { screen: 's-home', tab: 'home', emoji: '📸', title: 'Historias',
@@ -52,6 +52,9 @@ const ADVENT = { screen: 's-advent', emoji: '🎄', title: 'Calendario de advien
 const ALERTS = { screen: 's-home', tab: 'home', emoji: '🔔', title: 'Campana de avisos',
   text: 'Arriba en Inicio está la <b>campana</b>: junta todo lo que te espera y dice de dónde viene cada cosa.', list: ['Notas, cupones, votos, historias, antojos, el quiz y los juegos', 'Toca un aviso y te lleva directo a donde está', 'En Más, las secciones con algo pendiente suben al principio y dicen qué es'] };
 
+const REGALITOS = { screen: 's-advent', emoji: '🎁', title: 'Regalitos del adviento',
+  text: 'En el calendario de adviento → <b>🎁 Regalitos</b>, cada uno planea un regalito físico por día para el otro:', list: ['Qué es, precio, dónde comprarlo y si ya está comprado o envuelto (solo lo ves tú)', 'Ideas dentro del rango que acuerden y lista de compras por tienda', 'Una pista de dónde lo escondiste, que tu pareja ve al abrir la casilla', 'Reacciones, foto del regalito y su favorito'] };
+
 // gate: el paso solo sale a quien ya ve esa sección (Vacaciones empieza solo para el dueño)
 const VACWORK = { screen: 's-vac', gate: 's-vac', emoji: '💼', title: 'Vacaciones del trabajo',
   text: 'En Más → <b>Vacaciones</b> llevan la cuenta de sus días:', list: ['Pongan cuántos días tienen y cada cuánto se acreditan', 'Pidan vacaciones y márquenlas como aprobadas o no: salen solas en el calendario', 'Les dice cuántos días les quedarían, los feriados y los puentes que vienen', 'Historial de cada año'] };
@@ -80,9 +83,12 @@ const STEPS = () => [
 ];
 // Solo lo nuevo, para quien ya conocía la app
 // Lo nuevo de cada versión de la guía; a quien se saltó varias le salen todas las que no vio
-const NEW_BY_VERSION = { 2: [PET, SNAPS, GUESS, WEEK, NOTIFS, GESTURES], 3: [CRAVINGS, MENU], 4: [GASTOS], 5: [CHAT, COOKED, TRAVEL, VACATIONS, EASIER], 6: [FRUTA], 7: [CALNOTIF], 8: [PHOTOSAVE], 9: [ADVENT], 10: [ALERTS], 11: [VACWORK] };
-const visible = s => !s.gate || gateOn(s.gate);
-const newSteps = seenV => Object.entries(NEW_BY_VERSION).filter(([v]) => Number(v) > seenV).flatMap(([, s]) => s).filter(visible);
+const NEW_BY_VERSION = { 2: [PET, SNAPS, GUESS, WEEK, NOTIFS, GESTURES], 3: [CRAVINGS, MENU], 4: [GASTOS], 5: [CHAT, COOKED, TRAVEL, VACATIONS, EASIER], 6: [FRUTA], 7: [CALNOTIF], 8: [PHOTOSAVE], 9: [ADVENT], 10: [ALERTS], 11: [VACWORK], 12: [REGALITOS] };
+// Pasos con gate (secciones que no todos ven todavía): salen cuando la persona ya ve la sección y no lo ha visto
+// (prefs.tourGates.<gate>), sin importar la versión. Los demás, por versión.
+const gateSeen = g => !!profile(uid()).prefs?.tourGates?.[g];
+const newSteps = seenV => Object.entries(NEW_BY_VERSION).flatMap(([v, s]) => s.map(x => [Number(v), x]))
+  .filter(([v, s]) => s.gate ? gateOn(s.gate) && !gateSeen(s.gate) : v > seenV).map(([, s]) => s);
 const NEW_STEPS = seenV => [
   { emoji: '✨', title: 'Lo nuevo en Futari', text: `${myName() ? esc(myName()) + ', a' : 'A'}gregamos ${seenV >= TOUR_VERSION - 1 ? 'algo' : 'varias cosas'}. Te ${seenV >= TOUR_VERSION - 1 ? 'lo' : 'las'} muestro en un minuto.` },
   ...newSteps(seenV),
@@ -110,7 +116,8 @@ function tourEnd(finished) {
   $('tour')?.remove();
   document.querySelectorAll('.tabbar .spot').forEach(b => b.classList.remove('spot'));
   try { localStorage.setItem('nosotros-tour', '1'); localStorage.setItem('futari-tour-v', String(TOUR_VERSION)); } catch {}
-  write(setDoc(ref('profiles', uid()), { prefs: { tour: true, tourV: TOUR_VERSION } }, { merge: true }));
+  const tourGates = Object.fromEntries(steps.filter(s => s.gate).map(s => [s.gate, true]));
+  write(setDoc(ref('profiles', uid()), { prefs: { tour: true, tourV: TOUR_VERSION, ...(Object.keys(tourGates).length ? { tourGates } : {}) } }, { merge: true }));
   go(finished && !myName() ? 's-settings' : 's-home');
 }
 // Se llama cuando ya cargó el perfil: si nunca vio la guía (ni en este ni en otro teléfono), la muestra.
@@ -124,7 +131,7 @@ export function maybeStartTour() {
   // Ya conocía la app: mostrar una vez lo nuevo, cuando no haya otra ventana abierta (por ejemplo las Novedades)
   const v = Math.max(seenV, prefs.tourV || 1);
   // (si todo lo nuevo es de una sección que todavía no ve, no se muestra ni se marca: le sale cuando la vea)
-  if (v < TOUR_VERSION && newSteps(v).length) {
+  if (newSteps(v).length) {
     let tries = 0;
     const later = () => { if ($('sheet')?.classList.contains('show') || $('lockScreen') || document.querySelector('.dialog')) { if (++tries < 120) setTimeout(later, 1000); return; } startTour(true, v); };
     setTimeout(later, 1500);

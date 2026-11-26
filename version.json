@@ -1,7 +1,8 @@
 {
-  "version": "1.16.0",
-  "notes": ["📅 En el calendario, las vacaciones que todavía están por aprobar se ven con ⏳ y una barra más clarita."],
+  "version": "1.17.0",
+  "notes": ["🎁 Regalitos en el calendario de adviento: planeen un regalito por día del 1 al 24 de diciembre (qué es, precio, dónde comprarlo, comprado o envuelto). Su lista es secreta: solo la ve quien la escribe.", "Ideas dentro del rango que acuerden (de ₡1.000 a ₡2.000, se puede cambiar), lista de compras por tienda y avisos si el de mañana no está comprado.", "Al abrir la casilla sale la pista de dónde está escondido; reaccionen, guarden una foto y elijan su favorito.", "Cada casilla ya dice qué día de la semana es."],
   "history": [
+    { "version": "1.17.0", "notes": ["🎁 Regalitos en el calendario de adviento: planeen un regalito por día del 1 al 24 de diciembre (qué es, precio, dónde comprarlo, comprado o envuelto). Su lista es secreta: solo la ve quien la escribe.", "Ideas dentro del rango que acuerden (de ₡1.000 a ₡2.000, se puede cambiar), lista de compras por tienda y avisos si el de mañana no está comprado.", "Al abrir la casilla sale la pista de dónde está escondido; reaccionen, guarden una foto y elijan su favorito.", "Cada casilla ya dice qué día de la semana es."] },
     { "version": "1.16.0", "notes": ["📅 En el calendario, las vacaciones que todavía están por aprobar se ven con ⏳ y una barra más clarita."] },
     { "version": "1.15.0", "notes": ["🔔 Nueva campana de avisos en Inicio: junta todo lo que te espera (notas, cupones, votos, historias, antojos, juegos…) y dice de dónde viene. Toca uno y te lleva directo.", "En Más, las secciones con algo pendiente suben al principio y dicen qué es.", "El calendario de adviento ya solo marca la casilla de hoy, no todas las que quedaron sin abrir."] },
     { "version": "1.14.0", "notes": ["❄️ Futari se vistió de Navidad: colores rojo y dorado, nieve, luces y un gorrito en Inicio, hasta el 6 de enero.", "Si prefieren verla como siempre, se apaga en Ajustes → Apariencia → 🎄 Estilo navideño (solo en tu teléfono)."] },
