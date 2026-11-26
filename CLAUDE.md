@@ -22,6 +22,7 @@ Lee estos documentos antes de cambiar algo:
 | [docs/FLECHAS.md](docs/FLECHAS.md) | Juego Flechas (sorpresa del dueño): modos, regalo, generador, figuras 3D |
 | [docs/FRUTA.md](docs/FRUTA.md) | Juego Pura fruta (combinar 3): motor, niveles, especiales, datos y calibración |
 | [docs/PARADA.md](docs/PARADA.md) | Juego La parada (sorpresa del dueño, todavía sin regalar) |
+| [docs/VACACIONES.md](docs/VACACIONES.md) | Vacaciones del trabajo: saldo, acreditación, solicitudes, feriados; solo el dueño la ve hasta compartirla en Administración |
 | [docs/ADVIENTO.md](docs/ADVIENTO.md) | Calendario de adviento (15 nov – 31 dic): casillas, llenarle casillas a la pareja, datos y avisos |
 | [docs/PENDIENTES.md](docs/PENDIENTES.md) | Cosas pospuestas, ideas, servicios externos y trampas conocidas (iPhone/Android) |
 
@@ -35,6 +36,9 @@ menciona en Novedades ni en la guía. Los tres juegos se administran en Administ
 
 **La parada** (v56) es la nueva **sorpresa**: no la menciones en novedades ni en la guía hasta que el dueño la regale.
 Los juegos sorpresa comparten `gifts.js` (regalo envuelto, `gates`). Ver [docs/PARADA.md](docs/PARADA.md).
+
+**Vacaciones** (1.16.0) por ahora **solo la ve el dueño**: no la menciones en las notas de `version.json` hasta que se
+comparta (Administración → Pruebas). Su paso de la guía ya filtra por `gate`. Ver [docs/VACACIONES.md](docs/VACACIONES.md).
 
 ## Reglas que no se rompen
 

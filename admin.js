@@ -11,6 +11,7 @@ import { SPECIES, STAGES } from './pet.js';
 import { sceneSVG, petSVG, ITEMS, SLOTS } from './pet-art.js';
 import { GAMES, playGame } from './pet-games.js';
 import { juegosHTML } from './admin-juegos.js';
+import { vacAdminCard } from './vacations.js';
 
 let range = 14, selDay = null, visits = [], errors = [], usage = [], stats = [], photoCount = null, loading = false, tab = 'ingresos';
 const COLORS = ['var(--g1)', 'var(--g2)'];
@@ -253,7 +254,8 @@ function labGame(id) {
 }
 
 function testsHTML() {
-  return `${giftAdminCards()}
+  return `${vacAdminCard()}
+    ${giftAdminCards()}
     ${labHTML()}
     <div class="glass stack"><span class="label">🔔 Notificaciones</span>
       <p class="small muted" style="margin:0">${pushHere ? 'Activadas en este teléfono.' : 'No están activadas en este teléfono (Ajustes → Notificaciones).'}</p>
@@ -270,7 +272,7 @@ function testsHTML() {
 }
 
 /* ---------- Pestaña Estadísticas ---------- */
-const SCREENS = { home: 'Inicio', decide: 'Decidir', moments: 'Momentos', love: 'Detalles', more: 'Más', settings: 'Ajustes', cal: 'Calendario',
+const SCREENS = { home: 'Inicio', decide: 'Decidir', moments: 'Momentos', love: 'Detalles', more: 'Más', settings: 'Ajustes', cal: 'Calendario', vac: 'Vacaciones',
   reminders: 'Recordatorios', music: 'Playlist', grocery: 'Súper', money: 'Gastos', trips: 'Viajes', trip: 'Viaje', places: 'Restaurantes',
   shows: 'Pelis y series', recipes: 'Recetas', map: 'Mapa', badges: 'Logros', game: 'Juego de retos', us: 'Gustos y regalos', quiz: 'Quiz',
   bucket: 'Bucket list', cravings: 'Antojos', arrows: 'Flechas', bus: 'La parada', pet: 'Mascota', summary: 'Resumen del año', gallery: 'Galería', search: 'Buscar', admin: 'Admin' };

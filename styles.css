@@ -1293,6 +1293,18 @@ html:not([data-ts="n"]) .topbar h1 { font-size: 26px; }
 .cal .vbars i.s { margin-left: 6px; border-top-left-radius: 3px; border-bottom-left-radius: 3px; }
 .cal .vbars i.e { margin-right: 6px; border-top-right-radius: 3px; border-bottom-right-radius: 3px; }
 .cal button.sel .vbars i { opacity: 1; box-shadow: 0 0 0 1px rgba(0,0,0,.25); }
+.cal .vbars i.p { opacity: .5; background-image: repeating-linear-gradient(90deg, transparent 0 4px, rgba(0,0,0,.35) 4px 6px); }
+/* Vacaciones del trabajo (vacations.js) */
+.vac-lock { padding: 8px 12px; border-radius: 12px; background: color-mix(in srgb, #38BDF8 14%, transparent); }
+.vac-hero { display: flex; align-items: baseline; gap: 8px; }
+.vac-hero b { font-size: 46px; line-height: 1; font-weight: 800; letter-spacing: -1px; }
+.vac-neg { color: #F87171; }
+.vac-st { font-size: 11.5px; font-weight: 700; padding: 3px 9px; border-radius: 99px; white-space: nowrap; background: var(--glass-2); color: var(--muted); }
+.vac-st.pendiente { background: rgba(250,204,21,.18); color: #EAB308; }
+.vac-st.aprobada { background: rgba(62,207,142,.18); color: #22B573; }
+.vac-st.rechazada { background: rgba(248,113,113,.18); color: #EF4444; }
+.vac-st.tomada { background: rgba(56,189,248,.16); color: #0EA5E9; }
+.vac-item .vac-ask { margin: -4px 0 10px; }
 .vac-row { display: flex; align-items: center; gap: 10px; width: 100%; text-align: left; font: inherit; color: var(--text); cursor: pointer; margin-top: 8px;
   padding: 10px 12px; border-radius: 14px; border: 0; border-left: 5px solid var(--vc); background: color-mix(in srgb, var(--vc) 16%, var(--soft)); }
 .wk-vac { font: inherit; font-size: 13px; padding: 6px 10px; border-radius: 10px; border: 0; border-left: 4px solid var(--vc); color: var(--text); cursor: pointer;

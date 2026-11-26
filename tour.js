@@ -1,12 +1,12 @@
 // Guía de bienvenida: aparece la primera vez que cada uno entra (y se puede repetir desde Ajustes).
-import { $, S, esc, icon, expose, go, write, ref, profile, myName, uid } from './core.js';
+import { $, S, esc, icon, expose, go, write, ref, profile, myName, uid, gateOn } from './core.js';
 import { setDoc } from 'https://www.gstatic.com/firebasejs/11.0.2/firebase-firestore.js';
 
 const standalone = () => matchMedia('(display-mode: standalone)').matches || navigator.standalone;
 const isIOS = () => /iphone|ipad|ipod/i.test(navigator.userAgent);
 
 // Versión de la guía: si alguien ya vio una anterior, le sale una vez «Lo nuevo» (NEW_STEPS) en vez de la completa.
-const TOUR_VERSION = 10;
+const TOUR_VERSION = 11;
 const PET = { screen: 's-home', tab: 'home', emoji: '🐣', title: 'Su mascota',
   text: 'Adopten un huevo en Inicio. Come cada día que <b>los dos</b> hacen algo en Futari:', list: ['Nace a los 3 días y crece hasta leyenda 👑', 'Si un día no come se pone triste, pero no pierde lo que creció', 'Ganan monedas 🪙 para comprarle ropa y detalles', '4 juegos para competir por el récord'] };
 const SNAPS = { screen: 's-home', tab: 'home', emoji: '📸', title: 'Historias',
@@ -52,6 +52,10 @@ const ADVENT = { screen: 's-advent', emoji: '🎄', title: 'Calendario de advien
 const ALERTS = { screen: 's-home', tab: 'home', emoji: '🔔', title: 'Campana de avisos',
   text: 'Arriba en Inicio está la <b>campana</b>: junta todo lo que te espera y dice de dónde viene cada cosa.', list: ['Notas, cupones, votos, historias, antojos, el quiz y los juegos', 'Toca un aviso y te lleva directo a donde está', 'En Más, las secciones con algo pendiente suben al principio y dicen qué es'] };
 
+// gate: el paso solo sale a quien ya ve esa sección (Vacaciones empieza solo para el dueño)
+const VACWORK = { screen: 's-vac', gate: 's-vac', emoji: '💼', title: 'Vacaciones del trabajo',
+  text: 'En Más → <b>Vacaciones</b> llevan la cuenta de sus días:', list: ['Pongan cuántos días tienen y cada cuánto se acreditan', 'Pidan vacaciones y márquenlas como aprobadas o no: salen solas en el calendario', 'Les dice cuántos días les quedarían, los feriados y los puentes que vienen', 'Historial de cada año'] };
+
 const STEPS = () => [
   { emoji: '💞', title: `¡Bienvenido${myName() ? ', ' + myName() : ''}!`,
     text: 'Esta es Futari (二人, «los dos» en japonés), su app de pareja. Todo lo que hagan aquí lo ven los dos al instante. Te muestro lo principal en un minuto.' },
@@ -76,10 +80,12 @@ const STEPS = () => [
 ];
 // Solo lo nuevo, para quien ya conocía la app
 // Lo nuevo de cada versión de la guía; a quien se saltó varias le salen todas las que no vio
-const NEW_BY_VERSION = { 2: [PET, SNAPS, GUESS, WEEK, NOTIFS, GESTURES], 3: [CRAVINGS, MENU], 4: [GASTOS], 5: [CHAT, COOKED, TRAVEL, VACATIONS, EASIER], 6: [FRUTA], 7: [CALNOTIF], 8: [PHOTOSAVE], 9: [ADVENT], 10: [ALERTS] };
+const NEW_BY_VERSION = { 2: [PET, SNAPS, GUESS, WEEK, NOTIFS, GESTURES], 3: [CRAVINGS, MENU], 4: [GASTOS], 5: [CHAT, COOKED, TRAVEL, VACATIONS, EASIER], 6: [FRUTA], 7: [CALNOTIF], 8: [PHOTOSAVE], 9: [ADVENT], 10: [ALERTS], 11: [VACWORK] };
+const visible = s => !s.gate || gateOn(s.gate);
+const newSteps = seenV => Object.entries(NEW_BY_VERSION).filter(([v]) => Number(v) > seenV).flatMap(([, s]) => s).filter(visible);
 const NEW_STEPS = seenV => [
   { emoji: '✨', title: 'Lo nuevo en Futari', text: `${myName() ? esc(myName()) + ', a' : 'A'}gregamos ${seenV >= TOUR_VERSION - 1 ? 'algo' : 'varias cosas'}. Te ${seenV >= TOUR_VERSION - 1 ? 'lo' : 'las'} muestro en un minuto.` },
-  ...Object.entries(NEW_BY_VERSION).filter(([v]) => Number(v) > seenV).flatMap(([, s]) => s),
+  ...newSteps(seenV),
   { emoji: '💞', title: '¡Eso es todo!', text: 'La guía completa siempre está en Ajustes → «Ver la guía otra vez».', final: true },
 ];
 
@@ -117,7 +123,8 @@ export function maybeStartTour() {
   if (!seen && !prefs.tour) return setTimeout(startTour, 400);
   // Ya conocía la app: mostrar una vez lo nuevo, cuando no haya otra ventana abierta (por ejemplo las Novedades)
   const v = Math.max(seenV, prefs.tourV || 1);
-  if (v < TOUR_VERSION) {
+  // (si todo lo nuevo es de una sección que todavía no ve, no se muestra ni se marca: le sale cuando la vea)
+  if (v < TOUR_VERSION && newSteps(v).length) {
     let tries = 0;
     const later = () => { if ($('sheet')?.classList.contains('show') || $('lockScreen') || document.querySelector('.dialog')) { if (++tries < 120) setTimeout(later, 1000); return; } startTour(true, v); };
     setTimeout(later, 1500);

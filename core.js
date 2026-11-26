@@ -460,7 +460,7 @@ export const onShow = (id, fn) => { showHooks[id] = fn; };
 // [pantalla, ícono del sprite, nombre]: todas las secciones que pueden ir en la barra o en Más
 export const SECTIONS = [['s-decide', 'dice', '¿Qué hacemos?'], ['s-moments', 'photo', 'Momentos'], ['s-love', 'gift', 'Detalles'], ['s-advent', 'tree', 'Calendario de adviento'],
   ['s-cravings', 'crave', 'Antojos'], ['s-grocery', 'cart', 'Súper'], ['s-money', 'wallet', 'Gastos'], ['s-trips', 'plane', 'Viajes'],
-  ['s-places', 'fork', 'Restaurantes'], ['s-shows', 'film', 'Pelis y series'], ['s-cal', 'cal', 'Calendario'],
+  ['s-places', 'fork', 'Restaurantes'], ['s-shows', 'film', 'Pelis y series'], ['s-cal', 'cal', 'Calendario'], ['s-vac', 'beach', 'Vacaciones'],
   ['s-reminders', 'bell', 'Recordatorios'], ['s-recipes', 'pot', 'Recetas'], ['s-map', 'map', 'Nuestro mapa'],
   ['s-music', 'music', 'Su playlist'], ['s-pet', 'paw', 'Su mascota'], ['s-badges', 'medal', 'Logros'], ['s-game', 'flame', 'Juego de retos'],
   ['s-us', 'heart', 'Gustos y regalos'], ['s-quiz', 'brain', '¿Cuánto me conoces?'], ['s-bucket', 'list', 'Bucket list'],

@@ -1,7 +1,7 @@
 // Calendario compartido: planes de los dos más fechas especiales, mesiversarios y viajes.
 import { setDoc, updateDoc, deleteDoc } from 'https://www.gstatic.com/firebasejs/11.0.2/firebase-firestore.js';
 import { $, S, esc, icon, paint, on, onShow, expose, toast, openSheet, closeSheet, write, ref, newRef, loadPhotos,
-         parseDate, today, dayKey, todayKey, fmtDay, addMonths, nameOf, partnerUid, partnerName, avatar, uid, ask, ANDROID, softDelete, undoBar, daysBetween, fmtShort, plural, celebrate, go } from './core.js';
+         parseDate, today, dayKey, todayKey, fmtDay, addMonths, nameOf, partnerUid, partnerName, avatar, uid, ask, ANDROID, softDelete, undoBar, daysBetween, fmtShort, plural, celebrate, go, gateOn } from './core.js';
 import { notify, meForPartner } from './push.js';
 import { backBar } from './lists.js';
 import { DATE_KINDS, YEARLY_KINDS } from './data.js';
@@ -46,7 +46,10 @@ export function nextEventDate(ev, fromKey = todayKey()) {
    como etiqueta en la semana y en el día elegido («Día 3 de 12»). Si los dos están libres a la vez, se avisa. */
 export const VAC_KINDS = [['🏖️', 'Vacaciones'], ['🎄', 'Feriado'], ['🛌', 'Día libre'], ['🤒', 'Incapacidad'], ['📚', 'Estudio']];
 const VAC_COLORS = ['#3ECF8E', '#38BDF8', '#A78BFA', '#F472B6', '#FB923C', '#FACC15', '#F87171', '#94A3B8'];
-const vacList = () => S.data.vacations || [];
+// Las del trabajo (vacations.js, work: true) también salen aquí, menos las «no aprobadas»; las «por aprobar» llevan ⏳.
+const vacList = () => (S.data.vacations || []).filter(v => v.status !== 'rechazada');
+const pend = v => v.work && v.status === 'pendiente';
+const vacTitle = v => `${v.title}${pend(v) ? ' ⏳' : ''}`;
 export const vacsOn = k => vacList().filter(v => k >= v.start && k <= v.end).sort((a, b) => a.start.localeCompare(b.start));
 const vacWho = v => !v.who || v.who === 'ambos' ? [uid(), partnerUid()].filter(Boolean) : [v.who];
 const addDay = (k, n) => { const d = parseDate(k); d.setDate(d.getDate() + n); return dayKey(d); };
@@ -76,7 +79,7 @@ export function myVacationRow() {
   const { n } = vacDays(mine), left = daysBetween(today(), parseDate(mine.start));
   if (left > 60) return null;
   if (left <= 0) return [mine.emoji || '🏖️', `<b>Día ${daysBetween(parseDate(mine.start), today()) + 1} de ${n}</b> de ${esc(mine.title.toLowerCase())} 😎`, `go('s-cal');calPick('${tk}')`];
-  return [mine.emoji || '🏖️', `${left === 1 ? '<b>Mañana</b> empiezan' : `<b>Faltan ${left} días</b> para`} ${esc(mine.title.toLowerCase())}${mine.who === 'ambos' ? ' de los dos' : ''}`, `go('s-cal');calPick('${mine.start}')`];
+  return [mine.emoji || '🏖️', `${left === 1 ? '<b>Mañana</b> empiezan' : `<b>Faltan ${left} días</b> para`} ${esc(mine.title.toLowerCase())}${mine.who === 'ambos' ? ' de los dos' : ''}${pend(mine) ? ' (por aprobar ⏳)' : ''}`, `go('s-cal');calPick('${mine.start}')`];
 }
 function vacRange(v) { const a = parseDate(v.start), b = parseDate(v.end); return v.start === v.end ? fmtShort(a) : a.getMonth() === b.getMonth() ? `${a.getDate()}–${b.getDate()} ${b.toLocaleDateString('es', { month: 'short' }).replace('.', '')}` : `${fmtShort(a)} – ${fmtShort(b)}`; }
 function togetherBanner() {
@@ -92,15 +95,17 @@ const canEditVac = v => !v.who || v.who === 'ambos' || v.who === uid();
 function viewVac(v) {
   const { n, work } = vacDays(v), tk = todayKey(), left = daysBetween(today(), parseDate(v.start));
   openSheet(`<div class="stack"><div class="vac-row" style="--vc:${esc(v.color || '#3ECF8E')};margin:0;cursor:default"><span style="font-size:28px">${esc(v.emoji || '🏖️')}</span>
-      <span class="grow"><b>${esc(v.title)}</b><span class="tiny muted" style="display:block">De ${esc(nameOf(v.who))}</span></span></div>
+      <span class="grow"><b>${esc(vacTitle(v))}</b><span class="tiny muted" style="display:block">De ${esc(nameOf(v.who))}${v.work ? ` · del trabajo${pend(v) ? ', por aprobar' : ', aprobadas'}` : ''}</span></span></div>
     <p class="small" style="margin:0">📅 ${esc(fmtDay(parseDate(v.start)))}${v.end !== v.start ? ` al ${esc(fmtDay(parseDate(v.end)))}` : ''}</p>
     <p class="small muted" style="margin:0">${plural(n, 'día', 'días')}${work !== n ? ` · ${plural(work, 'hábil', 'hábiles')}` : ''}${tk < v.start ? ` · ${left === 1 ? 'empiezan mañana' : `faltan ${left} días`}` : tk <= v.end ? ` · va en el día ${daysBetween(parseDate(v.start), today()) + 1}` : ''}</p>
     ${v.note ? `<p class="small" style="margin:0">📝 ${esc(v.note)}</p>` : ''}
     <button class="btn ghost" onclick="exportEvent('${v.id}')">${icon('cal')} A mi calendario</button>
-    <p class="tiny muted center" style="margin:0">Solo ${esc(nameOf(v.who))} puede cambiarlas.</p></div>`);
+    <p class="tiny muted center" style="margin:0">${v.work ? 'Son vacaciones del trabajo: se manejan aparte.' : `Solo ${esc(nameOf(v.who))} puede cambiarlas.`}</p></div>`);
 }
 function openVac(start, id) {
   const v = id ? vacList().find(x => x.id === id) : null, p = partnerUid();
+  // Las del trabajo se editan en Vacaciones (saldo y estado); quien todavía no ve esa sección solo las ve
+  if (v?.work) return gateOn('s-vac') ? window.vacOpen?.(v.id) : viewVac(v);
   if (v && !canEditVac(v)) return viewVac(v);
   vacEdit = v?.id || null; vacColor = v?.color || VAC_COLORS[0];
   const k = v?.kind || '🏖️';
@@ -197,7 +202,7 @@ function renderWeek() {
         const k = dayKey(d), its = itemsFor(k);
         return `<div class="wk-day ${k === tk ? 'today' : ''}" data-day="${k}">
           <button class="wk-date" onclick="openAdd('${k}')" aria-label="Agregar el ${esc(fmtDay(d))}"><b>${cap(d.toLocaleDateString('es', { weekday: 'short' }).replace('.', ''))}</b><span>${d.getDate()}</span></button>
-          <div class="wk-items">${vacsOn(k).map(v => `<button class="wk-vac" style="--vc:${esc(v.color || '#3ECF8E')}" onclick="openVac(null,'${v.id}')">${esc(v.emoji || '🏖️')} ${esc(v.title)}${v.who && v.who !== 'ambos' ? ` · ${esc(v.who === uid() ? 'Tú' : nameOf(v.who).split(' ')[0])}` : ''}</button>`).join('')}${its.length ? its.map(i => i.kind === 'plan'
+          <div class="wk-items">${vacsOn(k).map(v => `<button class="wk-vac" style="--vc:${esc(v.color || '#3ECF8E')}" onclick="openVac(null,'${v.id}')">${esc(v.emoji || '🏖️')} ${esc(vacTitle(v))}${v.who && v.who !== 'ambos' ? ` · ${esc(v.who === uid() ? 'Tú' : nameOf(v.who).split(' ')[0])}` : ''}</button>`).join('')}${its.length ? its.map(i => i.kind === 'plan'
             ? `<button class="wk-plan" data-ev="${i.ev.id}" onclick="wkTap(this)">${i.time ? `<small>${esc(i.time)}</small> ` : ''}${esc(i.label)}${i.ev.who && i.ev.who !== 'ambos' ? ` · ${esc(nameOf(i.ev.who).split(' ')[0])}` : ''}${i.ev.repeat && i.ev.repeat !== 'none' ? ' ↻' : ''}</button>`
             : i.kind === 'date' ? `<button class="wk-chip" onclick="openFecha(null,'${i.f.id}')">${esc(i.label)}</button>` : `<span class="wk-chip">${esc(i.label)}</span>`).join('')
             : vacsOn(k).length ? '' : '<span class="wk-none">—</span>'}</div></div>`;
@@ -291,7 +296,7 @@ function render() {
           const marks = (fecha ? [`<b>${esc(fecha.f.emoji)}</b>`] : []).concat(its.filter(i => i.kind !== 'date').map(i => `<i class="${i.kind}"></i>`)).slice(0, 3);
           const vs = vacsOn(k).slice(0, 2);
           return `<button class="${c.getMonth() !== vm ? 'out' : ''} ${k === tk ? 'today' : ''} ${k === sel ? 'sel' : ''}" onclick="calPick('${k}')" aria-label="${fmtDay(c)}${its.length ? ', ' + its.length + ' cosas' : ''}${vs.length ? ', ' + vs.map(v => v.title).join(', ') : ''}">
-            ${c.getDate()}<span class="dots">${marks.join('')}</span>${vs.length ? `<span class="vbars">${vs.map(v => `<i class="${k === v.start || c.getDay() === 1 ? 's' : ''} ${k === v.end || c.getDay() === 0 ? 'e' : ''}" style="background:${esc(v.color || '#3ECF8E')}"></i>`).join('')}</span>` : ''}</button>`;
+            ${c.getDate()}<span class="dots">${marks.join('')}</span>${vs.length ? `<span class="vbars">${vs.map(v => `<i class="${k === v.start || c.getDay() === 1 ? 's' : ''} ${k === v.end || c.getDay() === 0 ? 'e' : ''} ${pend(v) ? 'p' : ''}" style="background:${esc(v.color || '#3ECF8E')}"></i>`).join('')}</span>` : ''}</button>`;
         }).join('')}</div>
       <div class="legend"><span><i style="background:#3ECF8E;border-radius:2px;height:4px;width:12px"></i>Vacaciones</span><span><i style="background:var(--c-plan)"></i>Planes</span><span>🎂 Fechas especiales</span><span><i style="background:var(--c-date)"></i>Aniversarios</span><span><i style="background:var(--c-trip)"></i>Viajes</span></div>
       ${vy !== today().getFullYear() || vm !== today().getMonth() ? `<button class="link" onclick="calToday()">Ir a hoy</button>` : ''}
@@ -300,7 +305,7 @@ function render() {
     <div class="glass"><div class="row"><h2>${cap(fmtDay(parseDate(sel)))}</h2>
       <button class="link" onclick="openAdd('${sel}')">${icon('plus')} Agregar</button></div>
       ${vacsOn(sel).map(v => { const { n } = vacDays(v), i = daysBetween(parseDate(v.start), parseDate(sel)) + 1; return `<button class="vac-row" style="--vc:${esc(v.color || '#3ECF8E')}" onclick="openVac(null,'${v.id}')"><span style="font-size:22px">${esc(v.emoji || '🏖️')}</span>
-        <span class="grow"><b>${esc(v.title)}</b><span class="tiny muted" style="display:block">${esc(whoLabel(v))} · ${n > 1 ? `día ${i} de ${n} · ` : ''}${esc(vacRange(v))}${v.note ? ' · ' + esc(v.note) : ''}</span></span></button>`; }).join('')}
+        <span class="grow"><b>${esc(vacTitle(v))}</b><span class="tiny muted" style="display:block">${esc(whoLabel(v))}${pend(v) ? ' · por aprobar' : ''} · ${n > 1 ? `día ${i} de ${n} · ` : ''}${esc(vacRange(v))}${v.note ? ' · ' + esc(v.note) : ''}</span></span></button>`; }).join('')}
       <ul class="list" style="margin-top:6px">${items.length ? items.map(i => i.kind === 'plan' ? `<li>
         ${i.ev.who === 'ambos' || !i.ev.who ? `<span class="avatars">${avatar(uid(), 28)}${p ? avatar(p, 28) : ''}</span>` : avatar(i.ev.who, 28)}
         <div class="txt" role="button" tabindex="0" style="cursor:pointer" aria-label="Editar ${esc(i.label)}" onclick="openEvent(null,'${i.ev.id}')">${esc(i.label)}<span class="sub">${i.ev.repeat && i.ev.repeat !== 'none' ? '↻ ' + repeatLabel(i.ev.repeat).toLowerCase() + ' · ' : ''}${i.time ? esc(i.time) + ' · ' : ''}${i.ev.who === 'ambos' || !i.ev.who ? 'Los dos' : esc(nameOf(i.ev.who))}${i.ev.note ? ' · ' + esc(i.ev.note) : ''}</span></div>
@@ -327,7 +332,9 @@ function openAdd(date) {
     <button class="btn ghost" onclick="openFecha('${d}')">🎂 Una fecha especial</button>
     <p class="tiny muted center" style="margin:-4px 0 4px">Un día para recordar: cumpleaños, aniversarios, festivos…</p>
     <button class="btn ghost" onclick="openVac('${d}')">🏖️ Vacaciones o días libres</button>
-    <p class="tiny muted center" style="margin:-4px 0 0">Del día que empiezan al que terminan: vacaciones, feriados, días libres…</p></div>`);
+    <p class="tiny muted center" style="margin:-4px 0 0">Del día que empiezan al que terminan: vacaciones, feriados, días libres…</p>
+    ${gateOn('s-vac') ? `<button class="btn ghost" onclick="vacNew(null,'${d}','${d}')">💼 Vacaciones del trabajo</button>
+    <p class="tiny muted center" style="margin:-4px 0 0">Con saldo y estado (por aprobar o aprobadas)</p>` : ''}</div>`);
 }
 
 /* ---------- Fechas especiales (colección "dates") ---------- */

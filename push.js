@@ -184,6 +184,7 @@ const OPEN = {
   gift: () => { go('s-home'); setTimeout(() => window.unwrapGift?.(), 600); },
   'cravings-done': () => window.openCravings?.('done'),
   advent: () => window.openAdvent?.(),
+  vac: () => window.openVacations?.(),
 };
 // Espera a que estén cargados los datos y a que se quite el candado del PIN
 function openWhenReady(what) {
