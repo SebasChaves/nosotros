@@ -130,7 +130,8 @@ const NO_ACTS = new Set(['push', 'activity']); // automáticas
 const IGNORE = /^(at|updatedAt|editedAt|lastAt|ts|by|id)$/; // marcas de tiempo y autor: cambian solas en cada edición
 // Campos que la app guarda sola (por colección). Si todo lo que cambió está aquí, la fila sale como «automático».
 const AUTO = {
-  profiles: /^prefs\.(tour|tourV|tourGates|unwrapped|vacHigh|moneyTour)(\.|$)/,
+  profiles: /^prefs\.(tour|tourV|tourGates|unwrapped|vacHigh|moneyTour|hitoSeen)(\.|$)/,
+  liga: /^(hitos|closed|pts|winners)(\.|$)/,
   advent: /^(reactSeen)$/,
   _couple: /^(lastBackup)$/,
 };

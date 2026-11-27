@@ -23,6 +23,8 @@ import { myDailyDone, partnerDailyDone } from './daily.js';
 import { sectionName } from './menu.js';
 import { vacAlerts } from './vacations.js';
 import { regalitoAlerts } from './advent-gifts.js';
+import { sorpresaAlerts } from './sorpresa.js';
+import { diaryAlerts } from './diary.js';
 
 const later = f => setTimeout(f, 320); // después de cambiar de pantalla
 const focusHome = sel => () => { go('s-home'); later(() => { const el = document.querySelector(sel); el?.scrollIntoView({ behavior: 'smooth', block: 'center' }); if (el?.tagName === 'TEXTAREA') el.focus(); }); };
@@ -36,6 +38,7 @@ export function alertItems() {
   for (const r of urgentReminders()) add('urg-' + r.id, 's-home', '🔴', `<b>Urgente:</b> ${esc(r.text)}`, 'Recordatorio urgente', () => { go('s-reminders'); later(() => window.openReminder?.(r.id)); });
   const ans = S.data.answers.find(a => a.id === todayKey());
   if (p && ans?.answers?.[p] && !ans.answers[uid()]) add('question', 's-home', '💬', `${pn} ya respondió la pregunta del día: responde para ver qué dijo`, 'Pregunta del día', focusHome('#answerText'));
+  for (const a of sorpresaAlerts()) add(a.key, 's-home', a.e, a.text, a.short, focusHome('.sp-card'));
   if (guessWaiting()) add('guess', 's-home', '🔮', `${pn} ya respondió «¿Qué respondería ${pn}?»: adivina qué dijo`, '¿Qué respondería?', focusHome('.guess-card'));
 
   // Decidir
@@ -58,6 +61,9 @@ export function alertItems() {
   const chats = newChats();
   add('chats', 's-moments', '💬', `${pn} te escribió en ${chats.length === 1 ? (chats[0].by === uid() ? 'tu historia' : 'su historia') : plural(chats.length, 'historia', 'historias')}`, 'Mensaje en una historia', () => window.openSnaps?.(chats[chats.length - 1]?.id), chats.length);
   if (!myDailyDone() && partnerDailyDone()) add('daily', 's-moments', '📷', `${pn} ya subió su foto del día: sube la tuya para verla`, 'Foto del día', () => { go('s-moments'); window.momTab?.('daily'); });
+
+  // Diario de los dos
+  for (const a of diaryAlerts()) add(a.key, 's-diary', a.e, a.text, a.short, () => go('s-diary'));
 
   // Antojos
   const crav = partnerCravings().filter(c => !c.seen?.[uid()]);

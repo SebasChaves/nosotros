@@ -6,7 +6,7 @@ const standalone = () => matchMedia('(display-mode: standalone)').matches || nav
 const isIOS = () => /iphone|ipad|ipod/i.test(navigator.userAgent);
 
 // Versión de la guía: si alguien ya vio una anterior, le sale una vez «Lo nuevo» (NEW_STEPS) en vez de la completa.
-const TOUR_VERSION = 12;
+const TOUR_VERSION = 13;
 const PET = { screen: 's-home', tab: 'home', emoji: '🐣', title: 'Su mascota',
   text: 'Adopten un huevo en Inicio. Come cada día que <b>los dos</b> hacen algo en Futari:', list: ['Nace a los 3 días y crece hasta leyenda 👑', 'Si un día no come se pone triste, pero no pierde lo que creció', 'Ganan monedas 🪙 para comprarle ropa y detalles', '4 juegos para competir por el récord'] };
 const SNAPS = { screen: 's-home', tab: 'home', emoji: '📸', title: 'Historias',
@@ -55,6 +55,11 @@ const ALERTS = { screen: 's-home', tab: 'home', emoji: '🔔', title: 'Campana d
 const REGALITOS = { screen: 's-advent', emoji: '🎁', title: 'Regalitos del adviento',
   text: 'En el calendario de adviento → <b>🎁 Regalitos</b>, cada uno planea un regalito físico por día para el otro:', list: ['Qué es, precio, dónde comprarlo y si ya está comprado o envuelto (solo lo ves tú)', 'Ideas dentro del rango que acuerden y lista de compras por tienda', 'Una pista de dónde lo escondiste, que tu pareja ve al abrir la casilla', 'Reacciones, foto del regalito y su favorito'] };
 
+const SORPRESA = { screen: 's-home', tab: 'home', emoji: '⚡', title: 'Momento sorpresa y racha',
+  text: 'Cada día, a una <b>hora sorpresa</b> entre las 10:00 y las 21:00, les llega un aviso a los dos:', list: ['Tienen 10 minutos para subir una foto de lo que están haciendo', 'La de tu pareja se ve cuando subes la tuya', 'Toca la 🔥 racha en «Hoy»: a los 3, 7, 14, 30… días seguidos su mascota gana monedas', 'En Momentos, el botón 🌳 abre su árbol de recuerdos: cada momento es una hoja o una flor'] };
+const DIARIO = { screen: 's-diary', emoji: '📖', title: 'Diario y Liga del mes',
+  text: 'En Más hay dos secciones nuevas:', list: ['📖 Diario de los dos: una línea cada noche sobre cómo estuvo tu día; la de tu pareja se lee cuando escribes la tuya', '🏆 Liga del mes: el reto del día de los juegos, el momento sorpresa y el diario dan puntos', 'Quien gane el mes recibe un cupón del otro para elegir el plan del fin de semana 🏆'] };
+
 // gate: el paso solo sale a quien ya ve esa sección (Vacaciones empieza solo para el dueño)
 const VACWORK = { screen: 's-vac', gate: 's-vac', emoji: '💼', title: 'Vacaciones del trabajo',
   text: 'En Más → <b>Vacaciones</b> llevan la cuenta de sus días:', list: ['Pongan cuántos días tienen y cada cuánto se acreditan', 'Pidan vacaciones y márquenlas como aprobadas o no: salen solas en el calendario', 'Les dice cuántos días les quedarían, los feriados y los puentes que vienen', 'Historial de cada año'] };
@@ -83,7 +88,7 @@ const STEPS = () => [
 ];
 // Solo lo nuevo, para quien ya conocía la app
 // Lo nuevo de cada versión de la guía; a quien se saltó varias le salen todas las que no vio
-const NEW_BY_VERSION = { 2: [PET, SNAPS, GUESS, WEEK, NOTIFS, GESTURES], 3: [CRAVINGS, MENU], 4: [GASTOS], 5: [CHAT, COOKED, TRAVEL, VACATIONS, EASIER], 6: [FRUTA], 7: [CALNOTIF], 8: [PHOTOSAVE], 9: [ADVENT], 10: [ALERTS], 11: [VACWORK], 12: [REGALITOS] };
+const NEW_BY_VERSION = { 2: [PET, SNAPS, GUESS, WEEK, NOTIFS, GESTURES], 3: [CRAVINGS, MENU], 4: [GASTOS], 5: [CHAT, COOKED, TRAVEL, VACATIONS, EASIER], 6: [FRUTA], 7: [CALNOTIF], 8: [PHOTOSAVE], 9: [ADVENT], 10: [ALERTS], 11: [VACWORK], 12: [REGALITOS], 13: [SORPRESA, DIARIO] };
 // Pasos con gate (secciones que no todos ven todavía): salen cuando la persona ya ve la sección y no lo ha visto
 // (prefs.tourGates.<gate>), sin importar la versión. Los demás, por versión.
 const gateSeen = g => !!profile(uid()).prefs?.tourGates?.[g];

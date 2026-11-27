@@ -458,7 +458,7 @@ export const onShow = (id, fn) => { showHooks[id] = fn; };
    para pintarla antes de que cargue la base). Una pantalla "pertenece" a la pestaña de la barra a la que vuelve su
    botón Volver (tabOf); si no está en la barra, a Más. */
 // [pantalla, ícono del sprite, nombre]: todas las secciones que pueden ir en la barra o en Más
-export const SECTIONS = [['s-decide', 'dice', '¿Qué hacemos?'], ['s-moments', 'photo', 'Momentos'], ['s-love', 'gift', 'Detalles'], ['s-advent', 'tree', 'Calendario de adviento'],
+export const SECTIONS = [['s-decide', 'dice', '¿Qué hacemos?'], ['s-moments', 'photo', 'Momentos'], ['s-love', 'gift', 'Detalles'], ['s-diary', 'book', 'Diario de los dos'], ['s-liga', 'trophy', 'Liga del mes'], ['s-advent', 'tree', 'Calendario de adviento'],
   ['s-cravings', 'crave', 'Antojos'], ['s-grocery', 'cart', 'Súper'], ['s-money', 'wallet', 'Gastos'], ['s-trips', 'plane', 'Viajes'],
   ['s-places', 'fork', 'Restaurantes'], ['s-shows', 'film', 'Pelis y series'], ['s-cal', 'cal', 'Calendario'], ['s-vac', 'beach', 'Vacaciones'],
   ['s-reminders', 'bell', 'Recordatorios'], ['s-recipes', 'pot', 'Recetas'], ['s-map', 'map', 'Nuestro mapa'],
@@ -623,8 +623,15 @@ export const write = p => p.catch(err => {
 
 /* ================= Estado ================= */
 export const COLLECTIONS = ['bucket', 'ideas', 'notes', 'coupons', 'dates', 'moments', 'lists', 'answers',
-  'moods', 'challenges', 'groceries', 'expenses', 'places', 'trips', 'quiz', 'profiles', 'shows', 'events', 'cards', 'games', 'thinks', 'daily', 'pins', 'recipes', 'recipefav', 'menu', 'songs', 'reminders', 'snaps', 'push', 'activity', 'pet', 'guess', 'cravings', 'arrows', 'bus', 'money', 'cooked', 'dreams', 'vacations', 'fruta', 'advent'];
+  'moods', 'challenges', 'groceries', 'expenses', 'places', 'trips', 'quiz', 'profiles', 'shows', 'events', 'cards', 'games', 'thinks', 'daily', 'pins', 'recipes', 'recipefav', 'menu', 'songs', 'reminders', 'snaps', 'push', 'activity', 'pet', 'guess', 'cravings', 'arrows', 'bus', 'money', 'cooked', 'dreams', 'vacations', 'fruta', 'advent', 'sorpresa', 'diary', 'liga'];
 export const PRIVATE = ['gifts', 'regalitos'];
+// Momento sorpresa (sorpresa.js): minuto del día (desde las 00:00) en que toca, entre las 10:00 y las 20:59. Sale de la
+// fecha, así que los dos teléfonos y el Worker (misma función en notificaciones/worker.js) lo saben sin guardarlo.
+export function surpriseMin(day) {
+  let h = 2166136261;
+  for (const c of 'futari-sorpresa-' + day) { h ^= c.charCodeAt(0); h = Math.imul(h, 16777619); }
+  return 600 + ((h >>> 0) % 660);
+}
 export const S = {
   me: null,
   settings: { start: '', members: {}, currency: 'USD' },

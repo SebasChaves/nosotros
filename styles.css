@@ -1435,3 +1435,19 @@ html:not([data-ts="n"]) .topbar h1 { font-size: 26px; }
 .aj-table th, .aj-table td { padding: 6px 4px; text-align: center; border-bottom: 1px solid var(--line); white-space: nowrap; }
 .aj-table tr.wall td { background: color-mix(in srgb, #ff6a3d 16%, transparent); }
 .ar-end .btn.pay { font-weight: 500; opacity: .85; } .ar-end button:disabled { opacity: .55; }
+
+/* ---------- 1.19.0: momento sorpresa, árbol de recuerdos, liga del mes ---------- */
+.sp-live { border-color: var(--g1); box-shadow: 0 0 0 1px var(--g1), 0 8px 30px -10px var(--g1); animation: spPulse 1.6s ease-in-out infinite; }
+@keyframes spPulse { 50% { box-shadow: 0 0 0 3px var(--g1), 0 8px 34px -6px var(--g1); } }
+.tree-btn { font-size: 19px; line-height: 1; }
+.tree-wrap { padding: 8px; overflow: hidden; }
+.tree-svg { width: 100%; height: auto; display: block; }
+.tr-item { cursor: pointer; transform-box: fill-box; }
+.tr-item:active { opacity: .6; }
+.tr-new > :last-child { animation: trNew 1.8s ease-in-out infinite; transform-box: fill-box; transform-origin: center; }
+@keyframes trNew { 50% { transform: scale(1.45); } }
+.liga-score { display: flex; align-items: center; justify-content: space-between; gap: 10px; }
+.liga-score > span:not(.muted) { display: flex; align-items: center; gap: 8px; }
+.liga-score b.num { font-size: 28px; }
+.diary-line .who { display: flex; align-items: center; gap: 6px; }
+@media (prefers-reduced-motion: reduce) { .sp-live, .tr-new > :last-child { animation: none; } }

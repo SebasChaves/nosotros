@@ -37,7 +37,7 @@ const addDays = (d, n) => new Date(d.getFullYear(), d.getMonth(), d.getDate() + 
 // Días en que comió (los dos hicieron algo) desde que lo adoptaron
 export function fedDays(p = pet()) {
   if (!p?.start) return 0;
-  const keys = new Set([...S.data.moods, ...S.data.answers, ...S.data.thinks, ...S.data.daily, ...S.data.activity].map(x => x.id));
+  const keys = new Set([...S.data.moods, ...S.data.answers, ...S.data.thinks, ...S.data.daily, ...S.data.activity, ...(S.data.sorpresa || []), ...(S.data.diary || [])].map(x => x.id));
   let n = 0; for (const k of keys) if (k >= p.start && k <= todayKey() && bothDid(k)) n++;
   return n;
 }

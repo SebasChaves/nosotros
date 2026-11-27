@@ -22,6 +22,11 @@ manifest.json   PWA (nombre, íconos, colores)
 | `home.js` | Inicio: contador de días, tarjeta urgente, tarjeta **Hoy** (resumen de pendientes), ánimo, pregunta del día, reto semanal, próximas fechas, rachas, "Pensando en ti" |
 | `decide.js` (+ `data.js`) | ¿Qué hacemos?: listas con modos al azar / por turnos / match, y ruleta de ideas de citas |
 | `moments.js`, `daily.js` | Momentos (línea de tiempo con fotos, galería) y Foto del día (la de la pareja se revela al subir la tuya) |
+| `sorpresa.js` | ⚡ Momento sorpresa (1.19.0): hora al azar del día (`surpriseMin` en core.js, igual en el Worker v17), 10 minutos para subir una foto; tarjeta de Inicio (sale a su hora), avisos y álbum abajo de «Foto del día». `?emu&sorpHora=HH:MM` pone la hora en el emulador |
+| `racha.js` | 🔥 Hitos de la racha (3, 7, 14, 30… días): monedas para la mascota una vez (`liga/racha`, transacción), celebración una vez por persona (`prefs.hitoSeen`) y hoja «Su racha» (`openRacha`, al tocar la racha en «Hoy») |
+| `tree.js` | 🌳 Árbol de recuerdos (`s-tree`, botón en Momentos): SVG que crece con los meses juntos y los momentos (hoja / flor si tiene foto); no guarda nada |
+| `diary.js` | 📖 Diario de los dos (`s-diary`): una línea por día de cada uno, la del otro se ve al escribir la tuya; avisos desde las 19:00 |
+| `liga.js` | 🏆 Liga del mes (`s-liga` y tarjeta de Inicio): puntos calculados de los retos del día (Flechas, Pura fruta), momento sorpresa y diario; al empezar el mes cierra el anterior y le da un cupón al ganador |
 | `photo-save.js` | Guardar fotos en el teléfono: botón «Guardar» del visor y «Bajar fotos» de la Galería (.zip hecho a mano, sin librerías) |
 | `love.js` | Detalles: frasco de notas y cupones canjeables |
 | `season.js` | Estilo navideño (1.14.0): del 15 de noviembre al 6 de enero pone `body.xmas` (acento rojo y dorado que pisa el elegido, fondo con verde, nieve en un canvas `#snowfx`, guirnalda y gorrito en Inicio, saludo de Navidad y Año Nuevo). Cada uno lo apaga en Ajustes → Apariencia (`prefs.season === false`). Copia en localStorage `futari-xmas` para que el script del inicio de `index.html` lo pinte sin parpadeo. Con `?emu&advHoy=AAAA-MM-DD` se simula otro día |

@@ -91,7 +91,7 @@ de solo lectura** y manda, según la hora de Costa Rica (`TIME_ZONE`):
 | el minuto de `showTime` | «💌 … te dejó una nota para hoy»: notas del frasco programadas (`showDay`/`showTime`) a la pareja. Desde `WORKER_VERSION` 8 | `notes` |
 | domingo 19:30 | «🐷 ¡Les sobraron…!» / «💸 Se pasaron…»: gustos de la semana vs. presupuesto y vs. la semana pasada (lee solo `expenses` con `date` de las últimas 2 semanas y `money/cfg`). Desde `WORKER_VERSION` 6 | `money` |
 
-- La racha usa la misma regla que `home.js` (`didSomething`): `moods`, `answers`, `thinks`, `daily` y `activity`.
+- La racha usa la misma regla que `home.js` (`didSomething`): `moods`, `answers`, `thinks`, `daily`, `activity`, `sorpresa` y `diary` (estos dos desde v17).
   Si cambias esa regla, cámbiala también en el Worker.
 - Para gastar pocas lecturas del plan gratis, cada minuto solo consulta los recordatorios de hoy (`date == hoy`); lo demás
   (pareja, teléfonos, racha, fechas) se lee solo en punto o cuando hay un recordatorio que mandar. Desde el Worker v8 también consulta cada minuto las notas programadas de hoy (`notes` con `showDay == hoy`): unas 3.000 lecturas al día en total (el plan gratis da 50.000).
@@ -118,6 +118,16 @@ problema es el Cron en Cloudflare (*Settings → Triggers*, `* * * * *`) o sus *
 
 Del 1 al 24 de diciembre a las 8:00, a cada uno: «🎄 Tu casilla N está lista» (tipo `advent`, `?open=advent`). Si la pareja
 llenó esa casilla, dice que hay algo de ella sin decir qué. Ver docs/ADVIENTO.md.
+
+### Momento sorpresa y diario (v17, app 1.19.0)
+
+- **Momento sorpresa:** cada minuto se compara con `surpriseMin(hoy)` (la misma función que `core.js`: minuto entre las
+  10:00 y las 20:59 sacado de la fecha). En ese minuto, a los dos: «⚡ ¡Momento sorpresa!» (tipo `sorpresa`, `?open=sorpresa`).
+  No lee nada de la base para saber la hora. Si cambias `surpriseMin`, cámbiala en los dos lados.
+- **Diario:** a las 21:30 lee `diary/<hoy>` (1 lectura) y le avisa a quien no escribió (tipo `diary`, `?open=diary`).
+- La racha del Worker (20:00) también cuenta `sorpresa` y `diary`, como `didSomething` de home.js.
+- `BACKUP_COLS` suma `sorpresa`, `diary` y `liga`.
+- Sin pegar la v17 todo funciona en la app, pero no llegan esos dos avisos programados.
 
 ### Bitácora del Worker (v15)
 

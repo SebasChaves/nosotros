@@ -26,6 +26,11 @@ import './us.js';
 import './cravings.js';
 import './advent.js';
 import './vacations.js';
+import './sorpresa.js';
+import './racha.js';
+import './tree.js';
+import './diary.js';
+import './liga.js';
 import './season.js';
 import './arrows.js';
 import './bus.js';
@@ -48,7 +53,7 @@ import { logVisit, logActions, logError } from './tracking.js';
 import { maybeStartTour, resetTourCheck } from './tour.js';
 
 // Versión de esta copia de la app. Súbela junto con version.json y la caché de sw.js al publicar.
-export const APP_VERSION = '1.18.0';
+export const APP_VERSION = '1.19.0';
 window.FUTARI_VERSION = APP_VERSION; // lo guarda el registro de ingresos (panel de administración)
 
 // Si la app estuvo abierta hace poco (Android la cierra sola al salir), se vuelve rápido a la misma pantalla.
@@ -152,7 +157,7 @@ async function showResetGate(code) {
 // Colecciones de "un documento por día" (crecen para siempre): en vivo solo se escuchan los últimos días.
 // Los días viejos ya no cambian: se bajan una sola vez por teléfono y se guardan aquí, así cada vez que se abre
 // la app no se vuelven a leer cientos de documentos (el plan gratis de Firebase cobra cada lectura).
-const DAY_COLS = ['moods', 'answers', 'thinks', 'daily', 'activity'];
+const DAY_COLS = ['moods', 'answers', 'thinks', 'daily', 'activity', 'sorpresa', 'diary'];
 const LIVE_DAYS = 40, OLD_KEY_PREFIX = 'futari-old-';
 const oldDays = {}, recent = {};
 const cutoffKey = () => { const d = new Date(); d.setDate(d.getDate() - LIVE_DAYS); return dayKey(d); };

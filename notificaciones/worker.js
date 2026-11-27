@@ -20,7 +20,7 @@
 
 // v15: bitácora en KV (avisos programados «nlog:<día>», respaldo «blog:<día>», errores «elog:<día>») y POST /bitacora.
 // v16: calendario de adviento (aviso de la casilla del día a las 8:00, del 1 al 24 de diciembre) y «advent» en el respaldo.
-const WORKER_VERSION = 16; // súbelo al cambiar este archivo (la app lo muestra en el diagnóstico)
+const WORKER_VERSION = 17; // súbelo al cambiar este archivo (la app lo muestra en el diagnóstico)
 const enc = new TextEncoder();
 const b64u = buf => btoa(String.fromCharCode(...new Uint8Array(buf))).replace(/\+/g, '-').replace(/\//g, '_').replace(/=+$/, '');
 const unb64u = s => Uint8Array.from(atob(s.replace(/-/g, '+').replace(/_/g, '/') + '==='.slice((s.length + 3) % 4)), c => c.charCodeAt(0));
@@ -140,7 +140,13 @@ async function logRead(env, from) {
    No se respaldan: «push» (direcciones de los teléfonos), lo privado de cada uno ni las cartas «Solo nosotros». */
 const BACKUP_COLS = ['bucket', 'ideas', 'notes', 'coupons', 'dates', 'moments', 'lists', 'answers', 'moods', 'challenges', 'groceries', 'expenses', 'places',
   'trips', 'quiz', 'profiles', 'shows', 'events', 'cards', 'games', 'thinks', 'daily', 'pins', 'recipes', 'recipefav', 'menu', 'songs', 'reminders', 'snaps',
-  'activity', 'pet', 'guess', 'cravings', 'arrows', 'bus', 'money', 'cooked', 'dreams', 'vacations', 'fruta', 'advent'];
+  'activity', 'pet', 'guess', 'cravings', 'arrows', 'bus', 'money', 'cooked', 'dreams', 'vacations', 'fruta', 'advent', 'sorpresa', 'diary', 'liga'];
+// Momento sorpresa: la misma cuenta que surpriseMin en core.js (minuto del día entre las 10:00 y las 20:59)
+function surpriseMin(day) {
+  let h = 2166136261;
+  for (const c of 'futari-sorpresa-' + day) { h ^= c.charCodeAt(0); h = Math.imul(h, 16777619); }
+  return 600 + ((h >>> 0) % 660);
+}
 const kvJSON = async (env, k, d = null) => { const v = await env.RESPALDOS.get(k); return v ? JSON.parse(v) : d; };
 // KV deja escribir la misma clave como máximo una vez por segundo: si choca (429), espera y reintenta
 const kvPut = async (env, k, v, o) => { for (let i = 0; ; i++) { try { return await env.RESPALDOS.put(k, v, o); } catch (e) { if (i >= 3 || !/429|too many/i.test(String(e.message || e))) throw e; await new Promise(r => setTimeout(r, 1100)); } } };
@@ -446,7 +452,9 @@ export async function runSchedule(env, when = Date.now(), { dryRun = false } = {
     if (kv && plan.some(p => p.m > 0)) await kvPut(env, calKey, JSON.stringify(plan), { expirationTtl: 7200 });
     calDue = kv ? plan.filter(p => p.m === 0) : plan;
   } else if (kv) calDue = (await kvJSON(env, calKey, [])).filter(p => p.m === Number(L.minute));
-  if (!due.length && !notesDue.length && !onTheHour && !moneyTime && !calDue.length) return [];
+  // Momento sorpresa y diario (1.19.0)
+  const curMin = hour * 60 + Number(L.minute), spTime = curMin === surpriseMin(today), diaryTime = hhmm === '21:30';
+  if (!due.length && !notesDue.length && !onTheHour && !moneyTime && !calDue.length && !spTime && !diaryTime) return [];
   const couple = await db.get('');
   if (!couple) return [];
   const members = Object.keys(couple.members || {}).filter(u => (env.ALLOWED_UIDS || '').split(',').map(x => x.trim()).includes(u));
@@ -461,12 +469,12 @@ export async function runSchedule(env, when = Date.now(), { dryRun = false } = {
   // 1. Racha en peligro / mascota con hambre
   if (onTheHour && hour === STREAK_HOUR && members.length === 2) {
     // Los docs de cada día tienen como id la fecha: se piden por bloques de 30 días hacia atrás mientras siga la racha
-    const COLS = ['moods', 'answers', 'thinks', 'daily', 'activity'], days = {};
+    const COLS = ['moods', 'answers', 'thinks', 'daily', 'activity', 'sorpresa', 'diary'], days = {};
     const load = async keys => {
       const docs = await db.getMany(keys.flatMap(k => COLS.map(c => `${c}/${k}`)));
       for (const [path, d] of Object.entries(docs)) { const [c, k] = path.split('/'); (days[k] ||= {})[c] = d; }
     };
-    const did = (k, u) => { const x = days[k] || {}; return !!(x.moods?.[u] || x.answers?.answers?.[u] || x.thinks?.[u] || x.daily?.[u] || x.activity?.[u]); };
+    const did = (k, u) => { const x = days[k] || {}; return !!(x.moods?.[u] || x.answers?.answers?.[u] || x.thinks?.[u] || x.daily?.[u] || x.activity?.[u] || x.sorpresa?.[u] || x.diary?.[u]); };
     const both = k => members.every(u => did(k, u));
     await load([today, ...Array.from({ length: 30 }, (_, i) => shift(yesterday, -i))]);
     let streak = 0, k = yesterday;
@@ -553,13 +561,26 @@ export async function runSchedule(env, when = Date.now(), { dryRun = false } = {
     }
   }
 
+  // 3c. Momento sorpresa (sorpresa.js, 1.19.0): a la hora del día (surpriseMin), a los dos
+  if (spTime && members.length === 2) {
+    for (const u of members) add(u, 'sorpresa', { title: '⚡ ¡Momento sorpresa!', body: 'Tienen 10 minutos: foto de lo que estás haciendo ahora mismo 📸', url: './?open=sorpresa', tag: `sorpresa-${today}` });
+  }
+  // 3d. Diario de los dos (diary.js, 1.19.0): a las 21:30, a quien todavía no escribió su línea de hoy
+  if (diaryTime && members.length === 2) {
+    const d = (await db.getMany([`diary/${today}`]))[`diary/${today}`] || {};
+    for (const u of members) if (!d[u]) {
+      const other = members.find(x => x !== u);
+      add(u, 'diary', { title: '📖 ¿Cómo estuvo tu día?', body: d[other] ? `${nameFor(u, other)} ya escribió: escribe tu línea para leerla` : 'Escribe tu línea en el diario de los dos', url: './?open=diary', tag: `diary-${today}` });
+    }
+  }
+
   // 4. Resumen de la semana (domingo 19:00)
   if (onTheHour && hour === WEEK_HOUR && weekday === 0 && members.length === 2) {
     const keys = Array.from({ length: 7 }, (_, i) => shift(today, i - 6));
     const COLS = ['moods', 'answers', 'thinks', 'daily', 'activity', 'stats', 'guess'], days = {};
     const docs = await db.getMany(keys.flatMap(k => COLS.map(c => `${c}/${k}`)));
     for (const [path, d] of Object.entries(docs)) { const [c, k] = path.split('/'); (days[k] ||= {})[c] = d; }
-    const did = (k, u) => { const x = days[k] || {}; return !!(x.moods?.[u] || x.answers?.answers?.[u] || x.thinks?.[u] || x.daily?.[u] || x.activity?.[u]); };
+    const did = (k, u) => { const x = days[k] || {}; return !!(x.moods?.[u] || x.answers?.answers?.[u] || x.thinks?.[u] || x.daily?.[u] || x.activity?.[u] || x.sorpresa?.[u] || x.diary?.[u]); };
     const together = keys.filter(k => members.every(u => did(k, u))).length;
     const hearts = keys.reduce((s, k) => s + members.reduce((a, u) => a + (Number(days[k]?.thinks?.[u]) || 0), 0), 0);
     const snaps = keys.reduce((s, k) => s + members.reduce((a, u) => a + (Number(days[k]?.stats?.acts?.[u]?.snap) || 0), 0), 0);

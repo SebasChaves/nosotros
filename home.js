@@ -21,6 +21,8 @@ import { moneyCard, moneyTodayRows } from './money.js';
 import { notify, meForPartner } from './push.js';
 import { adventCard } from './advent.js';
 import { xmasGreeting } from './season.js';
+import { sorpresaCard } from './sorpresa.js';
+import { ligaCard } from './liga.js';
 
 // Gorrito navideño sobre el logo (solo se ve con body.xmas, ver season.js)
 const XMAS_HAT = `<svg class="xmas-hat" viewBox="0 0 30 26" aria-hidden="true"><path d="M3 20 C6 9 13 3 22 4 C26 5 27 9 26 13 L24 11 C22 8 18 9 16 12 L13 20 Z" fill="#E63946"/><rect x="1" y="18" width="16" height="6" rx="3" fill="#fff"/><circle cx="26" cy="14" r="3.4" fill="#fff"/></svg>`;
@@ -28,9 +30,13 @@ const XMAS_HAT = `<svg class="xmas-hat" viewBox="0 0 30 26" aria-hidden="true"><
 /* ---------- Racha y "Pensando en ti" ---------- */
 // Un día cuenta para la racha si los dos hicieron algo: marcar ánimo, responder la pregunta, mandar un "pensando en ti",
 // subir la foto del día o (vía markActive) mandar una historia, nota, cupón o canción.
-export const didSomething = (key, who) => !!(S.data.moods.find(x => x.id === key)?.[who] || S.data.answers.find(x => x.id === key)?.answers?.[who] || S.data.thinks.find(x => x.id === key)?.[who] || S.data.daily.find(x => x.id === key)?.[who] || S.data.activity.find(x => x.id === key)?.[who]);
+// (1.19.0: también el momento sorpresa y el diario de los dos)
+export const didSomething = (key, who) => !!(S.data.moods.find(x => x.id === key)?.[who] || S.data.answers.find(x => x.id === key)?.answers?.[who] || S.data.thinks.find(x => x.id === key)?.[who] || S.data.daily.find(x => x.id === key)?.[who] || S.data.activity.find(x => x.id === key)?.[who]
+  || S.data.sorpresa?.find(x => x.id === key)?.[who] || S.data.diary?.find(x => x.id === key)?.[who]);
 export const bothDid = key => { const p = partnerUid(); return !!p && didSomething(key, uid()) && didSomething(key, p); };
 const prevDay = d => new Date(d.getFullYear(), d.getMonth(), d.getDate() - 1);
+// Hitos de la racha (los premios están en racha.js, HITOS; aquí solo los días para la pastilla de «Hoy»)
+const STREAK_HITOS = [3, 7, 14, 30, 50, 100, 200, 365];
 export function streak() {
   let d = today(), n = 0;
   if (!bothDid(dayKey(d))) d = prevDay(d); // hoy todavía cuenta si lo completan más tarde
@@ -38,7 +44,7 @@ export function streak() {
   return n;
 }
 export function bestStreak() {
-  const keys = [...new Set([...S.data.moods, ...S.data.answers, ...S.data.thinks, ...S.data.daily, ...S.data.activity].map(x => x.id))].filter(bothDid).sort();
+  const keys = [...new Set([...S.data.moods, ...S.data.answers, ...S.data.thinks, ...S.data.daily, ...S.data.activity, ...(S.data.sorpresa || []), ...(S.data.diary || [])].map(x => x.id))].filter(bothDid).sort();
   let best = 0, run = 0, prev = null;
   for (const k of keys) { run = prev && dayKey(new Date(parseDate(prev).getFullYear(), parseDate(prev).getMonth(), parseDate(prev).getDate() + 1)) === k ? run + 1 : 1; best = Math.max(best, run); prev = k; }
   return best;
@@ -95,10 +101,11 @@ function todayCard() {
   const tripVotes = S.data.trips.filter(t => [...(t.stays || []), ...(t.flights || [])].some(o => o.votes?.[uid()] === undefined)); if (tripVotes.length) row('🏨', `Hay opciones nuevas para votar en ${esc(tripVotes[0].name)}`, `openTrip('${tripVotes[0].id}')`);
 
   const s = streak(), best = bestStreak(), meDone = didSomething(tk, uid()), themDone = p && didSomething(tk, p);
+  const nx = s >= 1 ? STREAK_HITOS.find(n => n > s) : null; // próximo hito (número de días)
   const mine = thinksToday(uid()), theirs = p ? thinksToday(p) : 0;
   return `<div class="glass stack">
     <div class="row"><span class="label">${icon('cal')} Hoy</span>
-      <span class="pill ${s ? 'hot' : ''}" title="Días seguidos en que los dos usaron la app">🔥 ${plural(s, 'día', 'días')}${best > s ? ` · récord ${best}` : ''}</span></div>
+      <button class="pill ${s ? 'hot' : ''}" onclick="openRacha()" title="Días seguidos en que los dos usaron la app" style="cursor:pointer">🔥 ${plural(s, 'día', 'días')}${nx ? ` · 🎁 en ${plural(nx - s, 'día', 'días')}` : best > s ? ` · récord ${best}` : ''}</button></div>
     ${!meDone && p ? `<p class="small muted" style="margin:0">${s ? 'Para no perder la racha' : 'Para empezar una racha'}: marca tu ánimo, responde la pregunta o manda un corazón.${themDone ? `  ${pn} ya hizo lo suyo.` : ''}</p>` : ''}
     <div class="row">
       <button class="btn" style="flex:1" onclick="sendThink()">${icon('heart-f')} Pensando en ti</button>
@@ -254,7 +261,7 @@ function renderHome() {
   } else hero = counterCard();
   const up = upcoming().slice(0, 5);
   const cards = {
-    urgent: urgentCard, cravings: cravingsCard, advent: adventCard, money: moneyCard, counter: () => hero, pet: petCard, snaps: snapsCard, guess: guessCard, week: weekCard, today: todayCard, memory: memoryCard, mood: moodCard, question: questionCard, challenge: challengeCard,
+    urgent: urgentCard, cravings: cravingsCard, sorpresa: sorpresaCard, liga: ligaCard, advent: adventCard, money: moneyCard, counter: () => hero, pet: petCard, snaps: snapsCard, guess: guessCard, week: weekCard, today: todayCard, memory: memoryCard, mood: moodCard, question: questionCard, challenge: challengeCard,
     upcoming: () => `<div class="glass"><div class="row"><span class="label">${icon('cal')} Próximos momentos</span>
       <div class="row" style="gap:0"><button class="link" onclick="go('s-cal')">Calendario</button><button class="link" onclick="openFechas()">Fechas</button></div></div>
       <div style="margin-top:6px">${up.length ? up.map(m => `<div class="event"><div>${esc(m.label)}<div class="tiny muted">${fmtDate(m.date)}</div></div>
@@ -284,7 +291,7 @@ function renderHome() {
    En este teléfono se anota la última vez que se tocó cada tarjeta (localStorage, nada se sube). Las tarjetas de
    AUTO_HIDE que no se tocan en STALE_DAYS se esconden y al final de Inicio queda «Mostrar» para traerlas de vuelta.
    Las de avisos (urgentes, antojos, Hoy) y el contador nunca se esconden solas. */
-const AUTO_HIDE = ['week', 'pet', 'snaps', 'money', 'memory', 'mood', 'question', 'guess', 'challenge', 'upcoming'], STALE_DAYS = 21;
+const AUTO_HIDE = ['week', 'pet', 'snaps', 'money', 'memory', 'mood', 'question', 'guess', 'challenge', 'liga', 'upcoming'], STALE_DAYS = 21;
 const cardUse = () => { try { return JSON.parse(localStorage.getItem('futari-hc-use')) || {}; } catch { return {}; } };
 const saveUse = u => { try { localStorage.setItem('futari-hc-use', JSON.stringify(u)); } catch {} };
 const cardName = id => (HOME_CARDS.find(c => c[0] === id)?.[1] || id).replace(/^\S+\s/, '').replace(/:.*$/, '').replace(/ \(.*\)$/, '');
@@ -301,8 +308,8 @@ document.addEventListener('click', e => {
 export function homeUnhide() { const u = cardUse(), now = Date.now(); for (const id of AUTO_HIDE) u[id] = now; saveUse(u); renderHome(); toast('Listo, volvieron todas las tarjetas'); }
 
 /* ---------- Personalización de Inicio ---------- */
-export const HOME_CARDS = [['urgent', '🔴 Recordatorios urgentes'], ['cravings', '🚨 Antojos urgentes de tu pareja'], ['counter', '💞 Contador'], ['advent', '🎄 Calendario de adviento (noviembre y diciembre)'],['week', '📊 Resumen de la semana (domingo y lunes)'], ['pet', '🥚 Su mascota'], ['snaps', '📸 Historias'], ['money', '💸 Gastos: anotar rápido y presupuesto de la semana'], ['today', '📌 Hoy'], ['memory', '📸 Un día como hoy'],
-  ['mood', '🙂 ¿Cómo te sientes?'], ['question', '💬 Pregunta del día'], ['guess', '🔮 ¿Qué respondería tu pareja?'], ['challenge', '🏆 Reto de la semana'], ['upcoming', '🗓️ Próximos momentos']];
+export const HOME_CARDS = [['urgent', '🔴 Recordatorios urgentes'], ['cravings', '🚨 Antojos urgentes de tu pareja'], ['sorpresa', '⚡ Momento sorpresa (sale a su hora)'], ['counter', '💞 Contador'], ['advent', '🎄 Calendario de adviento (noviembre y diciembre)'],['week', '📊 Resumen de la semana (domingo y lunes)'], ['pet', '🥚 Su mascota'], ['snaps', '📸 Historias'], ['money', '💸 Gastos: anotar rápido y presupuesto de la semana'], ['today', '📌 Hoy'], ['memory', '📸 Un día como hoy'],
+  ['mood', '🙂 ¿Cómo te sientes?'], ['question', '💬 Pregunta del día'], ['guess', '🔮 ¿Qué respondería tu pareja?'], ['challenge', '🏆 Reto de la semana'], ['liga', '🏆 Liga del mes'], ['upcoming', '🗓️ Próximos momentos']];
 // [{ id, on }] en el orden elegido; las tarjetas nuevas que no estén guardadas se agregan visibles, detrás de la
 // tarjeta que tienen antes en HOME_CARDS (por ejemplo, Historias queda debajo del contador).
 export function homeLayout() {
@@ -350,7 +357,7 @@ setInterval(() => {
   const m = $('heroMin'); if (m) m.innerHTML = `<b>${mins % 60}</b>minutos`;
 }, 20000);
 
-on('vacations dates moments moods answers challenges trips profiles events thinks notes coupons lists quiz daily reminders songs snaps activity pet guess cravings expenses money advent arrows bus fruta', renderHome);
+on('vacations dates moments moods answers challenges trips profiles events thinks notes coupons lists quiz daily reminders songs snaps activity pet guess cravings expenses money advent arrows bus fruta sorpresa diary liga', renderHome);
 window.rerenderHome = () => { if ($('s-home').classList.contains('active')) renderHome(); };
 on('thinks', checkIncomingThink);
 expose({ homeUnhide, sendThink, openFechas, answerQuestion, openAnswers, setMood, skipChallenge, doneChallenge });
