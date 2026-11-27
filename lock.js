@@ -1,6 +1,6 @@
 // Bloqueo con PIN opcional. Se guarda solo en este teléfono (una huella del PIN, nunca el PIN), por cuenta.
 import { signOut } from 'https://www.gstatic.com/firebasejs/11.0.2/firebase-auth.js';
-import { $, S, auth, icon, expose, toast, ask, uid } from './core.js';
+import { $, S, auth, icon, expose, toast, ask, uid, logHooks } from './core.js';
 
 const KEY = () => `futari-pin-${uid()}`;
 const AFTER_MS = 60 * 1000; // se vuelve a pedir si la app estuvo en segundo plano más de 1 minuto
@@ -61,7 +61,7 @@ export function disablePin() { mode = 'disable'; entry = ''; screen('Desactivar 
 async function pinForgot() {
   if (!(await ask('¿Olvidaste tu PIN? Se cerrará la sesión en este teléfono y se quitará el PIN. Para volver a entrar necesitas tu correo y contraseña.', { ok: 'Cerrar sesión', danger: true }))) return;
   try { localStorage.removeItem(KEY()); } catch {}
-  close(); signOut(auth);
+  close(); await logHooks.logout?.(); signOut(auth);
 }
 
 document.addEventListener('visibilitychange', () => {

@@ -40,9 +40,32 @@ export function logVisit(force = false) {
   if (!force && now - last < GAP) return;
   try { localStorage.setItem('futari-last-visit-' + S.me.uid, String(now)); } catch {}
   const d = new Date(now);
+  // Teléfono nuevo: este teléfono (o navegador) nunca había abierto Futari con esta cuenta
+  let newDev = false; try { const k = 'futari-dev-' + S.me.uid; newDev = !localStorage.getItem(k) && !last; localStorage.setItem(k, String(now)); } catch {}
+  flushSession(); // cierra la sesión anterior (si volvió después de 20 minutos)
+  const r = newLogRef('visits');
+  sess = { ref: r, at: now, path: [], secs: 0, uid: S.me.uid };
+  const cur = document.querySelector('.screen.active')?.id?.replace(/^s-/, '');
+  if (cur) sess.path.push(cur);
   // Se espera un momento para tener el modelo del teléfono (llega aparte).
-  setTimeout(() => setDoc(newLogRef('visits'), { uid: S.me.uid, at: now, day: dayKey(d), hour: d.getHours(), min: d.getMinutes(), ...device() }).catch(() => {}), 600);
+  setTimeout(() => setDoc(r, { uid: S.me.uid, at: now, day: dayKey(d), hour: d.getHours(), min: d.getMinutes(), ...device(), ...(newDev ? { newDev: true } : {}) }).catch(() => {}), 600);
 }
+/* ---------- Sesiones: cada ingreso guarda hasta cuándo estuvo y por qué pantallas pasó ---------- */
+// En el mismo documento del ingreso ("visits/<id>"): end (último momento con la app a la vista), secs (segundos a la
+// vista) y path (pantallas en orden, sin repetir seguidas, máximo 40).
+let sess = null;
+function flushSession() {
+  if (!sess || !sess.secs || sess.uid !== S.me?.uid || sess.sent === sess.secs) return;
+  sess.sent = sess.secs;
+  setDoc(sess.ref, { end: sess.end || Date.now(), secs: sess.secs, path: sess.path.slice(0, 40) }, { merge: true }).catch(() => {});
+}
+// Al cerrar sesión: se anota y se sube todo antes de salir (después ya no hay permiso para escribir)
+logHooks.logout = async () => {
+  if (!S.me) return;
+  addAct('_auth', 'sesion', 'x', {});
+  flushUsage(); flushSession();
+  await Promise.all(actionsWrite());
+};
 
 /* ---------- Errores ---------- */
 // Para encontrarlos sin tener el teléfono a mano. Máximo 30 distintos por sesión; si el mismo se repite, se suma a «count».
@@ -50,7 +73,11 @@ export function logVisit(force = false) {
 // trail = últimas pantallas abiertas antes del error.
 let sent = 0;
 const errRefs = {}, trail = [];
-logHooks.screen = id => { trail.push(String(id).replace(/^s-/, '')); if (trail.length > 6) trail.shift(); };
+logHooks.screen = id => {
+  const s = String(id).replace(/^s-/, '');
+  trail.push(s); if (trail.length > 6) trail.shift();
+  if (sess && sess.path[sess.path.length - 1] !== s && sess.path.length < 40) sess.path.push(s);
+};
 export function logError(message, where, extra = {}) {
   if (!S.me || !message) return;
   const key = `${message}|${where}`.slice(0, 400);
@@ -79,6 +106,7 @@ setInterval(() => {
   const s = document.querySelector('.screen.active')?.id?.replace(/^s-/, '');
   if (!s) return;
   acc[s] = (acc[s] || 0) + 5; accTotal += 5;
+  if (sess) { sess.secs += 5; sess.end = Date.now(); }
 }, 5000);
 function flushUsage() {
   if (!S.me || !accTotal) return;
@@ -88,47 +116,107 @@ function flushUsage() {
 }
 
 /* ---------- Acciones de cada uno (Administración → Bitácoras) ---------- */
-// app.js pasa cada foto de las colecciones. Los cambios hechos en ESTE teléfono llegan con «hasPendingWrites» (todavía no
-// confirmados por el servidor); los de la pareja no, así cada teléfono anota solo lo de su dueño. No se guarda ningún texto:
-// solo la sección (colección) y si agregó (a), cambió (e) o borró (d). El mismo documento con la misma acción cuenta una vez
-// por minuto (escribir en un formulario o jugar no llena la bitácora).
-// Los borrados no se pueden saber así (el documento ya no está en la foto): los anota softDelete (core.js) con
-// logHooks.deleted; si tocan «Deshacer», se quita. Las limpiezas automáticas (historias vencidas) no cuentan.
-// Se guarda junto con el tiempo de uso en "actions/<día>_<uid>": { uid, day, n: { col: { a, e, d } }, log: [{ at, c, o }] }.
+// app.js pasa cada foto de las colecciones (y la del documento de la pareja como «_couple»). Los cambios hechos en ESTE
+// teléfono llegan con «hasPendingWrites» (todavía no confirmados por el servidor); los de la pareja no, así cada teléfono
+// anota solo lo de su dueño. Se guarda la sección (colección), si agregó (a), cambió (e), borró (d), deshizo un borrado (u)
+// o cerró sesión (x), el id del documento, el teléfono y la versión, y:
+//   - al cambiar: qué campos cambiaron con el valor de antes y el de ahora (f: [{ p, b, a }], textos cortados a 80
+//     caracteres; las fotos no se copian, solo se dice que cambiaron: ph);
+//   - al agregar o borrar: un título corto (t) para saber qué fue.
+// auto: 1 = lo guardó la app sola (guía vista, avisos vistos…), sin que la persona tocara un ajuste.
+// El mismo documento en el mismo minuto se junta en una sola fila. Las colecciones privadas (regalos) no se anotan.
+// Se guarda junto con el tiempo de uso en "actions/<día>_<uid>": { uid, day, n: { col: { a, e, d } }, log: [...] }.
 const NO_ACTS = new Set(['push', 'activity']); // automáticas
+const IGNORE = /^(at|updatedAt|editedAt|lastAt|ts|by|id)$/; // marcas de tiempo y autor: cambian solas en cada edición
+// Campos que la app guarda sola (por colección). Si todo lo que cambió está aquí, la fila sale como «automático».
+const AUTO = {
+  profiles: /^prefs\.(tour|tourV|tourGates|unwrapped|vacHigh|moneyTour)(\.|$)/,
+  advent: /^(reactSeen)$/,
+  _couple: /^(lastBackup)$/,
+};
+const PHOTO_KEY = /(^|\.)(photo|photos|avatar|thumb|img|image|bg|pic|data)$/i;
+const prev = {}; // último contenido conocido de cada documento: «col/id» → datos
 const seenCols = new Set(), lastAct = {};
 let acts = [];
+const short = v => {
+  if (v === undefined || v === null || v === '') return '';
+  if (typeof v === 'string') return v.length > 80 ? v.slice(0, 79) + '…' : v;
+  if (typeof v === 'boolean' || typeof v === 'number') return v;
+  const s = JSON.stringify(v); return s.length > 80 ? s.slice(0, 79) + '…' : s;
+};
+const isPhotoVal = v => typeof v === 'string' && (v.startsWith('data:') || /^(avatar|bg|adv|mom|t)-/.test(v) && v.length > 20);
+// Aplana un documento a «ruta → valor» (hasta 3 niveles; las listas cuentan como un solo valor)
+function flat(o, pre = '', out = {}, depth = 0) {
+  for (const [k, v] of Object.entries(o || {})) {
+    if (!pre && IGNORE.test(k)) continue;
+    const p = pre ? `${pre}.${k}` : k;
+    if (v && typeof v === 'object' && !Array.isArray(v) && depth < 2 && !(v.seconds !== undefined && v.nanoseconds !== undefined)) flat(v, p, out, depth + 1);
+    else out[p] = v;
+  }
+  return out;
+}
+function diff(before, after) {
+  const A = flat(before), B = flat(after), f = [];
+  for (const p of new Set([...Object.keys(A), ...Object.keys(B)])) {
+    const x = A[p], y = B[p];
+    if (JSON.stringify(x) === JSON.stringify(y)) continue;
+    if (PHOTO_KEY.test(p) || isPhotoVal(x) || isPhotoVal(y)) f.push({ p, ph: y === undefined || y === null || y === false ? 'quitó' : x === undefined || x === null || x === false ? 'puso' : 'cambió' });
+    else f.push({ p, b: short(x), a: short(y) });
+  }
+  return f;
+}
+const titleOf = d => { const t = [d?.title, d?.name, d?.text, d?.t, d?.note, d?.q].find(v => typeof v === 'string' && v.trim()); return t ? short(t.trim()) : ''; };
+const dev = () => { const d = device(); return { d: d.model || d.os, v: d.app }; };
+function addAct(name, id, o, extra) {
+  const now = Date.now(), k = `${name}/${id}`, last = lastAct[k];
+  // Mismo documento, misma acción, en el último minuto y todavía sin subir: se junta (queda el «antes» original)
+  const same = last && now - last.at < 60e3 && last.o === o && !last.auto === !extra.auto && acts.includes(last);
+  if (same && o === 'e') {
+    for (const g of extra.f || []) { const h = last.f.find(x => x.p === g.p); if (h) Object.assign(h, g.ph ? { ph: g.ph } : { a: g.a }); else last.f.push(g); }
+    last.f = last.f.filter(x => x.ph || JSON.stringify(x.b) !== JSON.stringify(x.a)).slice(0, 8);
+    return;
+  }
+  if (same) return;
+  const a = { at: now, c: name, o, id, ...dev(), ...extra };
+  if (a.f) a.f = a.f.slice(0, 8);
+  lastAct[k] = a; acts.push(a);
+}
 export function logActions(name, snap) {
-  if (!seenCols.has(name)) { seenCols.add(name); return; } // la primera foto es la carga, no una acción
-  if (!S.me || NO_ACTS.has(name) || !snap.metadata.hasPendingWrites) return;
-  const now = Date.now();
-  for (const ch of snap.docChanges()) {
-    if (ch.type === 'removed' || !ch.doc.metadata.hasPendingWrites) continue;
-    const o = ch.type === 'added' ? 'a' : 'e', k = `${name}/${ch.doc.id}/${o}`;
-    if (now - (lastAct[k] || 0) < 60e3) continue;
-    lastAct[k] = now;
-    acts.push({ at: now, c: name, o, id: ch.doc.id });
+  const first = !seenCols.has(name); seenCols.add(name);
+  const changes = snap.docChanges ? snap.docChanges() : [{ type: snap.exists() ? 'modified' : 'removed', doc: snap }];
+  for (const ch of changes) {
+    const id = ch.doc.id, k = `${name}/${id}`, before = prev[k];
+    const data = ch.type === 'removed' ? null : ch.doc.data();
+    // Al borrar se queda el último contenido: sirve para el título del borrado, y si tocan «Deshacer» vuelve igual y no
+    // cuenta como «agregó» (no hay diferencia)
+    if (data) prev[k] = data;
+    // la primera foto es la carga; lo de la pareja no se anota aquí (lo anota su teléfono)
+    if (first || !S.me || NO_ACTS.has(name) || ch.type === 'removed' || !ch.doc.metadata.hasPendingWrites) continue;
+    if (ch.type === 'added' && !before) { addAct(name, id, 'a', { t: titleOf(data) }); continue; }
+    const f = diff(before, data);
+    if (!f.length) continue;
+    const auto = AUTO[name] && f.every(x => AUTO[name].test(x.p)) ? 1 : 0;
+    addAct(name, id, 'e', { f, ...(auto ? { auto } : {}) });
   }
 }
 logHooks.deleted = (name, id, undone) => {
   if (!S.me || NO_ACTS.has(name)) return;
-  if (!undone) { acts.push({ at: Date.now(), c: name, o: 'd', id }); return; }
-  const i = acts.findLastIndex(a => a.c === name && a.o === 'd' && a.id === id);
-  if (i >= 0) acts.splice(i, 1);
-  lastAct[`${name}/${id}/a`] = Date.now(); // al deshacer se vuelve a escribir: no es un «agregó»
+  if (!undone) { addAct(name, id, 'd', { t: titleOf(prev[`${name}/${id}`]) }); return; }
+  addAct(name, id, 'u', { t: titleOf(prev[`${name}/${id}`]) });
 };
-function flushActions() {
-  if (!S.me || !acts.length) return;
+function actionsWrite() {
+  if (!S.me || !acts.length) return [];
   const byDay = {};
-  for (const { at, c, o } of acts) (byDay[dayKey(new Date(at))] ||= []).push({ at, c, o }); // el id no se guarda
-  for (const [day, list] of Object.entries(byDay)) {
-    const cnt = {};
-    for (const a of list) (cnt[a.c] ||= {})[a.o] = ((cnt[a.c] ||= {})[a.o] || 0) + 1;
-    const n = Object.fromEntries(Object.entries(cnt).map(([c, ops]) => [c, Object.fromEntries(Object.entries(ops).map(([o, v]) => [o, increment(v)]))]));
-    setDoc(logRef('actions', `${day}_${S.me.uid}`), { uid: S.me.uid, day, n, log: arrayUnion(...list) }, { merge: true }).catch(() => {});
-  }
+  for (const a of acts) (byDay[dayKey(new Date(a.at))] ||= []).push(a);
   acts = [];
+  return Object.entries(byDay).map(([day, list]) => {
+    const cnt = {};
+    for (const a of list) if ('aed'.includes(a.o) && !a.auto) (cnt[a.c] ||= {})[a.o] = (cnt[a.c][a.o] || 0) + 1;
+    const n = Object.fromEntries(Object.entries(cnt).map(([c, ops]) => [c, Object.fromEntries(Object.entries(ops).map(([o, v]) => [o, increment(v)]))]));
+    return setDoc(logRef('actions', `${day}_${S.me.uid}`), { uid: S.me.uid, day, n, log: arrayUnion(...list) }, { merge: true }).catch(() => {});
+  });
 }
+function flushActions() { actionsWrite(); }
 
 /* ---------- Avisos que manda la app (push.js) ---------- */
 // "notiflog/<día>": { day, list: [{ at, by, to, type, src: 'app', r, n?, ok? }] }. r = ok, apagado (la pareja lo tiene
@@ -164,7 +252,10 @@ function sendPerf() {
 }
 setTimeout(sendPerf, 30000);
 
-const flushAll = () => { flushUsage(); flushActions(); };
+const flushAll = () => { flushUsage(); flushActions(); flushSession(); };
+
+/* ---------- Avisos que se tocaron (push.js: al abrir la app desde un aviso) ---------- */
+logHooks.opened = type => { if (S.me) logNotif({ type, src: 'tap', to: S.me.uid }); else setTimeout(() => S.me && logNotif({ type, src: 'tap', to: S.me.uid }), 3000); };
 document.addEventListener('visibilitychange', () => { if (document.hidden) { flushAll(); sendPerf(); } });
 addEventListener('pagehide', () => { flushAll(); sendPerf(); });
 setInterval(flushAll, 5 * 60e3);

@@ -3,7 +3,7 @@
 // (push-config.js, docs/NOTIFICACIONES.md) que avise a los teléfonos de su pareja.
 // En el emulador (?emu) no se llama al Worker: el aviso se anota en la consola y en window.__pushLog.
 import { setDoc, updateDoc, deleteField } from 'https://www.gstatic.com/firebasejs/11.0.2/firebase-firestore.js';
-import { $, S, auth, EMU, ref, on, partnerUid, profile, uid, toast, go, esc, openSheet, countStat, ANDROID, IOS } from './core.js';
+import { $, S, auth, EMU, ref, on, partnerUid, profile, uid, toast, go, esc, openSheet, countStat, ANDROID, IOS, logHooks } from './core.js';
 import { PUSH } from './push-config.js';
 import { logNotif } from './tracking.js';
 
@@ -204,6 +204,7 @@ export function handleOpenParam() {
   const n = qs.get('n');
   qs.delete('open'); qs.delete('n');
   if (S.me) countStat('opened', openedType(what, n)); else setTimeout(() => countStat('opened', openedType(what, n)), 3000);
+  logHooks.opened?.(openedType(what, n));
   history.replaceState(null, '', location.pathname + (qs.toString() ? '?' + qs.toString().replace(/=(&|$)/g, '$1') : ''));
   openWhenReady(what);
 }
@@ -211,7 +212,7 @@ export function handleOpenParam() {
 navigator.serviceWorker?.addEventListener('message', e => {
   const u = e.data?.futariOpen; if (!u) return;
   const sp = new URL(u, location.href).searchParams, what = sp.get('open');
-  if (what) { countStat('opened', openedType(what, sp.get('n'))); openWhenReady(what); }
+  if (what) { countStat('opened', openedType(what, sp.get('n'))); logHooks.opened?.(openedType(what, sp.get('n'))); openWhenReady(what); }
 });
 
 on('push', () => { syncSub(); refreshHere().then(() => window.rerenderSettings?.()); });

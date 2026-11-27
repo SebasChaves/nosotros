@@ -719,6 +719,10 @@ body.xmas .xmas-hat { display: block; position: absolute; left: -11px; top: -2px
 .adm-seg button { flex: 0 0 auto; white-space: nowrap; padding: 10px 12px; }
 /* Administración → Bitácoras */
 .adm-log li.adm-logday { padding: 10px 0 2px; border: 0; background: none; }
+.adm-field { margin: 2px 0 0 22px; word-break: break-word; }
+.adm-go { padding: 3px 10px; min-height: 0; font-size: 12px; }
+.adm-sel { flex: 1; min-width: 0; padding: 8px 10px; border-radius: 12px; border: 1px solid var(--line); background: var(--glass, rgba(255,255,255,.06)); color: inherit; font: inherit; font-size: 13px; }
+.adm-log details summary { cursor: pointer; margin-top: 4px; }
 .adm-pre { margin: 6px 0 0; padding: 8px; border-radius: 10px; background: var(--line); font-size: 11px; line-height: 1.4; white-space: pre-wrap; word-break: break-word; max-height: 180px; overflow: auto; }
 .adm-who { display: flex; flex-direction: column; gap: 4px; padding: 6px 0; border-bottom: 1px solid var(--line); }
 .adm-duel { display: grid; grid-template-columns: 34px 1fr 34px; align-items: center; gap: 8px; }

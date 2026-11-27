@@ -40,6 +40,9 @@ Los juegos sorpresa comparten `gifts.js` (regalo envuelto, `gates`). Ver [docs/P
 **Vacaciones** (1.16.0) por ahora **solo la ve el dueño**: no la menciones en las notas de `version.json` hasta que se
 comparta (Administración → Pruebas). Su paso de la guía ya filtra por `gate`. Ver [docs/VACACIONES.md](docs/VACACIONES.md).
 
+**Bitácoras** (Administración → 📒 Bitácoras): sus mejoras no se anuncian en `version.json` ni en la guía (en
+Novedades salen como «Mejoras y arreglos»). Lo que se guarda sí va siempre en el aviso de Ajustes (regla 7).
+
 ## Reglas que no se rompen
 
 1. **Sin build ni dependencias.** HTML + CSS + JavaScript con módulos ES nativos. Firebase se carga del CDN

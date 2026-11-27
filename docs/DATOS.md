@@ -89,7 +89,9 @@ teléfono no lo ve hasta borrar esas claves.
 ## Registro de uso y bitácoras (`visits`, `errors`, `actions`, `perf`, `notiflog`)
 
 `tracking.js` guarda un ingreso al abrir la app o al volver tras 20 min: `uid, at, day, hour, min, os, osVersion,
-model, browser, installed, app (versión)`. Desde 1.12.1 todos estos registros (y `usage`) viven en
+model, browser, installed, app (versión), newDev?` (`newDev` = primera vez de esa cuenta en ese teléfono o navegador,
+por `localStorage`). Desde 1.18.0 el mismo doc es la **sesión**: `end, secs, path[]` (hasta cuándo, segundos a la vista y
+pantallas en orden, máx. 40), se actualiza cada 5 min y al salir. Desde 1.12.1 todos estos registros (y `usage`) viven en
 `adminlogs/nosotros/<colección>` (`logCol` / `logRef` / `newLogRef` en core.js): las reglas dejan escribir a los dos y
 leer o borrar solo al uid del dueño. `stats` se quedó en `couples/` porque el Worker lo lee para el resumen del domingo.
 Lo de antes se mueve con la tarjeta «🔒 Mover registros viejos» de Administración → Ingresos. Hay un aviso en Ajustes
@@ -98,9 +100,9 @@ Lo de antes se mueve con la tarjeta «🔒 Mover registros viejos» de Administr
 | Colección | Campos |
 |---|---|
 | `errors` | `uid, at, message, where, screen, os, browser, model, app, kind (js/promesa/guardar/escuchar/foto), code, stack, trail[] (últimas pantallas), online, count, lastAt?` — máx. 30 distintos por sesión; si el mismo se repite suma `count`. `write()`, `photoError()` y los listeners de `app.js` también los anotan (`logHooks.error` en core.js) |
-| `actions` | id = `<día>_<uid>`: `uid, day, n{colección:{a,e,d}}, log[{at, c (colección), o a/e/d}]` — lo que hizo cada uno, **sin textos**. Se detecta en `app.js` (`logActions`): los cambios con `hasPendingWrites` son del dueño del teléfono. Los borrados los anota `softDelete` (un doc borrado ya no trae esa marca; si deshacen, se quita); un `deleteDoc` directo no se anota. Mismo doc + misma acción cuenta una vez por minuto. Fuera: `push`, `activity` |
+| `actions` | id = `<día>_<uid>`: `uid, day, n{colección:{a,e,d}}` (sin lo automático), `log[{at, c, o, id, d (teléfono), v (versión), t?, f?, auto?}]`. `o`: a agregó, e cambió, d borró, u deshizo un borrado, x cerró sesión (`c: '_auth'`). `f[{p (ruta del campo), b (antes), a (ahora)}]` o `{p, ph: puso/quitó/cambió}` para fotos (no se copian); textos cortados a 80 caracteres, máx. 8 campos. `t` = título corto al agregar o borrar. `auto: 1` = solo cambiaron campos que la app guarda sola (`AUTO` en tracking.js: guía vista, regalos abiertos…). `c: '_couple'` = el doc de la pareja (nombres, rango de regalitos, vacaciones). Desde 1.18.0. Se detecta en `logActions` (tracking.js, llamado desde app.js): los cambios con `hasPendingWrites` son del dueño del teléfono y se comparan con el último contenido conocido (`prev`). Los borrados los anota `softDelete`; un `deleteDoc` directo no se anota. El mismo doc en el mismo minuto se junta en una fila. Fuera: `push`, `activity` y lo privado (`private/`) |
 | `perf` | `uid, at, day, os…app (como visits), online, conn (solo Android), sw, dom, t{auth, cache, server, ready} (ms desde que empezó a cargar), photos{n, avg, max, fail}` — uno por cada vez que se abre la app desde cero, a los 30 s |
-| `notiflog` | id = día: `day, list[{at, by, to, type, src 'app', r, n?, ok?, gone?, d?}]` — cada aviso que manda la app (`notify` en push.js), sin el texto. Los programados los anota el Worker en su KV (NOTIFICACIONES.md) |
+| `notiflog` | id = día: `day, list[{at, by, to, type, src 'app', r, n?, ok?, gone?, d?}]` — cada aviso que manda la app (`notify` en push.js), sin el texto. `src: 'tap'` (1.18.0) = alguien tocó un aviso y entró a la app (`by` = quien lo tocó, `type`). Los programados los anota el Worker en su KV (NOTIFICACIONES.md) |
 
 «🧹 Registros de +90 días» (Administración → Pruebas) borra `visits`, `perf`, `usage`, `stats`, `actions` y `notiflog` viejos.
 

@@ -2,7 +2,7 @@
 //   Ingresos (por día, horas, teléfonos, datos, errores) · Estadísticas (uso, notificaciones, quién hace más) · Pruebas.
 import { query, where, orderBy, limit, getDocs, getCountFromServer, writeBatch, increment, arrayUnion } from 'https://www.gstatic.com/firebasejs/11.0.2/firebase-firestore.js';
 import { $, S, db, esc, icon, paint, on, onShow, expose, toast, ask, col, ref, avatar, loadPhotos, nameOf, openSheet, celebrate,
-         today, dayKey, todayKey, parseDate, fmtShort, fmtDay, plural, COLLECTIONS, uid, EMU, vnum, vlabel, auth, logCol, logRef } from './core.js';
+         today, dayKey, todayKey, parseDate, fmtShort, fmtDay, plural, COLLECTIONS, uid, EMU, vnum, vlabel, auth, logCol, logRef, SECTIONS } from './core.js';
 import { isTester, testerCard } from './testing.js';
 import { giftAdminCards } from './gifts.js';
 import { NOTIF_TYPES, pushHere, pushConfigured } from './push.js';
@@ -347,8 +347,42 @@ const COL_NAMES = { bucket: 'Bucket list', ideas: 'Ideas de citas', notes: 'Nota
   quiz: 'Quiz', profiles: 'Perfil y ajustes', shows: 'Pelis y series', events: 'Planes', cards: 'Cartas del juego', games: 'Juego de retos', thinks: '«Pensando en ti»',
   daily: 'Foto del día', pins: 'Mapa', recipes: 'Recetas', recipefav: 'Recetas favoritas', menu: 'Menú', songs: 'Playlist', reminders: 'Recordatorios', snaps: 'Historias',
   pet: 'Mascota', guess: '¿Qué respondería?', cravings: 'Antojos', arrows: 'Flechas', bus: 'La parada', money: 'Presupuesto y alcancías', cooked: 'Las que hicimos',
-  dreams: 'Por conocer', vacations: 'Vacaciones', fruta: 'Pura fruta' };
-const OPS = { a: ['➕', 'agregó'], e: ['✏️', 'cambió'], d: ['🗑️', 'borró'] };
+  dreams: 'Por conocer', vacations: 'Vacaciones', fruta: 'Pura fruta', advent: 'Calendario de adviento', _couple: 'Ajustes de los dos', _auth: 'Sesión' };
+const OPS = { a: ['➕', 'agregó'], e: ['✏️', 'cambió'], d: ['🗑️', 'borró'], u: ['↩️', 'deshizo el borrado'], x: ['🚪', 'cerró sesión'] };
+// Pantalla a la que lleva «Ir» en cada fila
+const COL_SCREEN = { moments: 's-moments', expenses: 's-money', money: 's-money', events: 's-cal', vacations: 's-cal', cravings: 's-cravings', groceries: 's-grocery',
+  places: 's-places', trips: 's-trips', dreams: 's-trips', shows: 's-shows', songs: 's-music', reminders: 's-reminders', recipes: 's-recipes', recipefav: 's-recipes', menu: 's-recipes',
+  cooked: 's-recipes', pins: 's-map', pet: 's-pet', lists: 's-decide', bucket: 's-bucket', notes: 's-love', coupons: 's-love', profiles: 's-settings', _couple: 's-settings',
+  advent: 's-advent', arrows: 's-arrows', bus: 's-bus', fruta: 's-fruta', quiz: 's-quiz', cards: 's-game', games: 's-game' };
+// Nombre en español de cada campo: primero la ruta completa (o su comienzo), después la última parte
+const FIELD = {
+  'prefs.myNick': 'su apodo', 'prefs.partnerNick': 'el apodo de su pareja', 'prefs.accent': 'el color', 'prefs.customAccent': 'el color propio',
+  'prefs.theme': 'el tema', 'prefs.textSize': 'el tamaño de letra', 'prefs.bg': 'la foto de fondo', 'prefs.season': 'el estilo navideño',
+  'prefs.menu.bar': 'la barra de abajo', 'prefs.menu.order': 'el orden de Más', 'prefs.menu.hidden': 'lo escondido en Más', 'prefs.home': 'las tarjetas de Inicio',
+  'prefs.notif': 'las notificaciones', 'prefs.counter': 'el contador', 'prefs.watch': 'el buscador de pelis', avatar: 'la foto de perfil', likes: 'sus gustos',
+  superAt: '«Voy al súper»', 'prefs.tour': 'la guía', 'prefs.tourV': 'la guía (versión vista)', 'prefs.tourGates': 'la guía', 'prefs.unwrapped': 'los regalos abiertos',
+  'prefs.vacHigh': 'el aviso de vacaciones', 'prefs.moneyTour': 'la guía de Gastos',
+  'adv.range': 'el rango de los regalitos', lastBackup: 'el último respaldo', features: 'lo compartido desde Administración', 'vac.cfg': 'la configuración de vacaciones',
+  'vac.holOff': 'los feriados quitados', 'vac.holAdd': 'los feriados agregados', currency: 'la moneda', start: 'la fecha de inicio',
+};
+const KEYS = { title: 'el título', name: 'el nombre', text: 'el texto', note: 'la nota', notes: 'las notas', amount: 'el monto', price: 'el precio', date: 'la fecha', time: 'la hora',
+  emoji: 'el emoji', done: 'hecho', status: 'el estado', cat: 'la categoría', category: 'la categoría', place: 'el lugar', who: 'quién', end: 'el final', url: 'el enlace',
+  rating: 'la calificación', votes: 'los votos', hint: 'la pista', react: 'la reacción', thanks: 'el agradecimiento', fav: 'el favorito', mood: 'el ánimo', q: 'la pregunta',
+  answer: 'la respuesta', limit: 'el límite', target: 'la meta', saved: 'lo ahorrado', type: 'el tipo', days: 'los días', half: 'medio día', budget: 'el presupuesto',
+  qty: 'la cantidad', store: 'la tienda', link: 'el enlace', address: 'la dirección', city: 'la ciudad', country: 'el país', season: 'la temporada', ep: 'el capítulo',
+  urgent: 'urgente', expires: 'el vencimiento', used: 'usado', level: 'el nivel', score: 'los puntos', coins: 'las monedas' };
+function fieldName(c, p) {
+  if (FIELD[p]) return FIELD[p];
+  const pre = Object.keys(FIELD).find(k => p.startsWith(k + '.')); if (pre) return FIELD[pre];
+  const mem = p.match(/^members\.([^.]+)\.name$/); if (mem) return `el nombre de ${nameOf(mem[1])}`;
+  const last = p.split('.').pop();
+  return KEYS[last] || p;
+}
+// Valores guardados con clave que se leen mejor en español
+const VALS = { 'prefs.theme': { dark: 'Oscuro', light: 'Claro', auto: 'Automático' }, 'prefs.textSize': { n: 'Normal', g: 'Grande', xg: 'Más grande' } };
+const fval = (p, v) => v === '' || v === undefined || v === null ? '—' : v === true ? 'sí' : v === false ? 'no' : `«${VALS[p]?.[v] || v}»`;
+const fieldLine = (c, f) => `<div class="tiny adm-field"><span class="muted">${esc(capital(fieldName(c, f.p)))}:</span> ${f.ph ? `${esc(f.ph)} 📷` : `${esc(fval(f.p, f.b))} → <b>${esc(fval(f.p, f.a))}</b>`}</div>`;
+let fWho = '', fOp = '', fCol = '', fAuto = false;
 const NOTIF_NAMES = Object.fromEntries(NOTIF_TYPES.map(([k, l]) => [k, l.split(' (')[0]]));
 const RES = { ok: 'entregado', apagado: 'lo tiene apagado', 'sin-telefono': 'sin teléfono con avisos', 'sin-configurar': 'servicio sin conectar', emulador: 'emulador (no se manda)', error: 'error de conexión' };
 const ERR_KINDS = { js: 'Código', promesa: 'Promesa', guardar: 'Guardar', escuchar: 'Sincronizar', foto: 'Foto' };
@@ -364,10 +398,10 @@ function byDayList(items, row) {
   return `<ul class="list adm-log">${html}</ul>${items.length > logMore ? `<button class="btn ghost small" onclick="admMore()">Ver más (${items.length - logMore})</button>` : ''}`;
 }
 function logsHTML(ids, days) {
-  const tabs = [['acciones', 'Acciones'], ['errores', 'Errores'], ['avisos', 'Avisos'], ['respaldos', 'Respaldos'], ['rendimiento', 'Rendimiento']];
+  const tabs = [['acciones', 'Acciones'], ['sesiones', 'Sesiones'], ['errores', 'Errores'], ['avisos', 'Avisos'], ['respaldos', 'Respaldos'], ['rendimiento', 'Rendimiento']];
   const nav = `<div class="chips scroll">${tabs.map(([k, l]) => `<button class="chip ${sub === k ? 'on' : ''}" onclick="admSub('${k}')">${l}</button>`).join('')}</div>`;
   if (loading && !logs.key) return nav + '<p class="small muted">Cargando…</p>';
-  const body = { acciones: actionsHTML, errores: errorsHTML, avisos: notifsHTML, respaldos: backupsHTML, rendimiento: perfHTML }[sub](ids, days);
+  const body = { acciones: actionsHTML, sesiones: sessionsHTML, errores: errorsHTML, avisos: notifsHTML, respaldos: backupsHTML, rendimiento: perfHTML }[sub](ids, days);
   return nav + body;
 }
 function actionsHTML(ids) {
@@ -376,16 +410,63 @@ function actionsHTML(ids) {
     for (const a of mine) for (const [c, o] of Object.entries(a.n || {})) for (const [k, v] of Object.entries(o)) { tot[c] = (tot[c] || 0) + v; ops[k] = (ops[k] || 0) + v; }
     const top = Object.entries(tot).sort((a, b) => b[1] - a[1]).slice(0, 8), mx = Math.max(1, ...top.map(t => t[1]));
     return `<div class="glass stack" style="gap:8px"><div class="row start" style="gap:8px">${avatar(id, 28)}<b>${esc(nameOf(id))}</b></div>
-      <div class="grid2" style="gap:6px;grid-template-columns:repeat(3,1fr)">${Object.entries(OPS).map(([k, [e, l]]) => `<div class="adm-kpi"><b class="num">${ops[k] || 0}</b><span class="tiny muted">${e} ${l}</span></div>`).join('')}</div>
+      <div class="grid2" style="gap:6px;grid-template-columns:repeat(3,1fr)">${['a', 'e', 'd'].map(k => [k, OPS[k]]).map(([k, [e, l]]) => `<div class="adm-kpi"><b class="num">${ops[k] || 0}</b><span class="tiny muted">${e} ${l}</span></div>`).join('')}</div>
       ${top.length ? `<span class="tiny muted">Dónde hizo más cosas</span>${top.map(([c, v]) => `<div class="adm-bar"><span class="small">${esc(COL_NAMES[c] || c)}</span><span class="adm-barline"><i style="width:${Math.round(v / mx * 100)}%;background:${COLORS[i % 2]}"></i></span><span class="tiny muted num">${v}</span></div>`).join('')}`
         : '<p class="tiny muted" style="margin:0">Sin acciones registradas en el periodo.</p>'}</div>`;
   }).join('');
-  const all = logs.actions.flatMap(a => (a.log || []).map(x => ({ ...x, uid: a.uid }))).sort((a, b) => b.at - a.at);
-  const list = all.length ? byDayList(all, x => `<li><div class="txt"><span class="small">${OPS[x.o]?.[0] || '•'} <b>${esc(nameOf(x.uid))}</b> ${OPS[x.o]?.[1] || x.o} en ${esc(COL_NAMES[x.c] || x.c)}</span></div><span class="tiny muted num">${tm(x.at)}</span></li>`)
-    : '<p class="small muted" style="margin:0">Todavía no hay acciones registradas.</p>';
-  return `<div class="stack" style="gap:14px">${per}</div>
+  const all = allActs();
+  // Resumen de hoy: cuántas cosas hizo cada uno, dónde y qué ajustes cambió
+  const tk = todayKey(), todays = all.filter(x => dayKey(new Date(x.at)) === tk && !x.auto);
+  const sumToday = ids.map(id => {
+    const m = todays.filter(x => x.uid === id); if (!m.length) return `<div class="small"><b>${esc(nameOf(id))}</b> <span class="muted">· nada todavía</span></div>`;
+    const byCol = {}; for (const x of m) if (x.o !== 'x') byCol[x.c] = (byCol[x.c] || 0) + 1;
+    const set = m.filter(x => ['profiles', '_couple'].includes(x.c) && x.f?.length).flatMap(x => x.f.map(f => fieldName(x.c, f.p)));
+    return `<div class="small"><b>${esc(nameOf(id))}</b> · ${plural(m.length, 'acción', 'acciones')}<span class="muted"> · ${Object.entries(byCol).sort((a, b) => b[1] - a[1]).slice(0, 4).map(([c, n]) => `${esc(COL_NAMES[c] || c)}${n > 1 ? ' ×' + n : ''}`).join(', ')}${set.length ? ` · cambió ${esc([...new Set(set)].slice(0, 3).join(', '))}` : ''}</span></div>`;
+  }).join('');
+  // Filtros
+  const cols = [...new Set(all.map(x => x.c))].sort((a, b) => (COL_NAMES[a] || a).localeCompare(COL_NAMES[b] || b));
+  const list = all.filter(x => (!fWho || x.uid === fWho) && (!fCol || x.c === fCol) && (fAuto || !x.auto)
+    && (!fOp || (fOp === 'auto' ? x.auto : x.o === fOp)));
+  const nAuto = all.filter(x => x.auto).length;
+  const chip = (on, fn, l) => `<button class="chip ${on ? 'on' : ''}" onclick="${fn}">${l}</button>`;
+  const filters = `<div class="chips scroll">${chip(!fWho, "admF('who','')", 'Los dos')}${ids.map(id => chip(fWho === id, `admF('who','${id}')`, esc(nameOf(id)))).join('')}</div>
+    <div class="chips scroll">${chip(!fOp, "admF('op','')", 'Todo')}${['a', 'e', 'd', 'u', 'x'].map(o => chip(fOp === o, `admF('op','${o}')`, `${OPS[o][0]} ${OPS[o][1]}`)).join('')}</div>
+    <div class="row" style="gap:8px"><select class="adm-sel" aria-label="Sección" onchange="admF('col',this.value)"><option value="">Todas las secciones</option>${cols.map(c => `<option value="${esc(c)}" ${fCol === c ? 'selected' : ''}>${esc(COL_NAMES[c] || c)}</option>`).join('')}</select>
+      <label class="tiny muted" style="display:flex;gap:6px;align-items:center;white-space:nowrap"><input type="checkbox" ${fAuto ? 'checked' : ''} onchange="admF('auto',this.checked)"> ⚙️ Automáticos (${nAuto})</label></div>`;
+  return `<div class="glass stack" style="gap:6px"><span class="label">Hoy</span>${sumToday}</div>
+    <div class="stack" style="gap:14px">${per}</div>
     <div class="glass stack"><span class="label">Qué hizo cada uno</span>
-      <p class="tiny muted" style="margin:0">Cada teléfono anota lo que hace su dueño: solo la sección y la acción, nunca el texto. La misma cosa cuenta una vez por minuto. Se sube cada 5 minutos o al salir de la app.</p>${list}</div>`;
+      <p class="tiny muted" style="margin:0">Cada teléfono anota lo que hace su dueño: qué cambió (antes → ahora), qué agregó o borró, desde qué teléfono. ⚙️ = lo guardó la app sola. Se sube cada 5 minutos o al salir de la app.</p>
+      ${filters}${list.length ? byDayList(list, actRow) : '<p class="small muted" style="margin:0">No hay acciones con estos filtros.</p>'}</div>`;
+}
+const allActs = () => logs.actions.flatMap(a => (a.log || []).map(x => ({ ...x, uid: a.uid }))).sort((a, b) => b.at - a.at);
+function actRow(x) {
+  const [e, verb] = OPS[x.o] || ['•', x.o], where = x.o === 'x' ? '' : ` en ${esc(COL_NAMES[x.c] || x.c)}`;
+  const go = COL_SCREEN[x.c] && !['d', 'x'].includes(x.o) ? `<button class="btn ghost small adm-go" onclick="go('${COL_SCREEN[x.c]}')">Ir</button>` : '';
+  return `<li style="display:block"><div class="row start" style="gap:6px;align-items:flex-start"><span class="small" style="flex:1">${x.auto ? '⚙️' : e} <b>${esc(nameOf(x.uid))}</b> ${verb}${where}${x.t ? ` · «${esc(x.t)}»` : ''}</span>
+      <span class="tiny muted num">${tm(x.at)}</span>${go}</div>
+    ${(x.f || []).map(f => fieldLine(x.c, f)).join('')}
+    ${x.d || x.v ? `<div class="tiny muted">${esc([x.d, x.v && 'v' + vlabel(x.v)].filter(Boolean).join(' · '))}${x.auto ? ' · automático' : ''}</div>` : ''}</li>`;
+}
+/* Sesiones: cada ingreso con su duración, las pantallas que abrió y lo que hizo en ese rato */
+function sessionsHTML(ids) {
+  const acts = allActs();
+  const list = visits.filter(v => !fWho || v.uid === fWho);
+  const nf = list.filter(v => v.newDev).length;
+  const who = `<div class="chips scroll"><button class="chip ${!fWho ? 'on' : ''}" onclick="admF('who','')">Los dos</button>${ids.map(id => `<button class="chip ${fWho === id ? 'on' : ''}" onclick="admF('who','${id}')">${esc(nameOf(id))}</button>`).join('')}</div>`;
+  const row = v => {
+    const end = v.end || v.at, mins = v.secs ? Math.max(1, Math.round(v.secs / 60)) : null;
+    const mine = acts.filter(x => x.uid === v.uid && x.at >= v.at - 5000 && x.at <= end + 60e3 && !x.auto);
+    const path = (v.path || []).map(p => SECTIONS.find(([k]) => k === 's-' + p)?.[2] || { home: 'Inicio', more: 'Más', settings: 'Ajustes' }[p] || p);
+    return `<li style="display:block"><div class="row start" style="gap:6px;flex-wrap:wrap"><span class="small"><b>${esc(nameOf(v.uid))}</b> · ${tm(v.at)}${v.end ? ` – ${tm(v.end)}` : ''}${mins ? ` <span class="muted">(${mins} min)</span>` : ''}</span>
+        ${v.newDev ? '<span class="pill" style="border-color:rgba(255,181,71,.6)">📱 teléfono nuevo</span>' : ''}${mine.length ? `<span class="pill">${plural(mine.length, 'acción', 'acciones')}</span>` : ''}</div>
+      <div class="tiny muted">${esc([v.model || v.os, shortBrowser(v.browser), v.app && 'v' + vlabel(v.app), v.installed === false ? 'sin instalar' : ''].filter(Boolean).join(' · '))}</div>
+      ${path.length ? `<div class="tiny">${esc(path.join(' → '))}</div>` : ''}
+      ${mine.length ? `<details><summary class="tiny muted">Qué hizo</summary><ul class="list adm-log">${mine.map(actRow).join('')}</ul></details>` : ''}</li>`;
+  };
+  return `${who}<div class="glass stack"><span class="label">Sesiones · ${range} días</span>
+      <p class="tiny muted" style="margin:0">Cada vez que abre la app (o vuelve después de 20 minutos): cuánto rato la tuvo a la vista, por qué pantallas pasó y qué hizo. La duración y las pantallas se empezaron a guardar en la 1.18.0.${nf ? ` · 📱 ${plural(nf, 'ingreso', 'ingresos')} desde un teléfono nuevo.` : ''}</p>
+      ${list.length ? byDayList(list, row) : '<p class="small muted" style="margin:0">Sin ingresos en el periodo.</p>'}</div>`;
 }
 function errorsHTML() {
   if (!errors.length) return '<div class="glass"><p class="small muted" style="margin:0">Sin errores registrados 🎉</p></div>';
@@ -402,17 +483,20 @@ function errorsHTML() {
 }
 function notifsHTML(ids) {
   const wk = logs.worker ? Object.values(logs.worker.days).flatMap(d => (d.notifs || []).map(x => ({ ...x, src: 'worker' }))) : [];
-  const all = [...logs.notif, ...wk].sort((a, b) => b.at - a.at);
-  const ok = all.filter(x => x.r === 'ok' || (x.src === 'worker' && x.ok > 0)).length, off = all.filter(x => x.r === 'apagado').length;
+  const taps = logs.notif.filter(x => x.src === 'tap');
+  const all = [...logs.notif.filter(x => x.src !== 'tap'), ...wk].sort((a, b) => b.at - a.at);
+  const ok =all.filter(x => x.r === 'ok' || (x.src === 'worker' && x.ok > 0)).length, off = all.filter(x => x.r === 'apagado').length;
   const failed = all.length - ok - off - all.filter(x => x.r === 'emulador').length;
   const res = x => x.src === 'worker' ? (x.ok ? `entregado${x.n > 1 ? ` (${x.ok}/${x.n})` : ''}` : `no llegó (${x.r || 'sin teléfono'})`) : x.r === 'ok' ? `entregado${x.n > 1 ? ` (${x.ok}/${x.n})` : ''}` : RES[x.r] || (x.r?.startsWith('worker-') ? `el Worker respondió ${x.r.slice(7)}` : `no llegó (${x.r})`);
   const good = x => x.r === 'ok' || (x.src === 'worker' && x.ok > 0);
-  const list = all.length ? byDayList(all, x => `<li><div class="txt"><span class="small">${good(x) ? '✅' : x.r === 'apagado' || x.r === 'emulador' ? '⚪' : '❌'} ${esc(NOTIF_NAMES[x.type] || x.type)}</span>
+  const mixed = [...all, ...taps].sort((a, b) => b.at - a.at);
+  const list = mixed.length ? byDayList(mixed, x => x.src === 'tap' ? `<li><div class="txt"><span class="small">👆 <b>${esc(nameOf(x.by))}</b> abrió un aviso de ${esc(NOTIF_NAMES[x.type] || x.type)}</span><span class="sub">Tocó el aviso y entró a la app</span></div><span class="tiny muted num">${tm(x.at)}</span></li>` : `<li><div class="txt"><span class="small">${good(x) ? '✅' : x.r === 'apagado' || x.r === 'emulador' ? '⚪' : '❌'} ${esc(NOTIF_NAMES[x.type] || x.type)}</span>
       <span class="sub">${x.src === 'worker' ? '⏰ Programado' : esc(nameOf(x.by))} → ${esc(x.by === x.to ? 'sí mismo (prueba)' : nameOf(x.to))} · ${esc(res(x))}${x.gone ? ` · ${plural(x.gone, 'teléfono viejo borrado', 'teléfonos viejos borrados')}` : ''}${x.d ? ' · ' + esc(x.d) : ''}</span></div><span class="tiny muted num">${tm(x.at)}</span></li>`)
     : '<p class="small muted" style="margin:0">Todavía no hay avisos registrados.</p>';
   return `<div class="glass stack"><span class="label">🔔 Avisos · ${range} días</span>
       <div class="grid2" style="gap:6px;grid-template-columns:repeat(3,1fr)"><div class="adm-kpi"><b class="num">${ok}</b><span class="tiny muted">✅ entregados</span></div>
         <div class="adm-kpi"><b class="num">${Math.max(0, failed)}</b><span class="tiny muted">❌ no llegaron</span></div><div class="adm-kpi"><b class="num">${off}</b><span class="tiny muted">⚪ apagados</span></div></div>
+      <p class="small" style="margin:0">👆 ${plural(taps.length, 'aviso abierto', 'avisos abiertos')} (tocaron el aviso y entraron a la app)</p>
       ${logs.worker ? '' : `<p class="tiny muted" style="margin:0">⏰ Programados: ${esc(logs.workerMsg || 'sin datos del Worker.')}</p>`}
       <p class="tiny muted" style="margin:0">«Entregado» quiere decir que el servicio del teléfono (Apple o Google) lo recibió; si el teléfono lo mostró depende de él. Se anota el tipo y para quién, no el texto.</p>
       ${list}</div>`;
@@ -469,6 +553,7 @@ on('fruta arrows bus', () => { if (tab === 'juegos' && $('s-admin')?.classList.c
 function admTab(t) { tab = t; render(); window.scrollTo?.(0, 0); if (t === 'bitacoras') load(); }
 function admSub(s) { sub = s; logMore = 60; render(); }
 function admMore() { logMore += 100; render(); }
+function admF(k, v) { if (k === 'who') fWho = v; else if (k === 'op') { fOp = v; if (v === 'auto') fAuto = true; } else if (k === 'col') fCol = v; else if (k === 'auto') fAuto = !!v; logMore = 60; render(); }
 function admDay(d) { selDay = d; render(); }
 function admReload() { load(); }
 function admCsv() {
@@ -501,4 +586,4 @@ async function admForceUpdate() {
 }
 
 onShow('s-admin', () => { render(); load(); });
-expose({ labSpecies, labStage, labMood, labTime, labFed, ...labWearFns, labAll, labNone, labRandom, labHatch, labGame, admTab, admSub, admMore, admMigrate, admRange, admDay, admReload, admCsv, admPurge, admClearErrors, admForceUpdate });
+expose({ labSpecies, labStage, labMood, labTime, labFed, ...labWearFns, labAll, labNone, labRandom, labHatch, labGame, admTab, admSub, admMore, admF, admMigrate, admRange, admDay, admReload, admCsv, admPurge, admClearErrors, admForceUpdate });
