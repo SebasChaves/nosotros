@@ -128,6 +128,8 @@ llenó esa casilla, dice que hay algo de ella sin decir qué. Ver docs/ADVIENTO.
 - La racha del Worker (20:00) también cuenta `sorpresa` y `diary`, como `didSomething` de home.js.
 - `BACKUP_COLS` suma `sorpresa`, `diary` y `liga`.
 - Sin pegar la v17 todo funciona en la app, pero no llegan esos dos avisos programados.
+- **v18 (app 1.20.0):** `BACKUP_COLS` suma `mejengas`. El recordatorio de la mejenga sale como un plan del calendario
+  (`events` con `mejenga: id`); los avisos de agendada, empezó y final los manda la app (tipo `mejenga`, `?open=mejenga`).
 
 ### Bitácora del Worker (v15)
 

@@ -6,7 +6,7 @@ const standalone = () => matchMedia('(display-mode: standalone)').matches || nav
 const isIOS = () => /iphone|ipad|ipod/i.test(navigator.userAgent);
 
 // Versión de la guía: si alguien ya vio una anterior, le sale una vez «Lo nuevo» (NEW_STEPS) en vez de la completa.
-const TOUR_VERSION = 13;
+const TOUR_VERSION = 14;
 const PET = { screen: 's-home', tab: 'home', emoji: '🐣', title: 'Su mascota',
   text: 'Adopten un huevo en Inicio. Come cada día que <b>los dos</b> hacen algo en Futari:', list: ['Nace a los 3 días y crece hasta leyenda 👑', 'Si un día no come se pone triste, pero no pierde lo que creció', 'Ganan monedas 🪙 para comprarle ropa y detalles', '4 juegos para competir por el récord'] };
 const SNAPS = { screen: 's-home', tab: 'home', emoji: '📸', title: 'Historias',
@@ -60,6 +60,9 @@ const SORPRESA = { screen: 's-home', tab: 'home', emoji: '⚡', title: 'Momento 
 const DIARIO = { screen: 's-diary', emoji: '📖', title: 'Diario y Liga del mes',
   text: 'En Más hay dos secciones nuevas:', list: ['📖 Diario de los dos: una línea cada noche sobre cómo estuvo tu día; la de tu pareja se lee cuando escribes la tuya', '🏆 Liga del mes: el reto del día de los juegos, el momento sorpresa y el diario dan puntos', 'Quien gane el mes recibe un cupón del otro para elegir el plan del fin de semana 🏆'] };
 
+const MEJENGAS = { screen: 's-mejengas', emoji: '⚽', title: 'Mejengas',
+  text: 'En Más → <b>Mejengas</b> están los partidos con marcador en vivo:', list: ['Agenden la mejenga: sale en el calendario y en «Hoy»', 'Durante el partido, quien está en la gradería lleva el marcador: +1 por equipo, cronómetro y momentos', 'Cada gol tiene su animación, y el golazo del jugador una especial', 'Al final: resultado, calificación, jugada de la noche, foto, estadísticas y logros'] };
+
 // gate: el paso solo sale a quien ya ve esa sección (Vacaciones empieza solo para el dueño)
 const VACWORK = { screen: 's-vac', gate: 's-vac', emoji: '💼', title: 'Vacaciones del trabajo',
   text: 'En Más → <b>Vacaciones</b> llevan la cuenta de sus días:', list: ['Pongan cuántos días tienen y cada cuánto se acreditan', 'Pidan vacaciones y márquenlas como aprobadas o no: salen solas en el calendario', 'Les dice cuántos días les quedarían, los feriados y los puentes que vienen', 'Historial de cada año'] };
@@ -88,7 +91,7 @@ const STEPS = () => [
 ];
 // Solo lo nuevo, para quien ya conocía la app
 // Lo nuevo de cada versión de la guía; a quien se saltó varias le salen todas las que no vio
-const NEW_BY_VERSION = { 2: [PET, SNAPS, GUESS, WEEK, NOTIFS, GESTURES], 3: [CRAVINGS, MENU], 4: [GASTOS], 5: [CHAT, COOKED, TRAVEL, VACATIONS, EASIER], 6: [FRUTA], 7: [CALNOTIF], 8: [PHOTOSAVE], 9: [ADVENT], 10: [ALERTS], 11: [VACWORK], 12: [REGALITOS], 13: [SORPRESA, DIARIO] };
+const NEW_BY_VERSION = { 2: [PET, SNAPS, GUESS, WEEK, NOTIFS, GESTURES], 3: [CRAVINGS, MENU], 4: [GASTOS], 5: [CHAT, COOKED, TRAVEL, VACATIONS, EASIER], 6: [FRUTA], 7: [CALNOTIF], 8: [PHOTOSAVE], 9: [ADVENT], 10: [ALERTS], 11: [VACWORK], 12: [REGALITOS], 13: [SORPRESA, DIARIO], 14: [MEJENGAS] };
 // Pasos con gate (secciones que no todos ven todavía): salen cuando la persona ya ve la sección y no lo ha visto
 // (prefs.tourGates.<gate>), sin importar la versión. Los demás, por versión.
 const gateSeen = g => !!profile(uid()).prefs?.tourGates?.[g];

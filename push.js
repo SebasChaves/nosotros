@@ -9,7 +9,7 @@ import { logNotif } from './tracking.js';
 
 // [tipo, nombre en Ajustes]. Cada uno elige cuáles recibe (prefs.notif[tipo] === false = apagado).
 export const NOTIF_TYPES = [['snaps', '📸 Historias y respuestas'], ['reacts', '😍 Reacciones a tus historias'], ['notes', '💌 Notas nuevas'],
-  ['thinks', '❤️ «Pensando en ti»'], ['sorpresa', '⚡ Momento sorpresa (a su hora y cuando tu pareja sube la suya)'], ['diary', '📖 Diario de los dos (lo que escribe tu pareja y recordatorio en la noche)'], ['songs', '🎵 Canciones dedicadas'], ['coupons', '🎟️ Cupones nuevos, canjeados y cumplidos'],
+  ['thinks', '❤️ «Pensando en ti»'], ['sorpresa', '⚡ Momento sorpresa (a su hora y cuando tu pareja sube la suya)'], ['diary', '📖 Diario de los dos (lo que escribe tu pareja y recordatorio en la noche)'], ['mejenga', '⚽ Mejengas (agendadas, cuando empieza y el resultado final)'], ['songs', '🎵 Canciones dedicadas'], ['coupons', '🎟️ Cupones nuevos, canjeados y cumplidos'],
   // Programados: los manda el Worker solo (notificaciones/worker.js → scheduled)
   ['cravings', '🍓 Antojos (nuevos, urgentes y cumplidos)'], ['arrows', '🏹 Flechas (reto del día)'], ['bus', '🚏 La parada (reto del día y duelos)'], ['fruta', '🍍 Pura fruta (reto del día y duelos)'], ['pet', '🐾 Su mascota (compras, récords, nacimiento)'], ['money', '💸 Gastos (salidas, presupuesto y resumen del domingo)'], ['grocery', '🛒 Cuando tu pareja va al súper'], ['vacations', '🏖️ Vacaciones y días libres que pone tu pareja'], ['trips', '✈️ Viajes (lugares por conocer y lo que falta antes de salir)'], ['shows', '🎬 Cuando tu pareja avanza en una serie que ven por separado'], ['guess', '🔮 ¿Qué respondería tu pareja?'], ['decide', '🎲 Decidir juntos (te toca votar y en qué coincidieron)'], ['advent', '🎄 Calendario de adviento (casilla del día y lo que te deja tu pareja)'],
   ['streak', '🔥 Racha en peligro y mascota con hambre (en la noche)'], ['reminders', '🔔 Recordatorios del día'], ['events', '📅 Planes del calendario (nuevos, cambios y recordatorio antes)'], ['dates', '🎂 Fechas especiales (el día antes y el mismo día)'], ['week', '📊 Resumen de la semana (domingo en la noche)']];
@@ -188,6 +188,7 @@ const OPEN = {
   sorpresa: () => { go('s-home'); setTimeout(() => document.querySelector('.sp-card')?.scrollIntoView({ behavior: 'smooth', block: 'center' }), 300); },
   diary: () => go('s-diary'),
   liga: () => go('s-liga'),
+  mejenga: () => { const l = S.data.mejengas?.find(m => m.status === 'envivo'); if (l) window.mjOpen?.(l.id); else go('s-mejengas'); },
 };
 // Espera a que estén cargados los datos y a que se quite el candado del PIN
 function openWhenReady(what) {

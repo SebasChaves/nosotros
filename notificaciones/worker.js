@@ -20,7 +20,7 @@
 
 // v15: bitácora en KV (avisos programados «nlog:<día>», respaldo «blog:<día>», errores «elog:<día>») y POST /bitacora.
 // v16: calendario de adviento (aviso de la casilla del día a las 8:00, del 1 al 24 de diciembre) y «advent» en el respaldo.
-const WORKER_VERSION = 17; // súbelo al cambiar este archivo (la app lo muestra en el diagnóstico)
+const WORKER_VERSION = 18; // súbelo al cambiar este archivo (la app lo muestra en el diagnóstico)
 const enc = new TextEncoder();
 const b64u = buf => btoa(String.fromCharCode(...new Uint8Array(buf))).replace(/\+/g, '-').replace(/\//g, '_').replace(/=+$/, '');
 const unb64u = s => Uint8Array.from(atob(s.replace(/-/g, '+').replace(/_/g, '/') + '==='.slice((s.length + 3) % 4)), c => c.charCodeAt(0));
@@ -140,7 +140,7 @@ async function logRead(env, from) {
    No se respaldan: «push» (direcciones de los teléfonos), lo privado de cada uno ni las cartas «Solo nosotros». */
 const BACKUP_COLS = ['bucket', 'ideas', 'notes', 'coupons', 'dates', 'moments', 'lists', 'answers', 'moods', 'challenges', 'groceries', 'expenses', 'places',
   'trips', 'quiz', 'profiles', 'shows', 'events', 'cards', 'games', 'thinks', 'daily', 'pins', 'recipes', 'recipefav', 'menu', 'songs', 'reminders', 'snaps',
-  'activity', 'pet', 'guess', 'cravings', 'arrows', 'bus', 'money', 'cooked', 'dreams', 'vacations', 'fruta', 'advent', 'sorpresa', 'diary', 'liga'];
+  'activity', 'pet', 'guess', 'cravings', 'arrows', 'bus', 'money', 'cooked', 'dreams', 'vacations', 'fruta', 'advent', 'sorpresa', 'diary', 'liga', 'mejengas'];
 // Momento sorpresa: la misma cuenta que surpriseMin en core.js (minuto del día entre las 10:00 y las 20:59)
 function surpriseMin(day) {
   let h = 2166136261;

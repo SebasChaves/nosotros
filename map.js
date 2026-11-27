@@ -40,7 +40,7 @@ async function render() {
       <div class="glass center"><div class="money grad-text">${c.length}</div><div class="small muted">${c.length === 1 ? 'país' : 'países'}</div></div></div>
     ${years.length > 1 || year ? `<div class="chips scroll"><button class="chip ${!year ? 'on' : ''}" onclick="pinYear('')">Todos los años</button>${years.map(y => `<button class="chip ${year === y ? 'on' : ''}" onclick="pinYear('${y}')">${y}</button>`).join('')}</div>` : ''}
     ${year ? (() => { const yp = pins.filter(p => (p.date || '').startsWith(year)), yc = new Set(yp.map(p => p.country).filter(Boolean)); return `<div class="glass small center">📅 En ${year} fueron a <b>${yp.length} ${yp.length === 1 ? 'lugar' : 'lugares'}</b>${yc.size ? ` en <b>${yc.size} ${yc.size === 1 ? 'país' : 'países'}</b> (${[...yc].map(esc).join(', ')})` : ''}</div>`; })() : ''}
-    <div class="chips scroll"><button class="chip ${!filter ? 'on' : ''}" onclick="pinFilter('')">Todos</button>${PIN_KINDS.map(([e, l]) => `<button class="chip ${filter === e ? 'on' : ''}" onclick="pinFilter('${e}')">${e} ${l}</button>`).join('')}${S.data.dreams.some(d => d.place && !d.went) ? `<button class="chip ${filter === '✨' ? 'on' : ''}" onclick="pinFilter('✨')">✨ Por conocer</button>` : ''}</div>
+    <div class="chips scroll"><button class="chip ${!filter ? 'on' : ''}" onclick="pinFilter('')">Todos</button>${PIN_KINDS.map(([e, l]) => `<button class="chip ${filter === e ? 'on' : ''}" onclick="pinFilter('${e}')">${e} ${l}</button>`).join('')}${S.data.dreams.some(d => d.place && !d.went) ? `<button class="chip ${filter === '✨' ? 'on' : ''}" onclick="pinFilter('✨')">✨ Por conocer</button>` : ''}${(S.data.mejengas || []).some(m => m.place?.lat) ? `<button class="chip ${filter === '⚽' ? 'on' : ''}" onclick="pinFilter('⚽')">⚽ Canchas</button>` : ''}</div>
     <div class="glass" style="padding:6px 14px">${list.length ? list.map(p => `<button class="result-row" onclick="flyPin('${p.id}')"><span class="e">${esc(p.kind)}</span>
       <span class="grow" style="min-width:0"><b style="display:block">${esc(p.title)}</b><span class="tiny muted">${[p.date ? fmtShort(parseDate(p.date)) : '', p.place, nameOf(p.by)].filter(Boolean).map(esc).join(' · ')}</span></span></button>`).join('')
       : '<p class="empty">Agreguen el primer lugar donde han estado juntos</p>'}</div>
@@ -73,6 +73,12 @@ function drawPins(fit) {
   if (!filter || filter === '🍽️') for (const p of S.data.places.filter(p => p.loc)) {
     const st = Object.values(p.ratings || {}), avgR = st.length ? (st.reduce((a, b) => a + b, 0) / st.length).toFixed(1) : '';
     marks.push({ lat: p.loc.lat, lng: p.loc.lng, html: `<div class="map-pin food"><span>🍽️</span></div>`, popup: `<b>${esc(p.name)}</b><br>${esc(p.status === 'been' ? 'Ya fueron' : 'Quieren ir')}${p.kind ? ' · ' + esc(p.kind) : ''}${avgR ? ` · ★ ${avgR}` : ''}<br><a href="#" onclick="go('s-places');return false">Ver en Restaurantes</a>` });
+  }
+  // Canchas de las mejengas (mejengas.js): una por lugar, con cuántos partidos
+  if (!filter || filter === '⚽') {
+    const canchas = {};
+    for (const m of (S.data.mejengas || []).filter(m => m.place?.lat && inYear(m.date))) (canchas[m.place.name] ||= { ...m.place, n: 0 }).n++;
+    for (const c of Object.values(canchas)) marks.push({ lat: c.lat, lng: c.lng, html: '<div class="map-pin"><span>⚽</span></div>', popup: `<b>${esc(c.name)}</b><br>${c.n} ${c.n === 1 ? 'mejenga' : 'mejengas'}<br><a href="#" onclick="go('s-mejengas');return false">Ver mejengas</a>` });
   }
   // Lugares por conocer (Viajes)
   if (!filter || filter === '✨') for (const d of S.data.dreams.filter(d => d.place && !d.went))
@@ -142,6 +148,6 @@ function savePin() {
 }
 function delPin(id) { softDelete('pins', id, 'el lugar del mapa', { after: () => map?.closePopup() }); }
 
-on('pins moments daily places dreams', () => { if ($('mapBox') && $('s-map').classList.contains('active')) render(); });
+on('pins moments daily places dreams mejengas',() => { if ($('mapBox') && $('s-map').classList.contains('active')) render(); });
 onShow('s-map', render);
 expose({ pinYear, showOnMap, addPin, pinFromPlace, myLocation, pickOnMap, cancelPick, savePin, delPin, flyPin, pinFilter });

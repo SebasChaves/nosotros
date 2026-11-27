@@ -347,13 +347,13 @@ const COL_NAMES = { bucket: 'Bucket list', ideas: 'Ideas de citas', notes: 'Nota
   quiz: 'Quiz', profiles: 'Perfil y ajustes', shows: 'Pelis y series', events: 'Planes', cards: 'Cartas del juego', games: 'Juego de retos', thinks: '«Pensando en ti»',
   daily: 'Foto del día', pins: 'Mapa', recipes: 'Recetas', recipefav: 'Recetas favoritas', menu: 'Menú', songs: 'Playlist', reminders: 'Recordatorios', snaps: 'Historias',
   pet: 'Mascota', guess: '¿Qué respondería?', cravings: 'Antojos', arrows: 'Flechas', bus: 'La parada', money: 'Presupuesto y alcancías', cooked: 'Las que hicimos',
-  dreams: 'Por conocer', vacations: 'Vacaciones', fruta: 'Pura fruta', advent: 'Calendario de adviento', _couple: 'Ajustes de los dos', _auth: 'Sesión', sorpresa: 'Momento sorpresa', diary: 'Diario', liga: 'Liga y racha' };
+  dreams: 'Por conocer', vacations: 'Vacaciones', fruta: 'Pura fruta', advent: 'Calendario de adviento', _couple: 'Ajustes de los dos', _auth: 'Sesión', sorpresa: 'Momento sorpresa', diary: 'Diario', liga: 'Liga y racha', mejengas: 'Mejengas' };
 const OPS = { a: ['➕', 'agregó'], e: ['✏️', 'cambió'], d: ['🗑️', 'borró'], u: ['↩️', 'deshizo el borrado'], x: ['🚪', 'cerró sesión'] };
 // Pantalla a la que lleva «Ir» en cada fila
 const COL_SCREEN = { moments: 's-moments', expenses: 's-money', money: 's-money', events: 's-cal', vacations: 's-cal', cravings: 's-cravings', groceries: 's-grocery',
   places: 's-places', trips: 's-trips', dreams: 's-trips', shows: 's-shows', songs: 's-music', reminders: 's-reminders', recipes: 's-recipes', recipefav: 's-recipes', menu: 's-recipes',
   cooked: 's-recipes', pins: 's-map', pet: 's-pet', lists: 's-decide', bucket: 's-bucket', notes: 's-love', coupons: 's-love', profiles: 's-settings', _couple: 's-settings',
-  advent: 's-advent', diary: 's-diary', liga: 's-liga', sorpresa: 's-home', arrows: 's-arrows', bus: 's-bus', fruta: 's-fruta', quiz: 's-quiz', cards: 's-game', games: 's-game' };
+  advent: 's-advent', diary: 's-diary', liga: 's-liga', mejengas: 's-mejengas', sorpresa: 's-home', arrows: 's-arrows', bus: 's-bus', fruta: 's-fruta', quiz: 's-quiz', cards: 's-game', games: 's-game' };
 // Nombre en español de cada campo: primero la ruta completa (o su comienzo), después la última parte
 const FIELD = {
   'prefs.myNick': 'su apodo', 'prefs.partnerNick': 'el apodo de su pareja', 'prefs.accent': 'el color', 'prefs.customAccent': 'el color propio',

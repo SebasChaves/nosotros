@@ -25,6 +25,7 @@ import { vacAlerts } from './vacations.js';
 import { regalitoAlerts } from './advent-gifts.js';
 import { sorpresaAlerts } from './sorpresa.js';
 import { diaryAlerts } from './diary.js';
+import { mejengaAlerts } from './mejengas.js';
 
 const later = f => setTimeout(f, 320); // después de cambiar de pantalla
 const focusHome = sel => () => { go('s-home'); later(() => { const el = document.querySelector(sel); el?.scrollIntoView({ behavior: 'smooth', block: 'center' }); if (el?.tagName === 'TEXTAREA') el.focus(); }); };
@@ -64,6 +65,9 @@ export function alertItems() {
 
   // Diario de los dos
   for (const a of diaryAlerts()) add(a.key, 's-diary', a.e, a.text, a.short, () => go('s-diary'));
+
+  // Mejengas
+  for (const a of mejengaAlerts()) add(a.key, 's-mejengas', a.e, a.text, a.short, a.run);
 
   // Antojos
   const crav = partnerCravings().filter(c => !c.seen?.[uid()]);

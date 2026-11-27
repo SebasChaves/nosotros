@@ -23,6 +23,7 @@ import { adventCard } from './advent.js';
 import { xmasGreeting } from './season.js';
 import { sorpresaCard } from './sorpresa.js';
 import { ligaCard } from './liga.js';
+import { mejengaCard } from './mejengas.js';
 
 // Gorrito navideño sobre el logo (solo se ve con body.xmas, ver season.js)
 const XMAS_HAT = `<svg class="xmas-hat" viewBox="0 0 30 26" aria-hidden="true"><path d="M3 20 C6 9 13 3 22 4 C26 5 27 9 26 13 L24 11 C22 8 18 9 16 12 L13 20 Z" fill="#E63946"/><rect x="1" y="18" width="16" height="6" rx="3" fill="#fff"/><circle cx="26" cy="14" r="3.4" fill="#fff"/></svg>`;
@@ -261,7 +262,7 @@ function renderHome() {
   } else hero = counterCard();
   const up = upcoming().slice(0, 5);
   const cards = {
-    urgent: urgentCard, cravings: cravingsCard, sorpresa: sorpresaCard, liga: ligaCard, advent: adventCard, money: moneyCard, counter: () => hero, pet: petCard, snaps: snapsCard, guess: guessCard, week: weekCard, today: todayCard, memory: memoryCard, mood: moodCard, question: questionCard, challenge: challengeCard,
+    urgent: urgentCard, cravings: cravingsCard, sorpresa: sorpresaCard, liga: ligaCard, mejenga: mejengaCard, advent: adventCard, money: moneyCard, counter: () => hero, pet: petCard, snaps: snapsCard, guess: guessCard, week: weekCard, today: todayCard, memory: memoryCard, mood: moodCard, question: questionCard, challenge: challengeCard,
     upcoming: () => `<div class="glass"><div class="row"><span class="label">${icon('cal')} Próximos momentos</span>
       <div class="row" style="gap:0"><button class="link" onclick="go('s-cal')">Calendario</button><button class="link" onclick="openFechas()">Fechas</button></div></div>
       <div style="margin-top:6px">${up.length ? up.map(m => `<div class="event"><div>${esc(m.label)}<div class="tiny muted">${fmtDate(m.date)}</div></div>
@@ -308,7 +309,7 @@ document.addEventListener('click', e => {
 export function homeUnhide() { const u = cardUse(), now = Date.now(); for (const id of AUTO_HIDE) u[id] = now; saveUse(u); renderHome(); toast('Listo, volvieron todas las tarjetas'); }
 
 /* ---------- Personalización de Inicio ---------- */
-export const HOME_CARDS = [['urgent', '🔴 Recordatorios urgentes'], ['cravings', '🚨 Antojos urgentes de tu pareja'], ['sorpresa', '⚡ Momento sorpresa (sale a su hora)'], ['counter', '💞 Contador'], ['advent', '🎄 Calendario de adviento (noviembre y diciembre)'],['week', '📊 Resumen de la semana (domingo y lunes)'], ['pet', '🥚 Su mascota'], ['snaps', '📸 Historias'], ['money', '💸 Gastos: anotar rápido y presupuesto de la semana'], ['today', '📌 Hoy'], ['memory', '📸 Un día como hoy'],
+export const HOME_CARDS = [['urgent', '🔴 Recordatorios urgentes'], ['cravings', '🚨 Antojos urgentes de tu pareja'], ['sorpresa', '⚡ Momento sorpresa (sale a su hora)'], ['mejenga', '⚽ Mejenga (el día del partido, en vivo y el resultado)'], ['counter', '💞 Contador'], ['advent', '🎄 Calendario de adviento (noviembre y diciembre)'],['week', '📊 Resumen de la semana (domingo y lunes)'], ['pet', '🥚 Su mascota'], ['snaps', '📸 Historias'], ['money', '💸 Gastos: anotar rápido y presupuesto de la semana'], ['today', '📌 Hoy'], ['memory', '📸 Un día como hoy'],
   ['mood', '🙂 ¿Cómo te sientes?'], ['question', '💬 Pregunta del día'], ['guess', '🔮 ¿Qué respondería tu pareja?'], ['challenge', '🏆 Reto de la semana'], ['liga', '🏆 Liga del mes'], ['upcoming', '🗓️ Próximos momentos']];
 // [{ id, on }] en el orden elegido; las tarjetas nuevas que no estén guardadas se agregan visibles, detrás de la
 // tarjeta que tienen antes en HOME_CARDS (por ejemplo, Historias queda debajo del contador).
@@ -357,7 +358,7 @@ setInterval(() => {
   const m = $('heroMin'); if (m) m.innerHTML = `<b>${mins % 60}</b>minutos`;
 }, 20000);
 
-on('vacations dates moments moods answers challenges trips profiles events thinks notes coupons lists quiz daily reminders songs snaps activity pet guess cravings expenses money advent arrows bus fruta sorpresa diary liga', renderHome);
+on('vacations dates moments moods answers challenges trips profiles events thinks notes coupons lists quiz daily reminders songs snaps activity pet guess cravings expenses money advent arrows bus fruta sorpresa diary liga mejengas', renderHome);
 window.rerenderHome = () => { if ($('s-home').classList.contains('active')) renderHome(); };
 on('thinks', checkIncomingThink);
 expose({ homeUnhide, sendThink, openFechas, answerQuestion, openAnswers, setMood, skipChallenge, doneChallenge });

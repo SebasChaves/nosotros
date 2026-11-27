@@ -14,6 +14,7 @@ import { quizWaiting } from './quiz.js';
 import { homeLayout, HOME_CARDS, COUNTER_UNITS } from './home.js';
 import { diarySub } from './diary.js';
 import { ligaSub } from './liga.js';
+import { mejengaSub } from './mejengas.js';
 import { xmasSeason } from './season.js';
 import { isTester } from './testing.js';
 import { menuOrder, hiddenInMore, sectionName, sectionIcon, menuPrefsCard } from './menu.js';
@@ -37,7 +38,7 @@ function renderMore() {
   // Subtítulo de cada sección en su mosaico
   const SUB = {
     's-decide': () => 'Listas e ideas de citas', 's-moments': () => 'Fotos, foto del día e historias', 's-love': () => 'Notas y cupones',
-    's-diary': () => diarySub(), 's-liga': () => ligaSub(),
+    's-diary': () => diarySub(), 's-liga': () => ligaSub(), 's-mejengas': () => mejengaSub(),
     's-advent': () => window.adventSub?.() ||'Una casilla por día hasta Nochebuena', 's-vac': () => window.vacSub?.() || 'Saldo y solicitudes',
     's-cravings': () => crav ? `${pn} tiene ${plural(crav, 'antojo', 'antojos')}` : 'Pide lo que se te antoje',
     's-grocery': () => groceryPending() ? plural(groceryPending(), 'cosa por comprar', 'cosas por comprar') : 'Nada pendiente',
@@ -464,7 +465,7 @@ function importData(input) {
   input.value = '';
 }
 
-on('groceries expenses trips places bucket quiz shows events pins songs menu notes moments thinks answers daily cravings lists coupons snaps profiles reminders arrows bus fruta advent guess vacations diary sorpresa liga', renderMore);
+on('groceries expenses trips places bucket quiz shows events pins songs menu notes moments thinks answers daily cravings lists coupons snaps profiles reminders arrows bus fruta advent guess vacations diary sorpresa liga mejengas', renderMore);
 on('ideas profiles push', () => { if ($('s-settings').classList.contains('active')) renderSettings(); });
 onShow('s-settings', renderSettings);
 window.rerenderSettings = () => { if ($('s-settings').classList.contains('active')) renderSettings(); };
